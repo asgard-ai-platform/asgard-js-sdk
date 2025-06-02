@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "preinstall": "nx reset",
     "serve:react-demo": "nx run react-demo:serve",
     "lint:core": "nx run @asgard-js/core:lint",
     "test:core": "nx run @asgard-js/core:test",
