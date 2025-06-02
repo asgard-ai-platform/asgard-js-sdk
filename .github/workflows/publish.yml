@@ -36,7 +36,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
-        run: npm install
+        run: npm run nx:reset && npm install
 
       - name: Bump version (core & react)
         id: bump
@@ -47,10 +47,10 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build core
-        run: npm run build:core
+        run: npm run nx:reset && npm run build:core
 
       - name: Build react
-        run: npm run build:react
+        run: npm run nx:reset && npm run build:react
 
       - name: Commit and tag
         run: |
