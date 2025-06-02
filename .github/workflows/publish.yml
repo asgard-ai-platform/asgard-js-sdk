@@ -47,10 +47,10 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build core
-        run: npm run nx:reset && npm run build:core
+        run: npx nx reset && npm run build:core
 
       - name: Build react
-        run: npm run nx:reset && npm run build:react
+        run: npx nx reset && npm run build:react
 
       - name: Commit and tag
         run: |
