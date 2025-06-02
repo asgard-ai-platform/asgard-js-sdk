@@ -36,7 +36,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
-        run: npm run nx:reset && npm install
+        run: npm install
 
       - name: Bump version (core & react)
         id: bump
