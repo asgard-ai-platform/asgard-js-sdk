@@ -48,14 +48,14 @@ jobs:
 
       - name: Build core
         run: |
-          rm -rf node_modules/.cache/nx
-          export NX_NO_DAEMON=true
+          rm -rf .nx
+          export NX_DAEMON=false
           npm run build:core
 
       - name: Build react
         run: |
-          rm -rf node_modules/.cache/nx
-          export NX_NO_DAEMON=true
+          rm -rf .nx
+          export NX_DAEMON=false
           npm run build:react
 
       - name: Commit and tag
@@ -65,18 +65,6 @@ jobs:
           git add packages/core/package.json packages/react/package.json
           git commit -m "chore(release): v${{ steps.bump.outputs.new_version }}"
           git push origin ci/NO-TICKET-fix-nx-build-error-issue-again-again-again-again
-
-      - name: Generate react changelog
-        id: changelog_react
-        run: |
-          CURR_TAG="@asgard-js/react@${{ steps.bump.outputs.new_version }}"
-          PREV_TAG=$(git tag --list "@asgard-js/react@*" --sort=-v:refname | sed -n '2p')
-          if [ -z "$PREV_TAG" ]; then PREV_TAG=$(git tag --list "@asgard-js/react@*" --sort=-v:refname | sed -n '1p'); fi
-          if [ -n "$PREV_TAG" ]; then
-            git log "$PREV_TAG..$CURR_TAG" -- packages/react --pretty=format:"* %s (%h)" > react-changelog.md
-          else
-            git log "$CURR_TAG" -- packages/react --pretty=format:"* %s (%h)" > react-changelog.md
-          fi
 
       - name: Release core
         run: npm run release:core --dry-run
