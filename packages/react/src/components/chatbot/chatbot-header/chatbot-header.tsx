@@ -1,10 +1,13 @@
 import { MouseEventHandler, ReactNode, useCallback, useMemo } from 'react';
 import styles from './chatbot-header.module.scss';
 import { ProfileIcon } from '../profile-icon';
-import { useAsgardContext } from 'src/context/asgard-service-context';
 import RefreshSvg from 'src/icons/refresh.svg?react';
 import CloseSvg from 'src/icons/close.svg?react';
-import { useAsgardThemeContext } from 'src/context/asgard-theme-context';
+import {
+  useAsgardAppInitializationContext,
+  useAsgardThemeContext,
+  useAsgardContext,
+} from 'src/context/';
 import clsx from 'clsx';
 
 interface ChatbotHeaderProps {
@@ -25,6 +28,9 @@ export function ChatbotHeader(props: ChatbotHeaderProps): ReactNode {
   } = props;
 
   const { chatbot } = useAsgardThemeContext();
+  const {
+    data: { annotations },
+  } = useAsgardAppInitializationContext();
 
   const { avatar, isResetting, resetChannel, closeChannel } =
     useAsgardContext();
@@ -70,7 +76,9 @@ export function ChatbotHeader(props: ChatbotHeaderProps): ReactNode {
       <div className={styles.chatbot_header__content} style={contentStyles}>
         <div className={styles.chatbot_header__title}>
           <ProfileIcon avatar={avatar} />
-          <h4 style={chatbot?.header?.title?.style}>{title}</h4>
+          <h4 style={chatbot?.header?.title?.style}>
+            {annotations?.embedConfig?.title || title}
+          </h4>
         </div>
         <div
           className={styles.chatbot_header__extra}

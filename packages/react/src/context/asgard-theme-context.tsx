@@ -262,6 +262,9 @@ export function AsgardThemeContextProvider(
           backgroundColor: themeFromAnnotations.chatbot?.backgroundColor,
           borderColor: themeFromAnnotations.chatbot?.borderColor,
           header: {
+            style: {
+              borderBottomColor: themeFromAnnotations.chatbot?.borderColor,
+            },
             title: {
               style: {
                 color:
@@ -282,10 +285,12 @@ export function AsgardThemeContextProvider(
             },
           },
           footer: {
+            style: {
+              borderTopColor: themeFromAnnotations.chatbot?.borderColor,
+            },
             textArea: {
               style: {
                 color: themeFromAnnotations.chatbot?.inactiveColor,
-                borderColor: themeFromAnnotations.chatbot?.borderColor,
                 backgroundColor: themeFromAnnotations.chatbot?.backgroundColor,
               },
               '::placeholder': {
@@ -294,12 +299,16 @@ export function AsgardThemeContextProvider(
             },
             submitButton: {
               style: {
-                color: themeFromAnnotations.chatbot?.inactiveColor,
+                color:
+                  themeFromAnnotations.chatbot?.primaryComponent
+                    ?.secondaryColor,
               },
             },
             speechInputButton: {
               style: {
-                color: themeFromAnnotations.chatbot?.inactiveColor,
+                color:
+                  themeFromAnnotations.chatbot?.primaryComponent
+                    ?.secondaryColor,
               },
             },
           },
