@@ -459,3 +459,84 @@ export function createImageTemplateExample(
     },
   });
 }
+
+export function createMathTemplateExample(): ConversationMessage {
+  return createBaseTemplateExample({
+    messageId: crypto.randomUUID(),
+    replyToCustomMessageId: '',
+    text: `# Mathematical Expressions Demo 🧮
+
+## Inline Math Examples
+- Pythagorean theorem: $a^2 + b^2 = c^2$
+- Einstein's mass-energy equivalence: $E = mc^2$
+- Quadratic formula: $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
+- Greek letters: $\\alpha + \\beta + \\gamma = \\delta$
+- Trigonometry: $\\sin^2(\\theta) + \\cos^2(\\theta) = 1$
+
+## Block Math Examples
+
+### Maxwell's Equations
+$$\\begin{aligned}
+\\nabla \\times \\vec{\\mathbf{B}} -\\, \\frac1c\\, \\frac{\\partial\\vec{\\mathbf{E}}}{\\partial t} &= \\frac{4\\pi}{c}\\vec{\\mathbf{j}} \\\\
+\\nabla \\cdot \\vec{\\mathbf{E}} &= 4 \\pi \\rho \\\\
+\\nabla \\times \\vec{\\mathbf{E}}\\, +\\, \\frac1c\\, \\frac{\\partial\\vec{\\mathbf{B}}}{\\partial t} &= \\vec{\\mathbf{0}} \\\\
+\\nabla \\cdot \\vec{\\mathbf{B}} &= 0
+\\end{aligned}$$
+
+### Matrix Operations
+$$\\begin{pmatrix}
+a & b \\\\
+c & d
+\\end{pmatrix}
+\\begin{pmatrix}
+x \\\\
+y
+\\end{pmatrix}
+=
+\\begin{pmatrix}
+ax + by \\\\
+cx + dy
+\\end{pmatrix}$$
+
+### Calculus Integration
+$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$
+
+### Complex Analysis
+$$e^{i\\pi} + 1 = 0$$
+
+## Mixed Content with Math
+
+Regular text with **bold** and \`code\`, plus math: $\\sum_{i=1}^{n} x_i = S$.
+
+### Mathematical Lists
+1. Linear function: $f(x) = mx + b$
+2. Quadratic function: $g(x) = ax^2 + bx + c$  
+3. Exponential function: $h(x) = e^{kx}$
+4. Logarithmic function: $j(x) = \\log_a(x)$
+
+> **Einstein Quote**: "Mathematics is the language in which God has written the universe." 
+> 
+> And indeed: $E = mc^2$ changed our understanding of reality!
+
+| Function Type | General Form | Example |
+|--------------|-------------|---------|
+| Linear | $y = mx + b$ | $y = 2x + 3$ |
+| Quadratic | $y = ax^2 + bx + c$ | $y = x^2 - 4x + 4$ |
+| Exponential | $y = a \\cdot b^x$ | $y = 2 \\cdot 3^x$ |
+
+This demonstrates the power of **react-markdown** with **KaTeX** integration! 🎉`,
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.TEXT,
+      text: '',
+      quickReplies: [
+        { text: 'Show physics formulas' },
+        { text: 'Display calculus examples' },
+        { text: 'Linear algebra demos' },
+        { text: 'Statistics formulas' }
+      ],
+    },
+  });
+}
