@@ -7,8 +7,8 @@ describe('URI Validation', () => {
   let windowOpenSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
@@ -61,8 +61,12 @@ describe('URI Validation', () => {
 
     describe('should reject dangerous protocols', () => {
       it('should reject javascript URLs', () => {
-        expect(isValidUri('javascript:alert("xss")')).toBe(false);
-        expect(isValidUri('JAVASCRIPT:alert("xss")')).toBe(false);
+        // eslint-disable-next-line no-script-url
+        const jsUri = 'javascript:alert("xss")';
+        // eslint-disable-next-line no-script-url
+        const jsUriUpper = 'JAVASCRIPT:alert("xss")';
+        expect(isValidUri(jsUri)).toBe(false);
+        expect(isValidUri(jsUriUpper)).toBe(false);
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           expect.stringContaining('Blocked unknown protocol: javascript:')
         );
@@ -171,12 +175,14 @@ describe('URI Validation', () => {
     });
 
     it('should block invalid URLs and return null', () => {
-      const result = safeWindowOpen('javascript:alert("xss")', '_blank');
+      // eslint-disable-next-line no-script-url
+      const maliciousUri = 'javascript:alert("xss")';
+      const result = safeWindowOpen(maliciousUri, '_blank');
 
       expect(windowOpenSpy).not.toHaveBeenCalled();
       expect(result).toBe(null);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Blocked attempt to open unsafe URI: javascript:alert("xss")'
+        `Blocked attempt to open unsafe URI: ${maliciousUri}`
       );
     });
 

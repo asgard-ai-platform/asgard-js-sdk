@@ -22,6 +22,10 @@ describe('Card Component - Security Tests', () => {
   const mockOnTemplateBtnClick = vi.fn();
   const defaultLinkTarget = '_blank';
 
+  // Define malicious URI as variable to avoid ESLint script URL warning
+  // eslint-disable-next-line no-script-url
+  const maliciousJsUri = 'javascript:alert("xss")';
+
   const baseTemplate = {
     type: MessageTemplateType.BUTTON,
     title: 'Test Card',
@@ -47,7 +51,7 @@ describe('Card Component - Security Tests', () => {
         label: 'Malicious Link',
         action: {
           type: 'uri' as const,
-          uri: 'javascript:alert("xss")',
+          uri: maliciousJsUri,
         },
       },
     ],
@@ -56,11 +60,21 @@ describe('Card Component - Security Tests', () => {
   beforeEach(() => {
     mockUseAsgardContext.mockReturnValue({
       sendMessage: mockSendMessage,
+      client: null,
+      isOpen: false,
+      isResetting: false,
+      isConnecting: false,
+      conversation: null,
+      resetChannel: vi.fn(),
+      closeChannel: vi.fn(),
+      avatar: null,
     });
 
     mockUseAsgardTemplateContext.mockReturnValue({
       onTemplateBtnClick: mockOnTemplateBtnClick,
       defaultLinkTarget,
+      onErrorClick: undefined,
+      errorMessageRenderer: undefined,
     });
 
     mockSafeWindowOpen.mockReturnValue(null);
@@ -90,7 +104,7 @@ describe('Card Component - Security Tests', () => {
       fireEvent.click(maliciousButton);
 
       expect(mockSafeWindowOpen).toHaveBeenCalledWith(
-        'javascript:alert("xss")',
+        maliciousJsUri,
         '_blank'
       );
     });
