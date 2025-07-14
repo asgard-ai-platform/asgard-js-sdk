@@ -22,12 +22,14 @@ export interface AsgardTemplateContextValue {
       };
     }
   ) => void;
+  defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   onErrorClick: undefined,
   errorMessageRenderer: undefined,
   onTemplateBtnClick: undefined,
+  defaultLinkTarget: undefined,
 });
 
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
@@ -45,17 +47,18 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
       };
     }
   ) => void;
+  defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
 
 export function AsgardTemplateContextProvider(
   props: AsgardTemplateContextProviderProps
 ): ReactNode {
-  const { children, onErrorClick, errorMessageRenderer, onTemplateBtnClick } =
+  const { children, onErrorClick, errorMessageRenderer, onTemplateBtnClick, defaultLinkTarget } =
     props;
 
   const contextValue = useMemo(
-    () => ({ onErrorClick, errorMessageRenderer, onTemplateBtnClick }),
-    [errorMessageRenderer, onErrorClick, onTemplateBtnClick]
+    () => ({ onErrorClick, errorMessageRenderer, onTemplateBtnClick, defaultLinkTarget }),
+    [errorMessageRenderer, onErrorClick, onTemplateBtnClick, defaultLinkTarget]
   );
 
   return (

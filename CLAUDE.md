@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## First to read
+- Always read the `docs/agent-rules.md` file first
+
 ## Project Overview
 
 This is the Asgard JS SDK, a TypeScript monorepo that provides JavaScript/React integration with the Asgard AI platform. It consists of two main packages:

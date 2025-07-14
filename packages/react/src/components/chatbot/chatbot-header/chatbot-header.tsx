@@ -11,7 +11,7 @@ import {
 import clsx from 'clsx';
 
 interface ChatbotHeaderProps {
-  title: string;
+  title?: string;
   customActions?: ReactNode[];
   maintainConnectionWhenClosed?: boolean;
   onClose?: () => void;
@@ -77,7 +77,7 @@ export function ChatbotHeader(props: ChatbotHeaderProps): ReactNode {
         <div className={styles.chatbot_header__title}>
           <ProfileIcon avatar={avatar} />
           <h4 style={chatbot?.header?.title?.style}>
-            {annotations?.embedConfig?.title || title}
+            {annotations?.embedConfig?.title || title || 'Bot'}
           </h4>
         </div>
         <div

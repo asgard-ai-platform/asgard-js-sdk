@@ -20,7 +20,7 @@ import { ChatbotContainer } from './chatbot-container/chatbot-container';
 interface ChatbotProps extends AsgardTemplateContextValue {
   className?: string;
   style?: CSSProperties;
-  title: string;
+  title?: string;
   customActions?: ReactNode[];
   theme?: Partial<AsgardThemeContextValue>;
   config: ClientConfig;
@@ -36,6 +36,7 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   onReset?: () => void;
   onClose?: () => void;
   loadingComponent?: ReactNode;
+  defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
 
 export interface ChatbotRef {
@@ -68,6 +69,7 @@ export const Chatbot = forwardRef(function Chatbot(
     errorMessageRenderer,
     className,
     style,
+    defaultLinkTarget,
   } = props;
 
   return (
@@ -103,6 +105,7 @@ export const Chatbot = forwardRef(function Chatbot(
               onErrorClick={onErrorClick}
               errorMessageRenderer={errorMessageRenderer}
               onTemplateBtnClick={onTemplateBtnClick}
+              defaultLinkTarget={defaultLinkTarget}
             >
               <ChatbotBody />
             </AsgardTemplateContextProvider>
