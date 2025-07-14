@@ -29,12 +29,15 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.2.5",
     "highlight.js": "^11.11.1",
+    "katex": "^0.16.22",
     "marked": "^15.0.8",
     "marked-highlight": "^2.2.1",
     "react-markdown": "^10.1.0",
     "react-vega": "^7.6.0",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1"
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.2",
