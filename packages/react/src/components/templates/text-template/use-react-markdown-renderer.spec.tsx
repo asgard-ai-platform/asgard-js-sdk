@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { useMarkdownRenderer } from './use-react-markdown-renderer';
+import { AsgardTemplateContextProvider } from '../../../context/asgard-template-context';
 
 describe('useMarkdownRenderer - Simple Tests', () => {
   it('should return the expected interface', () => {
@@ -279,5 +280,41 @@ describe('blockquotes and horizontal rules', () => {
     
     const hr = document.querySelector('hr');
     expect(hr).toBeInTheDocument();
+  });
+});
+
+describe('defaultLinkTarget integration', () => {
+  beforeEach(() => {
+    // Mock the safeWindowOpen function
+    vi.mock('../../../utils/uri-validation', () => ({
+      safeWindowOpen: vi.fn(),
+    }));
+  });
+
+  it('should handle link clicks with custom defaultLinkTarget', async () => {
+    const TestComponent = (): JSX.Element => {
+      const { htmlBlocks } = useMarkdownRenderer('[Google](https://google.com)', 0);
+
+      return <div>{htmlBlocks}</div>;
+    };
+
+    render(
+      <AsgardTemplateContextProvider defaultLinkTarget="_self">
+        <TestComponent />
+      </AsgardTemplateContextProvider>
+    );
+
+    // Wait for rendering to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const link = screen.getByRole('link', { name: 'Google' });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', 'https://google.com');
+
+    // Test that clicking the link calls safeWindowOpen with correct target
+    fireEvent.click(link);
+    
+    const { safeWindowOpen } = await import('../../../utils/uri-validation');
+    expect(safeWindowOpen).toHaveBeenCalledWith('https://google.com', '_self');
   });
 });

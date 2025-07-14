@@ -10,6 +10,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import classes from './text-template.module.scss';
+import { useAsgardTemplateContext } from 'src/context/asgard-template-context';
+import { safeWindowOpen } from 'src/utils/uri-validation';
 
 interface MarkdownRenderResult {
   htmlBlocks: ReactNode;
@@ -48,10 +50,32 @@ const CodeRenderer = ({ children, className, ...props }: any) => {
   );
 };
 
+// Custom link renderer to integrate defaultLinkTarget prop
+const LinkRenderer = ({ children, href, ...props }: any) => {
+  const { defaultLinkTarget } = useAsgardTemplateContext();
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (href) {
+        safeWindowOpen(href, defaultLinkTarget || '_blank');
+      }
+    },
+    [href, defaultLinkTarget]
+  );
+
+  return (
+    <a href={href} onClick={handleClick} {...props}>
+      {children}
+    </a>
+  );
+};
+
 // Component renderers that maintain current styling and behavior
 const components = {
   table: TableRenderer,
   code: CodeRenderer,
+  a: LinkRenderer,
 };
 
 export function useMarkdownRenderer(
@@ -73,6 +97,7 @@ export function useMarkdownRenderer(
 
     // Simple tokenization - split by double newlines for paragraphs
     const paragraphs = text.split(/\n\s*\n/);
+
     return paragraphs.map((p) => ({ raw: p + '\n\n', type: 'paragraph' }));
   }, []);
 
@@ -81,6 +106,7 @@ export function useMarkdownRenderer(
       setBlocks([]);
       setTypingText('');
       cacheRef.current.clear();
+
       return;
     }
 
@@ -89,6 +115,7 @@ export function useMarkdownRenderer(
       if (tokens.length === 0) {
         setBlocks([]);
         setTypingText('');
+
         return;
       }
 
@@ -97,6 +124,7 @@ export function useMarkdownRenderer(
         const raw = getRawText(tokens[i].raw);
         if (isCompleteParagraph(raw)) {
           lastCompleteIndex = i;
+
           break;
         }
       }
