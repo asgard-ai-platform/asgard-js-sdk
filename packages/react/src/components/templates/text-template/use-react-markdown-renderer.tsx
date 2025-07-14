@@ -11,6 +11,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import classes from './text-template.module.scss';
 import { useAsgardTemplateContext } from 'src/context/asgard-template-context';
 import { safeWindowOpen } from 'src/utils/uri-validation';
