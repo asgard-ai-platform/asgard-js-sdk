@@ -8,7 +8,9 @@ import {
 } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeKatex from 'rehype-katex';
 import classes from './text-template.module.scss';
 import { useAsgardTemplateContext } from 'src/context/asgard-template-context';
 import { safeWindowOpen } from 'src/utils/uri-validation';
@@ -23,15 +25,24 @@ type Token = {
   type: string;
 };
 
-// Replicate the exact completion detection from current implementation
+// Enhanced completion detection with math expression support
 function isCompleteParagraph(raw: string): boolean {
-  return (
+  // Basic completion logic
+  const basicCompletion = (
     raw.trim().endsWith('\n\n') ||
     raw.trim().endsWith('\n') ||
     raw.trim().endsWith('.') ||
     raw.trim().endsWith('。') ||
     raw.trim().endsWith('！')
   );
+  
+  // Math-specific completion detection
+  const mathCompletion = (
+    !raw.includes('$') ||                    // No math expressions
+    (raw.match(/\$/g) || []).length % 2 === 0  // Even number of $ signs (complete inline math)
+  );
+  
+  return basicCompletion && mathCompletion;
 }
 
 // Custom table renderer to maintain current styling
@@ -71,11 +82,29 @@ const LinkRenderer = ({ children, href, ...props }: any) => {
   );
 };
 
+// Custom math renderers for inline and block math expressions
+const InlineMathRenderer = ({ children, ...props }: any) => (
+  <span className="math math-inline" {...props}>
+    {children}
+  </span>
+);
+
+const BlockMathRenderer = ({ children, ...props }: any) => (
+  <div className="math math-display" {...props}>
+    {children}
+  </div>
+);
+
 // Component renderers that maintain current styling and behavior
 const components = {
   table: TableRenderer,
   code: CodeRenderer,
   a: LinkRenderer,
+  math: InlineMathRenderer,          // Inline math: $expression$
+  div: ({ className, ...props }: any) =>   // Block math: $$expression$$
+    className?.includes('math-display') ? 
+      <BlockMathRenderer {...props} /> : 
+      <div className={className} {...props} />
 };
 
 export function useMarkdownRenderer(
@@ -143,8 +172,8 @@ export function useMarkdownRenderer(
           const reactElement = (
             <ReactMarkdown
               key={raw}
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeHighlight, rehypeKatex]}
               components={components}
             >
               {raw.trim()}
