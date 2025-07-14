@@ -29,7 +29,7 @@ export function Card(props: CardProps): ReactNode {
   const { template, customStyle } = props;
 
   const { sendMessage } = useAsgardContext();
-  const { onTemplateBtnClick } = useAsgardTemplateContext();
+  const { onTemplateBtnClick, defaultLinkTarget } = useAsgardTemplateContext();
 
   const src = useMemo(() => {
     return (
@@ -61,7 +61,7 @@ export function Card(props: CardProps): ReactNode {
             return;
           case 'uri':
           case 'URI':
-            window.open(action.uri, action.target || '_self');
+            window.open(action.uri, action.target || defaultLinkTarget || '_blank');
 
             return;
           case 'emit':
@@ -78,7 +78,7 @@ export function Card(props: CardProps): ReactNode {
         }
       };
     },
-    [sendMessage, onTemplateBtnClick]
+    [sendMessage, onTemplateBtnClick, defaultLinkTarget]
   );
 
   return (
