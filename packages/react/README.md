@@ -62,6 +62,7 @@ const App = () => {
         fullScreen={false}
         avatar="https://example.com/avatar.png"
         botTypingPlaceholder="Bot is typing..."
+        defaultLinkTarget="_blank"
         onReset={() => {
           console.log('Chat reset');
         }}
@@ -119,7 +120,7 @@ config: {
 
 ### Chatbot Component Props
 
-- **title**: `string` - The title of the chatbot.
+- **title?**: `string` - The title of the chatbot (optional). If not provided, will use the value from the API if available.
 - **config**: `ClientConfig` - Configuration object for the Asgard service client, including:
   - `apiKey`: `string` (required) - API key for authentication
   - `botProviderEndpoint`: `string` (required) - Bot provider endpoint URL (SSE endpoint will be auto-derived)
@@ -142,6 +143,7 @@ config: {
 - **fullScreen**: `boolean` - Display chatbot in full screen mode, defaults to `false`
 - **avatar**: `string` - URL for the chatbot's avatar image
 - **botTypingPlaceholder**: `string` - Text to display while the bot is typing
+- **defaultLinkTarget?**: `'_blank' | '_self' | '_parent' | '_top'` - Default target for opening URIs when not specified by the API. Defaults to `'_blank'` (opens in new tab).
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
 - **onReset**: `() => void` - Callback function when chat is reset
 - **onClose**: `() => void` - Callback function when chat is closed
