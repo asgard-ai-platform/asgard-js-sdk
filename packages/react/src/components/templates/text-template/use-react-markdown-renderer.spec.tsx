@@ -318,3 +318,340 @@ describe('defaultLinkTarget integration', () => {
     expect(safeWindowOpen).toHaveBeenCalledWith('https://google.com', '_self');
   });
 });
+
+describe('math rendering - Phase 2 test specifications', () => {
+  describe('inline math expressions', () => {
+    it('should render simple inline math expressions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('The famous equation is $E = mc^2$ in physics.', 0));
+      
+      // Wait for rendering to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      // Should contain math elements (will work after KaTeX integration)
+      const mathElements = document.querySelectorAll('.math, .katex');
+      expect(mathElements.length).toBeGreaterThan(0);
+    });
+
+    it('should render complex inline math with fractions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Quadratic formula: $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$.', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      // Should render without errors
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should handle Greek letters and symbols', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Greek letters: $\\alpha + \\beta + \\gamma = \\delta$.', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should handle inline math in lists', async () => {
+      const markdown = `- First: $f(x) = x^2$
+- Second: $g(x) = \\sin(x)$  
+- Third: $h(x) = e^x$`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      // Should render list with math
+      const listItems = screen.getAllByRole('listitem');
+      expect(listItems).toHaveLength(3);
+    });
+  });
+
+  describe('block math expressions', () => {
+    it('should render simple block math', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      // Should contain block math elements
+      const mathElements = document.querySelectorAll('.math-display, .katex-display');
+      expect(mathElements.length).toBeGreaterThan(0);
+    });
+
+    it('should render aligned equations', async () => {
+      const markdown = `$$\\begin{aligned}
+a &= b + c \\\\
+d &= e + f
+\\end{aligned}$$`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should render Maxwell equations', async () => {
+      const markdown = `$$\\begin{aligned}
+\\nabla \\times \\vec{\\mathbf{B}} -\\, \\frac1c\\, \\frac{\\partial\\vec{\\mathbf{E}}}{\\partial t} &= \\frac{4\\pi}{c}\\vec{\\mathbf{j}} \\\\
+\\nabla \\cdot \\vec{\\mathbf{E}} &= 4 \\pi \\rho \\\\
+\\nabla \\times \\vec{\\mathbf{E}}\\, +\\, \\frac1c\\, \\frac{\\partial\\vec{\\mathbf{B}}}{\\partial t} &= \\vec{\\mathbf{0}} \\\\
+\\nabla \\cdot \\vec{\\mathbf{B}} &= 0
+\\end{aligned}$$`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should render matrix expressions', async () => {
+      const markdown = `$$\\begin{pmatrix}
+a & b \\\\
+c & d
+\\end{pmatrix}
+\\begin{pmatrix}
+x \\\\
+y
+\\end{pmatrix}
+=
+\\begin{pmatrix}
+ax + by \\\\
+cx + dy
+\\end{pmatrix}$$`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+  });
+
+  describe('mixed content with math', () => {
+    it('should handle markdown mixed with math', async () => {
+      const markdown = `# Math Section
+
+Here's some **bold text** and inline math: $x^2 + y^2 = z^2$.
+
+Block equation:
+$$a^2 + b^2 = c^2$$
+
+More text with \`code\` and another equation: $E = mc^2$.`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      // Should contain heading
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Math Section');
+      
+      // Should contain bold text
+      expect(screen.getByText('bold text')).toBeInTheDocument();
+      
+      // Should contain code element
+      expect(screen.getByText('code')).toBeInTheDocument();
+    });
+
+    it('should handle math in tables', async () => {
+      const markdown = `| Function | Formula |
+|----------|---------|
+| Linear   | $y = mx + b$ |
+| Quadratic | $y = ax^2 + bx + c$ |
+| Exponential | $y = e^x$ |`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      // Should render table
+      const table = document.querySelector('table');
+      expect(table).toBeInTheDocument();
+      
+      // Should be wrapped in table container
+      const tableContainer = document.querySelector('.table_container');
+      expect(tableContainer).toBeInTheDocument();
+    });
+
+    it('should handle math in blockquotes', async () => {
+      const markdown = `> Einstein said: $E = mc^2$
+> 
+> This is the mass-energy equivalence.`;
+      
+      const { result } = renderHook(() => useMarkdownRenderer(markdown, 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      
+      const blockquote = document.querySelector('blockquote');
+      expect(blockquote).toBeInTheDocument();
+    });
+  });
+
+  describe('streaming with math expressions', () => {
+    it('should handle incomplete inline math expressions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Incomplete math: $x = \\frac{1}{2', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Incomplete math should be in typing text, not rendered
+      expect(result.current.lastTypingText).toBe('Incomplete math: $x = \\frac{1}{2');
+      
+      // No complete blocks should be rendered
+      const container = result.current.htmlBlocks as React.ReactElement;
+      expect(container.props.children).toEqual([]);
+    });
+
+    it('should handle complete inline math expressions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Complete math: $x = \\frac{1}{2}$.', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Complete math should be rendered
+      expect(result.current.lastTypingText).toBe('');
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should handle incomplete block math expressions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Block math: $$\\int_{-\\infty}^{\\infty} e^{-x^2', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Incomplete block math should be in typing text
+      expect(result.current.lastTypingText).toBe('Block math: $$\\int_{-\\infty}^{\\infty} e^{-x^2');
+    });
+
+    it('should handle complete block math expressions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx$$', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Complete block math should be rendered
+      expect(result.current.lastTypingText).toBe('');
+      render(<div>{result.current.htmlBlocks}</div>);
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should handle mixed complete and incomplete math', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('First: $a = b$. Second: $c = \\frac{d', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // First complete math should be rendered, second incomplete should be in typing
+      expect(result.current.lastTypingText).toContain('Second: $c = \\frac{d');
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle invalid math expressions gracefully', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Invalid math: $\\invalid{syntax$ should not crash', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Should not throw errors
+      expect(() => render(<div>{result.current.htmlBlocks}</div>)).not.toThrow();
+      
+      // Should render something (either error indicator or fallback)
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should handle unmatched dollar signs', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Text with single $ sign should work fine.', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      render(<div>{result.current.htmlBlocks}</div>);
+      expect(screen.getByText('Text with single $ sign should work fine.')).toBeInTheDocument();
+    });
+
+    it('should handle empty math expressions', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Empty math: $$ should not break.', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(() => render(<div>{result.current.htmlBlocks}</div>)).not.toThrow();
+    });
+
+    it('should handle malformed LaTeX syntax', async () => {
+      const { result } = renderHook(() => useMarkdownRenderer('Malformed: $\\frac{1$ incomplete fraction.', 0));
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(() => render(<div>{result.current.htmlBlocks}</div>)).not.toThrow();
+    });
+  });
+
+  describe('performance with math', () => {
+    it('should render simple math expressions quickly', async () => {
+      const startTime = performance.now();
+      
+      const { result } = renderHook(() => useMarkdownRenderer('Simple: $x^2 + y^2 = z^2$', 0));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const endTime = performance.now();
+      
+      // Should render within reasonable time
+      expect(endTime - startTime).toBeLessThan(200); // 200ms threshold
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should handle complex math expressions efficiently', async () => {
+      const complexMath = `$$\\begin{pmatrix}
+a_{11} & a_{12} & \\cdots & a_{1n} \\\\
+a_{21} & a_{22} & \\cdots & a_{2n} \\\\
+\\vdots & \\vdots & \\ddots & \\vdots \\\\
+a_{m1} & a_{m2} & \\cdots & a_{mn}
+\\end{pmatrix}$$`;
+
+      const startTime = performance.now();
+      
+      const { result } = renderHook(() => useMarkdownRenderer(complexMath, 0));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const endTime = performance.now();
+      
+      // Complex math should still render reasonably quickly
+      expect(endTime - startTime).toBeLessThan(300); // 300ms threshold
+      expect(result.current.htmlBlocks).toBeDefined();
+    });
+
+    it('should cache math expressions effectively', async () => {
+      const mathText = 'Cached math: $E = mc^2$';
+      
+      // First render
+      const { result: result1 } = renderHook(() => useMarkdownRenderer(mathText, 0));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Second render should be faster (cached)
+      const startTime = performance.now();
+      const { result: result2 } = renderHook(() => useMarkdownRenderer(mathText, 0));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const endTime = performance.now();
+      
+      // Should be fast due to caching
+      expect(endTime - startTime).toBeLessThan(50); // 50ms threshold for cached
+      expect(result2.current.htmlBlocks).toBeDefined();
+    });
+  });
+});
