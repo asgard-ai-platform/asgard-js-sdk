@@ -31,7 +31,7 @@ export interface UseChannelReturn {
   isConnecting: boolean;
   conversation: Conversation | null;
   sendMessage?: (payload: Pick<FetchSsePayload, 'text' | 'payload'>) => void;
-  resetChannel?: (payload: Pick<FetchSsePayload, 'text' | 'payload'>) => void;
+  resetChannel?: (payload?: Pick<FetchSsePayload, 'text' | 'payload'>) => void;
   closeChannel?: () => void;
 }
 
