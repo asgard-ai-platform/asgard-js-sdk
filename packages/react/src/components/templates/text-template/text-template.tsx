@@ -7,7 +7,7 @@ import { Avatar } from '../avatar';
 import { Time } from '../time';
 import { useAsgardContext } from 'src/context/asgard-service-context';
 import { useAsgardThemeContext } from 'src/context/asgard-theme-context';
-import { useMarkdownRenderer } from './use-markdown-renderer';
+import { useMarkdownRenderer } from './use-react-markdown-renderer';
 
 interface TextTemplateProps {
   message: ConversationMessage;

@@ -54,7 +54,7 @@ const components = {
   code: CodeRenderer,
 };
 
-export function useReactMarkdownRenderer(
+export function useMarkdownRenderer(
   markdownText: string,
   delay = 100
 ): MarkdownRenderResult {
@@ -70,10 +70,10 @@ export function useReactMarkdownRenderer(
   // Mimic the exact token-based logic from current implementation
   const parseToTokens = useCallback((text: string): Token[] => {
     if (!text) return [];
-    
+
     // Simple tokenization - split by double newlines for paragraphs
     const paragraphs = text.split(/\n\s*\n/);
-    return paragraphs.map(p => ({ raw: p + '\n\n', type: 'paragraph' }));
+    return paragraphs.map((p) => ({ raw: p + '\n\n', type: 'paragraph' }));
   }, []);
 
   useEffect(() => {
@@ -127,7 +127,10 @@ export function useReactMarkdownRenderer(
         }
       }
 
-      const lastRaw = unprocessedTokens.map(t => getRawText(t.raw)).join('\n').trim();
+      const lastRaw = unprocessedTokens
+        .map((t) => getRawText(t.raw))
+        .join('\n')
+        .trim();
       setBlocks(newBlocks);
       setTypingText(lastRaw);
     }, delay);
@@ -136,11 +139,7 @@ export function useReactMarkdownRenderer(
   }, [markdownText, delay, getRawText, parseToTokens]);
 
   const htmlBlocks = useMemo<ReactNode>(() => {
-    return (
-      <div className={classes.md_container}>
-        {blocks}
-      </div>
-    );
+    return <div className={classes.md_container}>{blocks}</div>;
   }, [blocks]);
 
   return {

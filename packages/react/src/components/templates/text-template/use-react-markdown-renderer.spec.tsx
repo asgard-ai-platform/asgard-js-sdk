@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { useReactMarkdownRenderer } from './use-react-markdown-renderer';
+import { useMarkdownRenderer } from './use-react-markdown-renderer';
 
-describe('useReactMarkdownRenderer - Simple Tests', () => {
+describe('useMarkdownRenderer - Simple Tests', () => {
   it('should return the expected interface', () => {
-    const { result } = renderHook(() => useReactMarkdownRenderer('# Test'));
-    
+    const { result } = renderHook(() => useMarkdownRenderer('# Test'));
+
     expect(typeof result.current).toBe('object');
     expect(result.current).toHaveProperty('htmlBlocks');
     expect(result.current).toHaveProperty('lastTypingText');
@@ -14,27 +14,29 @@ describe('useReactMarkdownRenderer - Simple Tests', () => {
   });
 
   it('should handle empty input', () => {
-    const { result } = renderHook(() => useReactMarkdownRenderer(''));
-    
+    const { result } = renderHook(() => useMarkdownRenderer(''));
+
     expect(result.current.htmlBlocks).toBeDefined();
     expect(result.current.lastTypingText).toBe('');
   });
 
   it('should handle null input safely', () => {
-    const { result } = renderHook(() => useReactMarkdownRenderer(null as any));
-    
+    const { result } = renderHook(() => useMarkdownRenderer(null as any));
+
     expect(result.current.htmlBlocks).toBeDefined();
     expect(result.current.lastTypingText).toBe('');
   });
 
   it('should detect complete paragraphs', () => {
-    const { result } = renderHook(() => useReactMarkdownRenderer('Complete sentence.'));
+    const { result } = renderHook(() =>
+      useMarkdownRenderer('Complete sentence.')
+    );
     expect(result.current.lastTypingText).toBe('');
   });
 
   it('should accept delay parameter', () => {
-    const { result } = renderHook(() => useReactMarkdownRenderer('# Test', 50));
-    
+    const { result } = renderHook(() => useMarkdownRenderer('# Test', 50));
+
     expect(result.current).toBeDefined();
     expect(result.current.htmlBlocks).toBeDefined();
   });
