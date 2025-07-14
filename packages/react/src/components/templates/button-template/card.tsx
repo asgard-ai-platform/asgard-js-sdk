@@ -13,6 +13,7 @@ import {
 } from '@asgard-js/core';
 import { useAsgardContext } from 'src/context/asgard-service-context';
 import { useAsgardTemplateContext } from 'src/context/asgard-template-context';
+import { safeWindowOpen } from 'src/utils/uri-validation';
 import clsx from 'clsx';
 
 interface CardProps {
@@ -34,7 +35,7 @@ export function Card(props: CardProps): ReactNode {
   const src = useMemo(() => {
     return (
       template?.thumbnailImageUrl
-        .replace(/^http:/, '')
+        ?.replace(/^http:/, '')
         .replace(/^https:/, '') ||
       'https://via.assets.so/img.jpg?w=200&h=270&tc=white&bg=#eeeeee'
     );
@@ -61,7 +62,7 @@ export function Card(props: CardProps): ReactNode {
             return;
           case 'uri':
           case 'URI':
-            window.open(action.uri, action.target || defaultLinkTarget || '_blank');
+            safeWindowOpen(action.uri, action.target || defaultLinkTarget || '_blank');
 
             return;
           case 'emit':
