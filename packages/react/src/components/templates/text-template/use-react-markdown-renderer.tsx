@@ -99,7 +99,7 @@ const LinkRenderer = ({ children, href, ...props }: any) => {
   );
 
   return (
-    <a href={href} onClick={handleClick} {...props}>
+    <a href={href} onClick={handleClick} rel="noopener noreferrer" {...props}>
       {children}
     </a>
   );
