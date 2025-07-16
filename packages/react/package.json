@@ -30,8 +30,6 @@
     "dompurify": "^3.2.5",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
-    "marked": "^15.0.8",
-    "marked-highlight": "^2.2.1",
     "react-markdown": "^10.1.0",
     "react-vega": "^7.6.0",
     "rehype-highlight": "^7.0.2",
