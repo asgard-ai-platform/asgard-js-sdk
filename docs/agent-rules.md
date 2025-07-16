@@ -52,8 +52,8 @@ git status  # Show staged changes
 
 **Priority order**:
 
-1. Use GitHub MCP server (configured in `.mcp.json`)
-2. Fall back to `gh` CLI only if MCP unavailable
+1. Use `gh` CLI.
+2. Fall back to github MCP (configured in `.mcp.json`) only if `gh` CLI unavailable
 3. Verify correct GitHub account/token for repository
 
 **PR Reviews**:
