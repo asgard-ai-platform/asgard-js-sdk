@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { useMarkdownRenderer } from './use-react-markdown-renderer';
+import { useMarkdownRenderer, manageCacheSize, MAX_CACHE_SIZE } from './use-react-markdown-renderer';
 import { AsgardTemplateContextProvider } from '../../../context/asgard-template-context';
 
 describe('useMarkdownRenderer - Simple Tests', () => {
@@ -670,6 +670,89 @@ a_{m1} & a_{m2} & \\cdots & a_{mn}
       // Should be fast due to caching
       expect(endTime - startTime).toBeLessThan(150); // 150ms threshold for cached (increased for CI)
       expect(result2.current.htmlBlocks).toBeDefined();
+    });
+  });
+
+  describe('cache size management', () => {
+    it('should respect MAX_CACHE_SIZE constant', () => {
+      expect(MAX_CACHE_SIZE).toBe(100);
+    });
+
+    it('should not evict entries when cache is below limit', () => {
+      const cache = new Map<string, any>();
+      cache.set('key1', 'value1');
+      cache.set('key2', 'value2');
+      
+      manageCacheSize(cache);
+      
+      expect(cache.size).toBe(2);
+      expect(cache.has('key1')).toBe(true);
+      expect(cache.has('key2')).toBe(true);
+    });
+
+    it('should evict oldest entry when cache reaches MAX_CACHE_SIZE', () => {
+      const cache = new Map<string, any>();
+      
+      // Fill cache to exactly MAX_CACHE_SIZE
+      for (let i = 0; i < MAX_CACHE_SIZE; i++) {
+        cache.set(`key${i}`, `value${i}`);
+      }
+      
+      expect(cache.size).toBe(MAX_CACHE_SIZE);
+      expect(cache.has('key0')).toBe(true);
+      
+      // Adding one more should trigger eviction
+      manageCacheSize(cache);
+      
+      expect(cache.size).toBe(MAX_CACHE_SIZE - 1);
+      expect(cache.has('key0')).toBe(false); // First entry should be evicted
+      expect(cache.has('key1')).toBe(true);  // Second entry should remain
+    });
+
+    it('should implement LRU eviction strategy correctly', () => {
+      const cache = new Map<string, any>();
+      
+      // Fill cache to MAX_CACHE_SIZE
+      for (let i = 0; i < MAX_CACHE_SIZE; i++) {
+        cache.set(`key${i}`, `value${i}`);
+      }
+      
+      // Access key0 to move it to the end (most recently used)
+      const value0 = cache.get('key0');
+      cache.delete('key0');
+      cache.set('key0', value0);
+      
+      // Now manageCacheSize should evict key1 (now the oldest)
+      manageCacheSize(cache);
+      
+      expect(cache.size).toBe(MAX_CACHE_SIZE - 1);
+      expect(cache.has('key0')).toBe(true);  // Should remain (most recently used)
+      expect(cache.has('key1')).toBe(false); // Should be evicted (oldest)
+      expect(cache.has('key2')).toBe(true);  // Should remain
+    });
+
+    it('should handle empty cache gracefully', () => {
+      const cache = new Map<string, any>();
+      
+      manageCacheSize(cache);
+      
+      expect(cache.size).toBe(0);
+    });
+
+    it('should handle cache with exactly MAX_CACHE_SIZE entries', () => {
+      const cache = new Map<string, any>();
+      
+      // Fill cache to exactly MAX_CACHE_SIZE
+      for (let i = 0; i < MAX_CACHE_SIZE; i++) {
+        cache.set(`key${i}`, `value${i}`);
+      }
+      
+      manageCacheSize(cache);
+      
+      // Should evict one entry
+      expect(cache.size).toBe(MAX_CACHE_SIZE - 1);
+      expect(cache.has('key0')).toBe(false);
+      expect(cache.has('key1')).toBe(true);
     });
   });
 });

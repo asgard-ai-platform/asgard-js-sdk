@@ -428,6 +428,13 @@ Regular text with **bold** and \`code\`, plus math: $\\sum_{i=1}^{n} x_i = S$.
 - **Memory Usage**: <10% increase for math-heavy content
 - **Cache Efficiency**: Math expressions cached effectively
 
+### Cache Management Implementation
+- **MAX_CACHE_SIZE**: 100 entries (exported constant)
+- **LRU Eviction**: Oldest entries removed when cache is full
+- **Memory Safety**: Prevents unlimited cache growth
+- **Direct Testing**: `manageCacheSize` function exported for testing
+- **Test Coverage**: 6 comprehensive cache management tests
+
 ### Performance Testing Strategy
 ```typescript
 // Performance benchmark tests

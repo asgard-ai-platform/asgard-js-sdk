@@ -26,6 +26,20 @@ type Token = {
   type: string;
 };
 
+// Maximum number of cached markdown blocks to prevent memory leaks
+export const MAX_CACHE_SIZE = 100;
+
+// Helper function to manage cache size with LRU eviction
+export function manageCacheSize(cache: Map<string, ReactNode>): void {
+  if (cache.size >= MAX_CACHE_SIZE) {
+    // Remove the first (oldest) entry to make room for new ones
+    const firstKey = cache.keys().next().value;
+    if (firstKey) {
+      cache.delete(firstKey);
+    }
+  }
+}
+
 // Enhanced completion detection with math expression support
 function isCompleteParagraph(raw: string): boolean {
   // Basic completion logic - must end with proper punctuation or newlines
@@ -69,14 +83,14 @@ function isCompleteParagraph(raw: string): boolean {
 }
 
 // Custom table renderer to maintain current styling
-const TableRenderer = ({ children, ...props }: any) => (
+const TableRenderer = ({ children, ...props }: any): ReactNode => (
   <div className={classes.table_container}>
     <table {...props}>{children}</table>
   </div>
 );
 
 // Custom code renderer to maintain highlight.js classes exactly
-const CodeRenderer = ({ children, className, ...props }: any) => {
+const CodeRenderer = ({ children, className, ...props }: any): ReactNode => {
   return (
     <code className={`hljs ${className || ''}`} {...props}>
       {children}
@@ -85,7 +99,7 @@ const CodeRenderer = ({ children, className, ...props }: any) => {
 };
 
 // Custom link renderer to integrate defaultLinkTarget prop
-const LinkRenderer = ({ children, href, ...props }: any) => {
+const LinkRenderer = ({ children, href, ...props }: any): ReactNode => {
   const { defaultLinkTarget } = useAsgardTemplateContext();
 
   const handleClick = useCallback(
@@ -106,13 +120,13 @@ const LinkRenderer = ({ children, href, ...props }: any) => {
 };
 
 // Custom math renderers for inline and block math expressions
-const InlineMathRenderer = ({ children, ...props }: any) => (
+const InlineMathRenderer = ({ children, ...props }: any): ReactNode => (
   <span className="math math-inline" {...props}>
     {children}
   </span>
 );
 
-const BlockMathRenderer = ({ children, ...props }: any) => (
+const BlockMathRenderer = ({ children, ...props }: any): ReactNode => (
   <div className="math math-display" {...props}>
     {children}
   </div>
@@ -124,7 +138,7 @@ const components = {
   code: CodeRenderer,
   a: LinkRenderer,
   math: InlineMathRenderer, // Inline math: $expression$
-  div: ({ className, ...props }: any) => {
+  div: ({ className, ...props }: any): ReactNode => {
     // Block math: $$expression$$
     // Check for KaTeX display math classes
     if (
@@ -138,6 +152,7 @@ const components = {
         />
       );
     }
+
     return <div className={className} {...props} />;
   },
 };
@@ -220,6 +235,8 @@ export function useMarkdownRenderer(
               {raw.trim()}
             </ReactMarkdown>
           );
+          // Manage cache size before adding new entry
+          manageCacheSize(cacheRef.current);
           cacheRef.current.set(raw, reactElement);
           newBlocks.push(reactElement);
         }
