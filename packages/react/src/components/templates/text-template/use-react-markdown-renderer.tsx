@@ -53,13 +53,13 @@ function isCompleteParagraph(raw: string): boolean {
   );
 
   const basicCompletion =
-    raw.trim().endsWith('\n\n') ||
-    raw.trim().endsWith('\n') ||
-    raw.trim().endsWith('.') ||
-    raw.trim().endsWith('。') ||
-    raw.trim().endsWith('！') ||
-    raw.trim().endsWith('!') ||
-    raw.trim().endsWith('?') ||
+    raw.endsWith('\n\n') ||
+    raw.endsWith('\n') ||
+    raw.endsWith('.') ||
+    raw.endsWith('。') ||
+    raw.endsWith('！') ||
+    raw.endsWith('!') ||
+    raw.endsWith('?') ||
     hasMarkdownElements || // Has complete markdown elements
     hasCompleteTable; // Has complete table structure
 

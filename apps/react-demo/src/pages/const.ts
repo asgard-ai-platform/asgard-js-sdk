@@ -513,7 +513,7 @@ Regular text with **bold** and \`code\`, plus math: $\\sum_{i=1}^{n} x_i = S$.
 | Quadratic | $y = ax^2 + bx + c$ | $y = x^2 - 4x + 4$ |
 | Exponential | $y = a \\cdot b^x$ | $y = 2 \\cdot 3^x$ |
 
-## Notes
+
 This demonstrates the power of **react-markdown** with **KaTeX** integration! 🎉
 
 
