@@ -28,22 +28,44 @@ type Token = {
 
 // Enhanced completion detection with math expression support
 function isCompleteParagraph(raw: string): boolean {
-  // Basic completion logic
-  const basicCompletion = (
+  // Basic completion logic - must end with proper punctuation or newlines
+  // OR contain complete markdown elements
+  const hasMarkdownElements =
+    /^(#{1,6}\s|>\s|[-*+]\s|\d+\.\s|---+|```|\|.*\|)/m.test(raw.trim());
+
+  // Check for complete table structure (header row + separator + at least one data row)
+  const hasCompleteTable = /\|.*\|\s*\n\s*\|[-:\s|]+\|\s*\n\s*\|.*\|/m.test(
+    raw.trim()
+  );
+
+  const basicCompletion =
     raw.trim().endsWith('\n\n') ||
     raw.trim().endsWith('\n') ||
     raw.trim().endsWith('.') ||
     raw.trim().endsWith('。') ||
-    raw.trim().endsWith('！')
-  );
-  
+    raw.trim().endsWith('！') ||
+    raw.trim().endsWith('!') ||
+    raw.trim().endsWith('?') ||
+    hasMarkdownElements || // Has complete markdown elements
+    hasCompleteTable; // Has complete table structure
+
   // Math-specific completion detection
-  const mathCompletion = (
-    !raw.includes('$') ||                    // No math expressions
-    (raw.match(/\$/g) || []).length % 2 === 0  // Even number of $ signs (complete inline math)
+  // Check for complete math patterns (properly closed with $..$ or $$..$$)
+  const completeInlineMath = /\$[^$\s][^$]*\$/.test(raw);
+  const completeBlockMath = /\$\$[^$]*\$\$/.test(raw);
+  const hasCompleteMath = completeInlineMath || completeBlockMath;
+
+  const mathCompletion =
+    !raw.includes('$') || // No math expressions
+    hasCompleteMath; // Has complete math and no incomplete math
+
+  // Complete if: (basic completion AND math completion) OR complete block math
+  // OR if it's just a single token without newlines (treat as complete)
+  const isSimpleToken = !raw.includes('\n\n') && raw.trim().length > 0;
+
+  return (
+    (basicCompletion && mathCompletion) || (isSimpleToken && mathCompletion)
   );
-  
-  return basicCompletion && mathCompletion;
 }
 
 // Custom table renderer to maintain current styling
@@ -101,11 +123,23 @@ const components = {
   table: TableRenderer,
   code: CodeRenderer,
   a: LinkRenderer,
-  math: InlineMathRenderer,          // Inline math: $expression$
-  div: ({ className, ...props }: any) =>   // Block math: $$expression$$
-    className?.includes('math-display') ? 
-      <BlockMathRenderer {...props} /> : 
-      <div className={className} {...props} />
+  math: InlineMathRenderer, // Inline math: $expression$
+  div: ({ className, ...props }: any) => {
+    // Block math: $$expression$$
+    // Check for KaTeX display math classes
+    if (
+      className?.includes('math-display') ||
+      className?.includes('katex-display')
+    ) {
+      return (
+        <BlockMathRenderer
+          className={`math math-display ${className || ''}`}
+          {...props}
+        />
+      );
+    }
+    return <div className={className} {...props} />;
+  },
 };
 
 export function useMarkdownRenderer(
@@ -126,9 +160,13 @@ export function useMarkdownRenderer(
     if (!text) return [];
 
     // Simple tokenization - split by double newlines for paragraphs
-    const paragraphs = text.split(/\n\s*\n/);
+    // If there are no double newlines, treat the entire text as one token
+    const paragraphs = text.includes('\n\n') ? text.split(/\n\s*\n/) : [text];
 
-    return paragraphs.map((p) => ({ raw: p + '\n\n', type: 'paragraph' }));
+    return paragraphs.map((p) => ({
+      raw: p + (text.includes('\n\n') ? '\n\n' : ''),
+      type: 'paragraph',
+    }));
   }, []);
 
   useEffect(() => {
@@ -149,7 +187,9 @@ export function useMarkdownRenderer(
         return;
       }
 
-      let lastCompleteIndex = tokens.length - 1;
+      // Find the last complete token
+      let lastCompleteIndex = -1;
+
       for (let i = tokens.length - 1; i >= 0; i--) {
         const raw = getRawText(tokens[i].raw);
         if (isCompleteParagraph(raw)) {

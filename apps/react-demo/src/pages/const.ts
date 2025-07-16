@@ -464,7 +464,7 @@ export function createMathTemplateExample(): ConversationMessage {
   return createBaseTemplateExample({
     messageId: crypto.randomUUID(),
     replyToCustomMessageId: '',
-    text: `# Mathematical Expressions Demo 🧮
+    text: `# Mathematical Expressions Demo
 
 ## Inline Math Examples
 - Pythagorean theorem: $a^2 + b^2 = c^2$
@@ -476,27 +476,16 @@ export function createMathTemplateExample(): ConversationMessage {
 ## Block Math Examples
 
 ### Maxwell's Equations
-$$\\begin{aligned}
-\\nabla \\times \\vec{\\mathbf{B}} -\\, \\frac1c\\, \\frac{\\partial\\vec{\\mathbf{E}}}{\\partial t} &= \\frac{4\\pi}{c}\\vec{\\mathbf{j}} \\\\
-\\nabla \\cdot \\vec{\\mathbf{E}} &= 4 \\pi \\rho \\\\
-\\nabla \\times \\vec{\\mathbf{E}}\\, +\\, \\frac1c\\, \\frac{\\partial\\vec{\\mathbf{B}}}{\\partial t} &= \\vec{\\mathbf{0}} \\\\
-\\nabla \\cdot \\vec{\\mathbf{B}} &= 0
-\\end{aligned}$$
+$$\\nabla \\cdot \\mathbf{E} = \\frac{\\rho}{\\epsilon_0}$$
+
+$$\\nabla \\cdot \\mathbf{B} = 0$$
+
+$$\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}$$
+
+$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \mathbf{E}}{\partial t}$$
 
 ### Matrix Operations
-$$\\begin{pmatrix}
-a & b \\\\
-c & d
-\\end{pmatrix}
-\\begin{pmatrix}
-x \\\\
-y
-\\end{pmatrix}
-=
-\\begin{pmatrix}
-ax + by \\\\
-cx + dy
-\\end{pmatrix}$$
+$$\\begin{pmatrix} a & b \\ c & d \\end{pmatrix} \\begin{pmatrix} x \\ y \\end{pmatrix} = \\begin{pmatrix} ax + by \\ cx + dy \\end{pmatrix}$$
 
 ### Calculus Integration
 $$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$
@@ -524,7 +513,11 @@ Regular text with **bold** and \`code\`, plus math: $\\sum_{i=1}^{n} x_i = S$.
 | Quadratic | $y = ax^2 + bx + c$ | $y = x^2 - 4x + 4$ |
 | Exponential | $y = a \\cdot b^x$ | $y = 2 \\cdot 3^x$ |
 
-This demonstrates the power of **react-markdown** with **KaTeX** integration! 🎉`,
+## Notes
+This demonstrates the power of **react-markdown** with **KaTeX** integration! 🎉
+
+
+`,
     payload: null,
     isDebug: false,
     idx: 0,
@@ -535,7 +528,7 @@ This demonstrates the power of **react-markdown** with **KaTeX** integration! �
         { text: 'Show physics formulas' },
         { text: 'Display calculus examples' },
         { text: 'Linear algebra demos' },
-        { text: 'Statistics formulas' }
+        { text: 'Statistics formulas' },
       ],
     },
   });
