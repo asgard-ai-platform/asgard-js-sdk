@@ -139,6 +139,40 @@ The project enforces strict TypeScript and linting rules:
 ### Testing SSE Events
 The core package includes utilities for testing SSE event streams. Use the mock SSE server in tests to simulate real-time events.
 
+## React-Markdown Migration Status
+
+### ✅ Phase 1: Core Migration (Completed)
+- Migrated from `marked` to `react-markdown` with `remark-gfm` support
+- All basic markdown features working: headers, formatting, lists, links, images, tables, code blocks
+- Maintained backward compatibility and existing styling
+- 22 tests added covering core markdown functionality
+
+### ✅ Phase 2: Math Support (Completed)
+- Added KaTeX math rendering support with `remark-math` and `rehype-katex`
+- Supports both inline math (`$...$`) and block math (`$$...$$`)
+- Complex expressions: fractions, Greek letters, matrices, equations, integrals
+- Smart streaming detection for incomplete math expressions
+- 22 additional math-specific tests added
+- Fixed demo content LaTeX escaping issues
+- **Test Results**: 88/88 tests passing (100% success rate)
+
+**Dependencies Added**:
+- `remark-math`: ^6.0.0
+- `rehype-katex`: ^7.0.1  
+- `katex`: ^0.16.22
+
+**Files Modified**:
+- `use-react-markdown-renderer.tsx`: Core math rendering implementation with cache management
+- `use-react-markdown-renderer.spec.tsx`: Comprehensive test suite (88 tests)
+- `const.ts`: Fixed demo math content escaping
+- `text-template.module.scss`: Table container styling
+
+**Phase 2 Extensions**:
+- **Cache Management**: MAX_CACHE_SIZE (100) with LRU eviction strategy
+- **Memory Safety**: Prevents unlimited cache growth in production
+- **Performance Optimization**: Maintains fast rendering with size limits
+- **Test Coverage**: 6 additional cache management tests (88 total)
+
 ## Publishing Workflow
 
 1. Ensure all tests pass: `yarn test:core && yarn test:react`

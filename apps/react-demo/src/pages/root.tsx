@@ -2,12 +2,13 @@ import { Chatbot, ChatbotRef } from '@asgard-js/react';
 import { ReactNode, useCallback, useRef, useState } from 'react';
 import { ConversationMessage } from '@asgard-js/core';
 import {
-  // createButtonTemplateExample,
-  // createCarouselTemplateExample,
-  // createHintTemplateExample,
-  // createTextTemplateExample,
+  createButtonTemplateExample,
+  createCarouselTemplateExample,
+  createHintTemplateExample,
+  createTextTemplateExample,
   createChartTemplateExample,
-  // createImageTemplateExample,
+  createImageTemplateExample,
+  createMathTemplateExample,
 } from './const';
 
 const { VITE_API_KEY, VITE_BOT_PROVIDER_ENDPOINT } = import.meta.env;
@@ -17,13 +18,14 @@ export function Root(): ReactNode {
   const [isOpen, setIsOpen] = useState(true);
 
   const [initMessages] = useState<ConversationMessage[]>([
-    // createTextTemplateExample(),
-    // createHintTemplateExample(),
-    // createButtonTemplateExample(),
-    // createCarouselTemplateExample(),
+    createTextTemplateExample(),
+    createMathTemplateExample(),
+    createHintTemplateExample(),
+    createButtonTemplateExample(),
+    createCarouselTemplateExample(),
     createChartTemplateExample(),
-    // createImageTemplateExample(400, 600),
-    // createImageTemplateExample(600, 400),
+    createImageTemplateExample(400, 600),
+    createImageTemplateExample(600, 400),
   ]);
 
   const chatbotRef = useRef<ChatbotRef>(null);
@@ -83,7 +85,7 @@ export function Root(): ReactNode {
               fetchContextForInitialization,
             }}
             fullScreen
-            title="Chatbot"
+            // title="Chatbot"
             config={{
               botProviderEndpoint: VITE_BOT_PROVIDER_ENDPOINT,
               apiKey: VITE_API_KEY,
