@@ -159,7 +159,7 @@ The core package includes utilities for testing SSE event streams. Use the mock 
 **Dependencies Added**:
 - `remark-math`: ^6.0.0
 - `rehype-katex`: ^7.0.1  
-- `katex`: ^0.16.11
+- `katex`: ^0.16.22
 
 **Files Modified**:
 - `use-react-markdown-renderer.tsx`: Core math rendering implementation with cache management
