@@ -15,7 +15,6 @@ import 'katex/dist/katex.min.css';
 import classes from './text-template.module.scss';
 import { useAsgardTemplateContext } from 'src/context/asgard-template-context';
 import { safeWindowOpen } from 'src/utils/uri-validation';
-
 interface MarkdownRenderResult {
   htmlBlocks: ReactNode;
   lastTypingText: string;
@@ -113,7 +112,13 @@ const LinkRenderer = ({ children, href, ...props }: any): ReactNode => {
   );
 
   return (
-    <a href={href} onClick={handleClick} rel="noopener noreferrer" {...props}>
+    <a
+      className={classes.link}
+      href={href}
+      onClick={handleClick}
+      rel="noopener noreferrer"
+      {...props}
+    >
       {children}
     </a>
   );
