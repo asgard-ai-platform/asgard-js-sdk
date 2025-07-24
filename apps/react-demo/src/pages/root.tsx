@@ -13,13 +13,19 @@ import {
 
 const { VITE_API_KEY, VITE_BOT_PROVIDER_ENDPOINT } = import.meta.env;
 
+// Debug: 檢查環境變數
+console.log('Environment variables:', {
+  VITE_API_KEY,
+  VITE_BOT_PROVIDER_ENDPOINT
+});
+
 export function Root(): ReactNode {
   const [customChannelId] = useState(crypto.randomUUID());
   const [isOpen, setIsOpen] = useState(true);
 
   const [initMessages] = useState<ConversationMessage[]>([
     createTextTemplateExample(),
-    createMathTemplateExample(),
+    // createMathTemplateExample(), // 暫時移除以避免 MathML 警告
     createHintTemplateExample(),
     createButtonTemplateExample(),
     createCarouselTemplateExample(),

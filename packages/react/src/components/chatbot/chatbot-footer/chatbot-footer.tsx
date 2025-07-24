@@ -11,6 +11,8 @@ import {
 import { useAsgardContext } from 'src/context/asgard-service-context';
 import styles from './chatbot-footer.module.scss';
 import SendSvg from 'src/icons/send.svg?react';
+import CameraSvg from 'src/icons/camera.svg?react';
+import GallerySvg from 'src/icons/gallery.svg?react';
 import { SpeechInputButton } from './speech-input-button';
 import clsx from 'clsx';
 import { useAsgardThemeContext } from 'src/context/asgard-theme-context';
@@ -99,6 +101,24 @@ export function ChatbotFooter(): ReactNode {
       style={chatbot.footer?.style}
     >
       <div className={styles.chatbot_footer__content} style={contentStyles}>
+        <div className={styles.attachment_buttons}>
+          <button
+            className={styles.attachment_button}
+            onClick={() => console.log('Camera clicked')}
+            disabled={isConnecting}
+            title="拍照"
+          >
+            <CameraSvg />
+          </button>
+          <button
+            className={styles.attachment_button}
+            onClick={() => console.log('Gallery clicked')}
+            disabled={isConnecting}
+            title="選擇照片"
+          >
+            <GallerySvg />
+          </button>
+        </div>
         <textarea
           ref={textareaRef}
           className={styles.chatbot_textarea}

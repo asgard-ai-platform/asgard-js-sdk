@@ -4,7 +4,7 @@
   .chatbot_footer__content {
     display: grid;
     align-items: flex-end;
-    grid-template-columns: auto 24px;
+    grid-template-columns: auto 1fr auto;
     margin: 0 auto;
     max-width: 1200px;
     padding: var(--asg-spacing-3) var(--asg-spacing-4);
@@ -63,5 +63,49 @@
         fill: rgba(140, 140, 140, 1);
       }
     }
+  }
+}
+
+.attachment_buttons {
+  display: flex;
+  gap: var(--asg-spacing-2);
+  align-items: center;
+}
+
+.attachment_button {
+  font: inherit;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: rgba(140, 140, 140, 1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(67, 67, 67, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  &:active:not(:disabled) {
+    background: rgba(67, 67, 67, 0.5);
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  > svg {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    width: 18px;
+    height: 18px;
   }
 }
