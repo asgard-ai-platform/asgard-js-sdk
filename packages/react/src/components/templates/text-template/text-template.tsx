@@ -1,6 +1,6 @@
 import { CSSProperties, ReactNode, useMemo } from 'react';
 import clsx from 'clsx';
-import { ConversationBotMessage, ConversationMessage } from '@asgard-js/core';
+import { ConversationBotMessage, ConversationMessage, ConversationUserMessage } from '@asgard-js/core';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
 import classes from './text-template.module.scss';
 import { Avatar } from '../avatar';
@@ -47,6 +47,8 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
   if (message.type === 'error') return null;
 
   if (message.type === 'user') {
+    const userMessage = message as ConversationUserMessage;
+    
     return (
       <TemplateBox
         className="asgard-text-template asgard-text-template--user"
@@ -58,7 +60,31 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
           className={clsx(classes.text, classes['text--user'])}
           style={styles}
         >
-          {message.text}
+          {/* 顯示圖片附件 */}
+          {userMessage.files && userMessage.files.length > 0 && (
+            <div className={classes.user_images}>
+              {userMessage.files.map((file, index) => (
+                <div key={index} className={classes.user_image_container}>
+                  <img
+                    src={file.url}
+                    alt={file.name}
+                    className={classes.user_image}
+                    loading="lazy"
+                  />
+                  <div className={classes.user_image_name}>
+                    {file.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* 顯示文字內容（如果有的話） */}
+          {userMessage.text && (
+            <div className={classes.user_text}>
+              {userMessage.text}
+            </div>
+          )}
         </div>
         <Time time={message.time} />
       </TemplateBox>

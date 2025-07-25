@@ -134,6 +134,91 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       });
   }
 
+  async sendMessageWithFiles(payload: FetchSsePayload & { files: File[] }, options?: FetchSseOptions): Promise<void> {
+    // Validate that files are provided
+    if (!payload.files || payload.files.length === 0) {
+      throw new Error('Files must be provided for file upload');
+    }
+
+    // Validate file types (basic image validation)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const invalidFiles = payload.files.filter(file => !allowedTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      throw new Error(`Unsupported file types: ${invalidFiles.map(f => f.type).join(', ')}. Allowed types: ${allowedTypes.join(', ')}`);
+    }
+
+    try {
+      // Step 1: Upload files to get blobIds
+      const blobIds = await this.uploadFiles(payload.files, payload.customChannelId);
+      
+      // Step 2: Send message with blobIds
+      const messagePayload: FetchSsePayload = {
+        customChannelId: payload.customChannelId,
+        customMessageId: payload.customMessageId,
+        text: payload.text,
+        payload: payload.payload,
+        action: payload.action,
+        blobIds: blobIds
+      };
+      
+      this.fetchSse(messagePayload, options);
+    } catch (error) {
+      options?.onSseError?.(error);
+      throw error;
+    }
+  }
+
+  private async uploadFiles(files: File[], customChannelId: string): Promise<string[]> {
+    // 從 SSE 端點構造正確的 blob 端點
+    // SSE: https://api.asgard-ai.com/ns/proj-XXX/bot-provider/bp-XXX/message/sse
+    // Blob: https://api.asgard-ai.com/generic/ns/proj-XXX/bot-provider/bp-XXX/blob
+    const blobEndpoint = this.endpoint
+      .replace('/message/sse', '/blob')
+      .replace('/ns/', '/generic/ns/');
+    const blobIds: string[] = [];
+    
+    // Upload files sequentially to avoid overwhelming the server
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('customChannelId', customChannelId);
+        formData.append('file', file);
+        
+        
+        const response = await fetch(blobEndpoint, {
+          method: 'POST',
+          headers: this.apiKey ? { 'X-API-KEY': this.apiKey } : {},
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          // File upload failed
+          throw new Error(`File upload failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.isSuccess || !result.data || result.data.length === 0) {
+          throw new Error(`File upload failed: ${result.error || 'Unknown error'}`);
+        }
+        
+        const blobData = result.data[0];
+        blobIds.push(blobData.blobId);
+        
+        // Backend returns different channelId format (expected behavior)
+        
+      } catch (error) {
+        // File upload error
+        throw new Error(`Failed to upload file ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    
+    return blobIds;
+  }
+
   close(): void {
     this.destroy$.next();
     this.destroy$.complete();

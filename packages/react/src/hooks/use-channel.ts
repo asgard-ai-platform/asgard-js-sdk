@@ -31,6 +31,7 @@ export interface UseChannelReturn {
   isConnecting: boolean;
   conversation: Conversation | null;
   sendMessage?: (payload: Pick<FetchSsePayload, 'text' | 'payload'>) => void;
+  sendMessageWithFiles?: (payload: Pick<FetchSsePayload, 'text' | 'payload' | 'files'> & { files: File[] }) => Promise<void>;
   resetChannel?: (payload?: Pick<FetchSsePayload, 'text' | 'payload'>) => void;
   closeChannel?: () => void;
 }
@@ -119,8 +120,28 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
   const sendMessage = useCallback(
     (payload: Pick<FetchSsePayload, 'text' | 'payload'>) =>
-      channel?.sendMessage(payload),
-    [channel]
+      channel?.sendMessage({
+        customMessageId,
+        text: payload.text,
+        payload: payload.payload
+      }),
+    [channel, customMessageId]
+  );
+
+  const sendMessageWithFiles = useCallback(
+    async (payload: Pick<FetchSsePayload, 'text' | 'payload' | 'files'> & { files: File[] }): Promise<void> => {
+      if (!channel) {
+        throw new Error('Channel instance is required for file upload');
+      }
+      
+      return channel.sendMessageWithFiles({
+        customMessageId,
+        text: payload.text,
+        payload: payload.payload,
+        files: payload.files
+      });
+    },
+    [channel, customMessageId]
   );
 
   useEffect(() => {
@@ -138,6 +159,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       isConnecting,
       conversation,
       sendMessage,
+      sendMessageWithFiles,
       resetChannel,
       closeChannel,
     }),
@@ -147,6 +169,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       isConnecting,
       conversation,
       sendMessage,
+      sendMessageWithFiles,
       resetChannel,
       closeChannel,
     ]

@@ -19,11 +19,20 @@ export interface ChannelConfig {
   statesObserver?: ObserverOrNext<ChannelStates>;
 }
 
+export interface FileAttachment {
+  name: string;
+  size: number;
+  type: string;
+  url?: string; // Preview URL if available
+  blobId?: string; // Backend blob ID
+}
+
 export type ConversationUserMessage = {
   type: 'user';
   messageId: string;
   text: string;
   time: Date;
+  files?: FileAttachment[]; // File attachments support
 };
 
 export type ConversationBotMessage = {

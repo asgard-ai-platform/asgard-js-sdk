@@ -21,13 +21,27 @@ export function createSseObservable(
   return new Observable<SseResponse<EventType>>((subscriber) => {
     const controller = new AbortController();
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
 
     if (apiKey) {
       headers['X-API-KEY'] = apiKey;
     }
+
+    // Always use JSON format for SSE messages
+    headers['Content-Type'] = 'application/json';
+    
+    // Create payload object, excluding files since they should be uploaded separately
+    const requestPayload = {
+      customChannelId: payload.customChannelId,
+      customMessageId: payload.customMessageId,
+      text: payload.text,
+      action: payload.action,
+      payload: payload.payload,
+      ...(payload.blobIds && payload.blobIds.length > 0 && { blobIds: payload.blobIds })
+    };
+    
+    
+    const body = JSON.stringify(requestPayload);
 
     const searchParams = new URLSearchParams();
 
@@ -44,7 +58,7 @@ export function createSseObservable(
     fetchEventSource(url.toString(), {
       method: 'POST',
       headers,
-      body: payload ? JSON.stringify(payload) : undefined,
+      body,
       signal: controller.signal,
       /**
        * Allow SSE to work when the page is hidden.

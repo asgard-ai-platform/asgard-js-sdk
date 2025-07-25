@@ -4,6 +4,7 @@ import { EventHandler } from './event-emitter';
 
 export interface IAsgardServiceClient {
   fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void;
+  sendMessageWithFiles(payload: FetchSsePayload & { files: File[] }, options?: FetchSseOptions): void;
 }
 
 export type InitEventHandler = EventHandler<SseResponse<EventType.INIT>>;
@@ -69,6 +70,8 @@ export interface FetchSsePayload {
   text: string;
   payload?: Record<string, unknown>;
   action: FetchSseAction;
+  files?: File[];
+  blobIds?: string[];
 }
 
 export interface FetchSseOptions {

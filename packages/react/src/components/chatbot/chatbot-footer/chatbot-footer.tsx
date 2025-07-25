@@ -14,21 +14,25 @@ import SendSvg from 'src/icons/send.svg?react';
 import CameraSvg from 'src/icons/camera.svg?react';
 import GallerySvg from 'src/icons/gallery.svg?react';
 import { SpeechInputButton } from './speech-input-button';
+import { FileSelector } from './file-selector';
+import { ImagePreview } from './image-preview';
 import clsx from 'clsx';
 import { useAsgardThemeContext } from 'src/context/asgard-theme-context';
 
 export function ChatbotFooter(): ReactNode {
-  const { sendMessage, isConnecting } = useAsgardContext();
+  const { sendMessage, sendMessageWithFiles, isConnecting } = useAsgardContext();
 
   const { chatbot } = useAsgardThemeContext();
 
   const [value, setValue] = useState('');
   const [isComposing, setIsComposing] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const disabled = useMemo(
-    () => isConnecting || !value.trim(),
-    [isConnecting, value]
+    () => isConnecting || isUploading || (!value.trim() && selectedFiles.length === 0),
+    [isConnecting, isUploading, value, selectedFiles.length]
   );
 
   const contentStyles = useMemo(
@@ -55,16 +59,41 @@ export function ChatbotFooter(): ReactNode {
     []
   );
 
-  const onSubmit = useCallback(() => {
-    if (!isComposing && !isConnecting) {
-      sendMessage?.({ text: value });
-      setValue('');
+  const handleFilesSelected = useCallback((files: File[]) => {
+    setSelectedFiles(files);
+  }, []);
 
-      if (textareaRef.current) {
-        textareaRef.current.style.height = '36px';
+  const handleRemoveFile = useCallback((index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const onSubmit = useCallback(async () => {
+    if (!isComposing && !isConnecting && (value.trim() || selectedFiles.length > 0)) {
+      try {
+        setIsUploading(true);
+        
+        if (selectedFiles.length > 0) {
+          await sendMessageWithFiles?.({
+            text: value,
+            files: selectedFiles
+          });
+        } else {
+          sendMessage?.({ text: value });
+        }
+        
+        setValue('');
+        setSelectedFiles([]);
+
+        if (textareaRef.current) {
+          textareaRef.current.style.height = '36px';
+        }
+      } catch (error) {
+        // Error handling without console logging
+      } finally {
+        setIsUploading(false);
       }
     }
-  }, [isComposing, isConnecting, sendMessage, value]);
+  }, [isComposing, isConnecting, sendMessage, sendMessageWithFiles, value, selectedFiles]);
 
   const onKeyDown = useCallback<KeyboardEventHandler<HTMLTextAreaElement>>(
     (event) => {
@@ -72,17 +101,13 @@ export function ChatbotFooter(): ReactNode {
         event.key === 'Enter' &&
         !isComposing &&
         !isConnecting &&
-        value.trim()
+        (value.trim() || selectedFiles.length > 0)
       ) {
-        sendMessage?.({ text: value });
-        setValue('');
-
-        const element = event.target as HTMLTextAreaElement;
-
-        element.style.height = '36px';
+        event.preventDefault();
+        onSubmit();
       }
     },
-    [isComposing, isConnecting, sendMessage, value]
+    [isComposing, isConnecting, onSubmit, value, selectedFiles.length]
   );
 
   useEffect(() => {
@@ -104,35 +129,53 @@ export function ChatbotFooter(): ReactNode {
         <div className={styles.attachment_buttons}>
           <button
             className={styles.attachment_button}
-            onClick={() => console.log('Camera clicked')}
-            disabled={isConnecting}
+            onClick={() => {}}
+            disabled={isConnecting || isUploading}
             title="拍照"
           >
             <CameraSvg />
           </button>
-          <button
-            className={styles.attachment_button}
-            onClick={() => console.log('Gallery clicked')}
-            disabled={isConnecting}
-            title="選擇照片"
+          <FileSelector
+            onFilesSelected={handleFilesSelected}
+            accept="image/*"
+            multiple
+            maxSize={20 * 1024 * 1024} // 20MB
+            disabled={isConnecting || isUploading}
           >
-            <GallerySvg />
-          </button>
+            <button
+              className={styles.attachment_button}
+              disabled={isConnecting || isUploading}
+              title="選擇照片"
+            >
+              <GallerySvg />
+            </button>
+          </FileSelector>
         </div>
-        <textarea
-          ref={textareaRef}
-          className={styles.chatbot_textarea}
-          style={chatbot.footer?.textArea?.style}
-          disabled={isConnecting}
-          cols={40}
-          value={value}
-          placeholder="Enter message"
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          onCompositionStart={() => setIsComposing(true)}
-          onCompositionEnd={() => setIsComposing(false)}
-        />
-        {value ? (
+        <div className={styles.input_area}>
+          {selectedFiles.length > 0 && (
+            <div className={styles.file_preview_wrapper}>
+              <ImagePreview
+                files={selectedFiles}
+                onRemove={handleRemoveFile}
+                disabled={isUploading}
+              />
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            className={styles.chatbot_textarea}
+            style={chatbot.footer?.textArea?.style}
+            disabled={isConnecting || isUploading}
+            cols={40}
+            value={value}
+            placeholder={selectedFiles.length > 0 ? "新增訊息（可選）" : "Enter message"}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
+          />
+        </div>
+        {value || selectedFiles.length > 0 ? (
           <button
             className={clsx(
               styles.chatbot_submit_button,

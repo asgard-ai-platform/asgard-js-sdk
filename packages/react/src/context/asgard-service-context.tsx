@@ -29,6 +29,7 @@ export interface AsgardServiceContextValue {
   messages: Map<string, ConversationMessage> | null;
   messageBoxBottomRef: RefObject<HTMLDivElement>;
   sendMessage?: UseChannelReturn['sendMessage'];
+  sendMessageWithFiles?: UseChannelReturn['sendMessageWithFiles'];
   resetChannel?: UseChannelReturn['resetChannel'];
   closeChannel?: UseChannelReturn['closeChannel'];
   botTypingPlaceholder?: string;
@@ -84,6 +85,7 @@ export function AsgardServiceContextProvider(
     isConnecting,
     conversation,
     sendMessage,
+    sendMessageWithFiles,
     resetChannel,
     closeChannel,
   } = useChannel({
@@ -102,6 +104,7 @@ export function AsgardServiceContextProvider(
       isConnecting,
       messages: conversation?.messages ?? null,
       sendMessage,
+      sendMessageWithFiles,
       resetChannel,
       closeChannel,
       botTypingPlaceholder,
@@ -115,6 +118,7 @@ export function AsgardServiceContextProvider(
       isConnecting,
       conversation?.messages,
       sendMessage,
+      sendMessageWithFiles,
       resetChannel,
       closeChannel,
       botTypingPlaceholder,

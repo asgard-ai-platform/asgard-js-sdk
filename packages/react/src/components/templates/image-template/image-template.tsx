@@ -5,7 +5,7 @@ import styles from './image-template.module.scss';
 import { ConversationBotMessage } from '@asgard-js/core';
 import { useAsgardContext } from 'src/context/asgard-service-context';
 import { useAsgardThemeContext } from 'src/context/asgard-theme-context';
-import { ImageMessageTemplate } from '../../../../../core/src';
+import { ImageMessageTemplate } from '@asgard-js/core';
 import CloseSvg from 'src/icons/close.svg?react';
 
 interface ImageTemplateProps {

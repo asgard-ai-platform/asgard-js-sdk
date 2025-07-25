@@ -144,6 +144,66 @@ export default class Channel {
     );
   }
 
+  public async sendMessageWithFiles(
+    payload: Pick<FetchSsePayload, 'customMessageId' | 'text' | 'payload'> & { files: File[] },
+    options?: FetchSseOptions
+  ): Promise<void> {
+    const text = payload.text?.trim() || '';
+    const messageId = payload.customMessageId ?? crypto.randomUUID();
+
+    // Create file attachments from files
+    const fileAttachments = payload.files.map(file => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file), // 建立預覽 URL
+    }));
+
+    // Add user message to conversation first
+    this.conversation$.next(
+      this.conversation$.value.pushMessage({
+        type: 'user',
+        messageId,
+        text,
+        time: new Date(),
+        files: fileAttachments,
+      })
+    );
+
+    // Set connecting state
+    this.isConnecting$.next(true);
+
+    try {
+      // Use client's sendMessageWithFiles method which handles the two-step process
+      await this.client.sendMessageWithFiles({
+        action: FetchSseAction.NONE,
+        customChannelId: this.customChannelId,
+        customMessageId: messageId,
+        payload: payload?.payload,
+        text,
+        files: payload.files
+      }, {
+        onSseStart: options?.onSseStart,
+        onSseMessage: (response) => {
+          options?.onSseMessage?.(response);
+          this.conversation$.next(this.conversation$.value.onMessage(response));
+        },
+        onSseError: (err) => {
+          options?.onSseError?.(err);
+          this.isConnecting$.next(false);
+          throw err;
+        },
+        onSseCompleted: () => {
+          options?.onSseCompleted?.();
+          this.isConnecting$.next(false);
+        },
+      });
+    } catch (error) {
+      this.isConnecting$.next(false);
+      throw error;
+    }
+  }
+
   public close(): void {
     this.isConnecting$.complete();
     this.conversation$.complete();
