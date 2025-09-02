@@ -23,6 +23,7 @@ export interface UseChannelProps {
       conversation: Conversation | null;
     }
   ) => void;
+  onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: any }) => void;
 }
 
 export interface UseChannelReturn {
@@ -44,6 +45,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     customMessageId,
     initMessages,
     onSseMessage,
+    onAuthError,
   } = props;
 
   if (!client) {
@@ -88,8 +90,12 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           onSseCompleted() {
             setIsResetting(false);
           },
-          onSseError() {
+          onSseError(error) {
             setIsResetting(false);
+            // Handle authentication and bot provider errors
+            if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
+              onAuthError?.(error as any);
+            }
           },
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, {
@@ -102,7 +108,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       setIsOpen(true);
       setChannel(channel);
     },
-    [client, customChannelId, customMessageId, initMessages, onSseMessage]
+    [client, customChannelId, customMessageId, initMessages, onSseMessage, onAuthError]
   );
 
   const closeChannel = useCallback(() => {

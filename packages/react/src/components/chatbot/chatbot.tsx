@@ -50,6 +50,7 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   // Auth state props
   authState?: AuthState;
   onApiKeySubmit?: (apiKey: string) => Promise<void>;
+  onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: any }) => void;
 }
 
 export interface ChatbotRef {
@@ -86,6 +87,7 @@ export const Chatbot = forwardRef(function Chatbot(
     defaultLinkTarget,
     authState = 'authenticated',
     onApiKeySubmit,
+    onAuthError,
   } = props;
 
   // Render different content based on authState
@@ -171,6 +173,7 @@ export const Chatbot = forwardRef(function Chatbot(
           customChannelId={customChannelId}
           initMessages={initMessages}
           onSseMessage={onSseMessage}
+          onAuthError={onAuthError}
           botTypingPlaceholder={botTypingPlaceholder}
           inputPlaceholder={inputPlaceholder}
         >

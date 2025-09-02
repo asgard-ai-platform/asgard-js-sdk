@@ -53,7 +53,26 @@ export function createSseObservable(
       openWhenHidden: true,
       onopen: async (response) => {
         if (!response.ok) {
-          subscriber.error(response);
+          // Enhanced error handling for authentication and bot provider issues
+          let errorDetail;
+          try {
+            const errorText = await response.text();
+            errorDetail = JSON.parse(errorText);
+          } catch {
+            errorDetail = { message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+
+          const enhancedError = {
+            response,
+            status: response.status,
+            statusText: response.statusText,
+            errorDetail,
+            isAuthError: response.status === 401,
+            isBotProviderError: response.status === 400 && 
+              (errorDetail?.code === 'BOT_PROVIDER_DISABLED' || errorDetail?.code === 'BOT_PROVIDER_NOT_FOUND'),
+          };
+
+          subscriber.error(enhancedError);
           controller.abort();
         }
       },
