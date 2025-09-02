@@ -1,6 +1,6 @@
 {
   "name": "@asgard-js/react",
-  "version": "0.0.41",
+  "version": "0.0.42-canary.1",
   "publishConfig": {
     "access": "public"
   },
@@ -54,7 +54,7 @@
     "vitest": "^1.6.0"
   },
   "peerDependencies": {
-    "@asgard-js/core": "^0.0.41",
+    "@asgard-js/core": "^0.0.42-canary.1",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
