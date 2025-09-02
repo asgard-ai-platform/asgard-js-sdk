@@ -16,6 +16,7 @@ const { VITE_API_KEY, VITE_BOT_PROVIDER_ENDPOINT } = import.meta.env;
 export function Root(): ReactNode {
   const [customChannelId] = useState(crypto.randomUUID());
   const [isOpen, setIsOpen] = useState(true);
+  const [authState, setAuthState] = useState<'loading' | 'needApiKey' | 'authenticated' | 'error'>('authenticated');
 
   const [initMessages] = useState<ConversationMessage[]>([
     createTextTemplateExample(),
@@ -51,41 +52,98 @@ export function Root(): ReactNode {
           setIsOpen((prev) => !prev);
         }}
       >
-        Toggle
+        Toggle Chatbot
       </button>
+      
+      <div style={{ position: 'fixed', top: '1rem', left: '1rem', zIndex: 11, display: 'flex', gap: '8px', flexDirection: 'column' }}>
+        <button
+          style={{
+            border: '1px solid blue',
+            borderRadius: '5px',
+            color: 'blue',
+            cursor: 'pointer',
+            padding: '0.3rem 0.8rem',
+            fontSize: '12px'
+          }}
+          onClick={() => setAuthState('authenticated')}
+        >
+          Authenticated
+        </button>
+        <button
+          style={{
+            border: '1px solid orange',
+            borderRadius: '5px',
+            color: 'orange',
+            cursor: 'pointer',
+            padding: '0.3rem 0.8rem',
+            fontSize: '12px'
+          }}
+          onClick={() => setAuthState('needApiKey')}
+        >
+          Need API Key
+        </button>
+        <button
+          style={{
+            border: '1px solid gray',
+            borderRadius: '5px',
+            color: 'gray',
+            cursor: 'pointer',
+            padding: '0.3rem 0.8rem',
+            fontSize: '12px'
+          }}
+          onClick={() => setAuthState('loading')}
+        >
+          Loading
+        </button>
+        <button
+          style={{
+            border: '1px solid red',
+            borderRadius: '5px',
+            color: 'red',
+            cursor: 'pointer',
+            padding: '0.3rem 0.8rem',
+            fontSize: '12px'
+          }}
+          onClick={() => setAuthState('error')}
+        >
+          Error
+        </button>
+      </div>
       <div style={{ width: '800px', position: 'relative' }}>
         <div
           style={{ position: 'relative', display: isOpen ? 'block' : 'none' }}
         >
-          <button
-            style={{
-              position: 'absolute',
-              top: '80px',
-              right: '50%',
-              transform: 'translateX(50%)',
-              zIndex: 10,
-              border: '1px solid white',
-              borderRadius: '5px',
-              color: 'white',
-              backgroundColor: 'transparent',
-              cursor: 'pointer',
-              padding: '0.5rem 1rem',
-            }}
-            onClick={() =>
-              chatbotRef.current?.serviceContext?.sendMessage?.({
-                text: 'Hello',
-              })
-            }
-          >
-            Send a message from outside of chatbot
-          </button>
+          {authState === 'authenticated' && (
+            <button
+              style={{
+                position: 'absolute',
+                top: '80px',
+                right: '50%',
+                transform: 'translateX(50%)',
+                zIndex: 10,
+                border: '1px solid white',
+                borderRadius: '5px',
+                color: 'white',
+                backgroundColor: 'transparent',
+                cursor: 'pointer',
+                padding: '0.5rem 1rem',
+              }}
+              onClick={() =>
+                chatbotRef.current?.serviceContext?.sendMessage?.({
+                  text: 'Hello',
+                })
+              }
+            >
+              Send a message from outside of chatbot
+            </button>
+          )}
           <Chatbot
             ref={chatbotRef}
             asyncInitializers={{
               fetchContextForInitialization,
             }}
             fullScreen
-            // title="Chatbot"
+            title="Preview"
             config={{
               botProviderEndpoint: VITE_BOT_PROVIDER_ENDPOINT,
               apiKey: VITE_API_KEY,
@@ -96,7 +154,10 @@ export function Root(): ReactNode {
             loadingComponent={<div>Custom Loading...</div>}
             botTypingPlaceholder="typing"
             customChannelId={customChannelId}
-            initMessages={initMessages}
+            initMessages={authState === 'authenticated' ? initMessages : []}
+            
+            // Auth state prop
+            authState={authState}
             onClose={() => {
               setIsOpen(false);
             }}
