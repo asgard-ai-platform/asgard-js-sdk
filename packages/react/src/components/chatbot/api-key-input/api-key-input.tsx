@@ -60,7 +60,7 @@ export function ApiKeyInput({
       </div>
 
       <form onSubmit={handleSubmit} className={styles.api_key_input__form}>
-        <div className={styles.inputGroup}>
+        <div>
           <label className={styles.api_key_input__label}>Key</label>
           <div className={styles.api_key_input__input_wrapper}>
             <input
@@ -97,9 +97,7 @@ export function ApiKeyInput({
         <button
           type="submit"
           disabled={!apiKey.trim() || loading}
-          className={clsx(styles.api_key_input__submit_button, {
-            [styles['api_key_input__submit_button--loading']]: loading,
-          })}
+          className={styles.api_key_input__submit_button}
           style={{
             backgroundColor: chatbot?.mainColor,
             color: chatbot?.secondaryColor,
