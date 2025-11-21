@@ -6,6 +6,7 @@ export * from './carousel-template';
 export * from './hint-template';
 export * from './chart-template';
 export * from './image-template';
+export * from './video-template';
 export * from './user-image-template';
 
 export * from './quick-replies';
