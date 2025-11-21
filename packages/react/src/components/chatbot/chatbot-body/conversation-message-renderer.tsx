@@ -8,6 +8,7 @@ import {
   TextTemplate,
   ChartTemplate,
   ImageTemplate,
+  VideoTemplate,
   UserImageTemplate,
 } from '../../templates';
 
@@ -47,6 +48,8 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
       return <ChartTemplate message={message} />;
     case MessageTemplateType.IMAGE:
       return <ImageTemplate message={message} />;
+    case MessageTemplateType.VIDEO:
+      return <VideoTemplate message={message} />;
     default:
       return <div />;
   }
