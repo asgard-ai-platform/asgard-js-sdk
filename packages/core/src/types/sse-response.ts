@@ -25,6 +25,7 @@ export interface VideoMessageTemplate extends MessageTemplate {
   originalContentUrl: string;
   previewImageUrl: string;
   duration: number;
+  text?: string;
 }
 
 export interface AudioMessageTemplate extends MessageTemplate {

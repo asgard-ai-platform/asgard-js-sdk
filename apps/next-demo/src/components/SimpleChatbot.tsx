@@ -113,7 +113,10 @@ export default function SimpleChatbot() {
       const waitAndSend = () => {
         if (chatbotRef.current?.serviceContext?.isConnecting) {
           setTimeout(waitAndSend, 0);
-        } else if (textToSend && chatbotRef.current?.serviceContext?.sendMessage) {
+        } else if (
+          textToSend &&
+          chatbotRef.current?.serviceContext?.sendMessage
+        ) {
           chatbotRef.current.serviceContext.sendMessage({ text: textToSend });
         }
       };
