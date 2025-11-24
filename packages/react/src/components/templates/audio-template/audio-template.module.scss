@@ -1,0 +1,31 @@
+.audio_box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  max-width: 60%;
+  min-width: 250px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  gap: 8px;
+}
+
+.audio_player {
+  width: 100%;
+  min-width: 250px;
+  border-radius: 8px;
+  
+  // Hide certain buttons in native controls (as much as possible)
+  &::-webkit-media-controls-download-button {
+    display: none;
+  }
+  
+  &::-webkit-media-controls-fullscreen-button {
+    display: none;
+  }
+  
+  &::-webkit-media-controls-remote-playback-button {
+    display: none;
+  }
+}
+

@@ -32,6 +32,7 @@ export interface AudioMessageTemplate extends MessageTemplate {
   type: MessageTemplateType.AUDIO;
   originalContentUrl: string;
   duration: number;
+  text?: string;
 }
 
 export interface LocationMessageTemplate extends MessageTemplate {
