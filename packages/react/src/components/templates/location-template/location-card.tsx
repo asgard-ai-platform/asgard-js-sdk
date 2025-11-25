@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, MouseEventHandler } from 'react';
+import { ReactNode, MouseEventHandler } from 'react';
 import styles from './location-card.module.scss';
 import { LocationMessageTemplate } from '@asgard-js/core';
 import { safeWindowOpen } from '../../../utils/uri-validation';
@@ -11,9 +11,7 @@ export function LocationCard(props: LocationCardProps): ReactNode {
   const { template } = props;
 
   // Generate Google Maps embed URL (similar to URL preview in chat products, no API key required)
-  const mapEmbedUrl = useMemo(() => {
-    return `https://www.google.com/maps?q=${template.latitude},${template.longitude}&output=embed&z=15`;
-  }, [template.latitude, template.longitude]);
+  const mapEmbedUrl = `https://www.google.com/maps?q=${template.latitude},${template.longitude}&output=embed&z=15`;
 
   // Open Google Maps in a new tab when card is clicked
   const handleCardClick: MouseEventHandler<HTMLDivElement> = () => {
