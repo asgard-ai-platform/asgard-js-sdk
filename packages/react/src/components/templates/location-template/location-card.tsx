@@ -1,4 +1,4 @@
-import { ReactNode, MouseEventHandler } from 'react';
+import { ReactNode } from 'react';
 import styles from './location-card.module.scss';
 import { LocationMessageTemplate } from '@asgard-js/core';
 import { safeWindowOpen } from '../../../utils/uri-validation';
@@ -14,7 +14,7 @@ export function LocationCard(props: LocationCardProps): ReactNode {
   const mapEmbedUrl = `https://www.google.com/maps?q=${template.latitude},${template.longitude}&output=embed&z=15`;
 
   // Open Google Maps in a new tab when card is clicked
-  const handleCardClick: MouseEventHandler<HTMLDivElement> = () => {
+  const handleCardClick = () => {
     const googleMapsUrl = `https://www.google.com/maps?q=${template.latitude},${template.longitude}`;
     safeWindowOpen(googleMapsUrl, '_blank');
   };
@@ -28,7 +28,7 @@ export function LocationCard(props: LocationCardProps): ReactNode {
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleCardClick(e);
+          handleCardClick();
         }
       }}
       style={{ cursor: 'pointer' }}
