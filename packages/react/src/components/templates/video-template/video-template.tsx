@@ -76,7 +76,6 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
   const { avatar, messageBoxBottomRef } = useAsgardContext();
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const previewImageRef = useRef<HTMLImageElement>(null);
 
   // Auto scroll to bottom when VIDEO message is rendered to fully display the preview
   useEffect(() => {
@@ -144,7 +143,6 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
           {!isPlaying ? (
             <div className={styles.video_preview} onClick={handlePlayClick}>
               <img
-                ref={previewImageRef}
                 src={previewImageUrl}
                 alt="Video preview"
                 onLoad={handleImageLoad}
