@@ -10,6 +10,7 @@ import {
   ImageTemplate,
   VideoTemplate,
   AudioTemplate,
+  LocationTemplate,
   UserImageTemplate,
 } from '../../templates';
 
@@ -60,6 +61,8 @@ export function ConversationMessageRenderer(
       return <VideoTemplate message={message} />;
     case MessageTemplateType.AUDIO:
       return <AudioTemplate message={message} />;
+    case MessageTemplateType.LOCATION:
+      return <LocationTemplate message={message} />;
     default:
       return <div />;
   }
