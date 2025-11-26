@@ -1,12 +1,13 @@
-import { CSSProperties, ReactNode, useCallback, useMemo, useRef } from 'react';
+import { CSSProperties, ReactNode, useMemo } from 'react';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import clsx from 'clsx';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
 import { Avatar } from '../avatar';
-import { useDebounce, useResizeObserver } from '../../../hooks';
+import { useDebounce } from '../../../hooks';
 import classes from './text-template.module.scss';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { StreamdownClient } from './streamdown-client';
+
 interface BotTypingBoxProps {
   isTyping: boolean;
   typingText: string | null;
@@ -14,38 +15,9 @@ interface BotTypingBoxProps {
 
 export function BotTypingBox(props: BotTypingBoxProps): ReactNode {
   const { isTyping, typingText } = props;
-  const { messageBoxBottomRef, avatar } = useAsgardContext();
+  const { avatar } = useAsgardContext();
 
   const theme = useAsgardThemeContext();
-
-  const ref = useRef<HTMLDivElement>(null);
-
-  const onResize = useCallback(() => {
-    const bottomElement = messageBoxBottomRef.current;
-    if (!bottomElement) return;
-
-    // 找到滾動容器（chatbot_body）
-    let scrollContainer = bottomElement.parentElement;
-    while (scrollContainer && scrollContainer.scrollHeight <= scrollContainer.clientHeight) {
-      scrollContainer = scrollContainer.parentElement;
-    }
-
-    if (!scrollContainer) {
-      bottomElement.scrollIntoView({ behavior: 'smooth' });
-
-      return;
-    }
-
-    // 檢查是否在底部（threshold = 50px）
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
-
-    if (isAtBottom) {
-      bottomElement.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messageBoxBottomRef]);
-
-  useResizeObserver({ ref, onResize });
 
   const _isTyping = useDebounce(isTyping, 500);
 
@@ -70,7 +42,7 @@ export function BotTypingBox(props: BotTypingBoxProps): ReactNode {
     <TemplateBox className="asgard-text-template asgard-text-template--bot" type="bot" direction="horizontal">
       <Avatar avatar={avatar} />
       <TemplateBoxContent time={new Date()}>
-        <div ref={ref} className={clsx(classes.text, classes['text--bot'])} style={styles}>
+        <div className={clsx(classes.text, classes['text--bot'])} style={styles}>
           <span>
             {typingText ? <StreamdownClient>{typingText}</StreamdownClient> : null}
             {_isTyping && (

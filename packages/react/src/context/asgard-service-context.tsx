@@ -4,10 +4,12 @@ import {
   ForwardedRef,
   ReactNode,
   RefObject,
+  useCallback,
   useContext,
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from 'react';
 import { useAsgardServiceClient, useChannel, UseChannelProps, UseChannelReturn } from '../hooks';
 
@@ -28,6 +30,20 @@ export interface AsgardServiceContextValue {
   inputPlaceholder?: string;
   enableUpload?: boolean;
   enableExport?: boolean;
+  /** 用戶是否正在跟隨最新內容（用於自動滾動判斷） */
+  isFollowingLatest: boolean;
+  /** 設定跟隨狀態 */
+  setFollowingLatest: (value: boolean) => void;
+  /** 滾動到底部（由用戶觸發，會恢復跟隨狀態） */
+  scrollToBottom: (behavior?: ScrollBehavior) => void;
+  /** 程式滾動到底部（不會改變跟隨狀態） */
+  programmaticScrollToBottom: (behavior?: ScrollBehavior) => void;
+  /** 滾動容器的 ref */
+  scrollContainerRef: RefObject<HTMLDivElement>;
+}
+
+function noop(): void {
+  // intentionally empty
 }
 
 export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
@@ -44,6 +60,11 @@ export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
   inputPlaceholder: undefined,
   enableUpload: undefined,
   enableExport: undefined,
+  isFollowingLatest: true,
+  setFollowingLatest: noop,
+  scrollToBottom: noop,
+  programmaticScrollToBottom: noop,
+  scrollContainerRef: { current: null },
 });
 
 export interface AsgardServiceContextProviderProps {
@@ -82,6 +103,32 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
   } = props;
 
   const messageBoxBottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 滾動跟隨狀態管理
+  const [isFollowingLatest, setIsFollowingLatest] = useState(true);
+
+  const setFollowingLatest = useCallback((value: boolean) => {
+    setIsFollowingLatest(value);
+  }, []);
+
+  // 用戶觸發的滾動 - 會恢復跟隨狀態
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const bottomElement = messageBoxBottomRef.current;
+    if (bottomElement) {
+      bottomElement.scrollIntoView({ behavior });
+    }
+
+    setIsFollowingLatest(true);
+  }, []);
+
+  // 程式觸發的滾動（串流更新）- 不改變跟隨狀態
+  const programmaticScrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const bottomElement = messageBoxBottomRef.current;
+    if (bottomElement) {
+      bottomElement.scrollIntoView({ behavior });
+    }
+  }, []);
 
   const client = useAsgardServiceClient({ config });
 
@@ -111,6 +158,11 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       enableUpload,
       enableExport,
       messageBoxBottomRef,
+      scrollContainerRef,
+      isFollowingLatest,
+      setFollowingLatest,
+      scrollToBottom,
+      programmaticScrollToBottom,
     }),
     [
       avatar,
@@ -128,6 +180,10 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       inputPlaceholder,
       enableUpload,
       enableExport,
+      isFollowingLatest,
+      setFollowingLatest,
+      scrollToBottom,
+      programmaticScrollToBottom,
     ],
   );
 
