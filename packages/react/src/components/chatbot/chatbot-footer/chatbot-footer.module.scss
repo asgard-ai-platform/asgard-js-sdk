@@ -68,6 +68,54 @@
   align-items: center;
 }
 
+.attachment_menu_container {
+  position: relative;
+}
+
+.attachment_menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  min-width: 160px;
+  border-radius: 8px;
+  border: 1px solid var(--asg-color-border, #3d3d3d);
+  background: var(--asg-color-bg, #1a1a1a);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.attachment_menu_item {
+  display: flex;
+  align-items: center;
+  gap: var(--asg-spacing-2, 8px);
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--asg-color-text, #e0e0e0);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  > svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  > span {
+    white-space: nowrap;
+  }
+}
+
 .attachment_button {
   font: inherit;
   width: 32px;

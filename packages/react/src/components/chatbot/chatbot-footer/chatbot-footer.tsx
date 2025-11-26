@@ -14,6 +14,8 @@ import styles from './chatbot-footer.module.scss';
 import SendSvg from '../../../icons/send.svg?react';
 import GallerySvg from '../../../icons/gallery.svg?react';
 import DownloadSvg from '../../../icons/download.svg?react';
+import DocumentSvg from '../../../icons/document.svg?react';
+import PlusSvg from '../../../icons/plus.svg?react';
 import { SpeechInputButton } from './speech-input-button';
 import { DocumentUploadButton } from './document-upload-button';
 import clsx from 'clsx';
@@ -80,8 +82,10 @@ export function ChatbotFooter(): ReactNode {
     name: string;
   } | null>(null);
   const [selectedDocuments, setSelectedDocuments] = useState<File[]>([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const disabled = useMemo(
     () => isConnecting || (!value.trim() && selectedFiles.length === 0 && selectedDocuments.length === 0),
@@ -117,6 +121,38 @@ export function ChatbotFooter(): ReactNode {
     }),
     [chatbot],
   );
+
+  // 計算啟用的按鈕數量
+  const enabledButtonCount = useMemo(() => {
+    let count = 0;
+
+    if (enableExport) count++;
+
+    if (enableUpload) count++;
+
+    if (enableDocumentUpload) count++;
+
+    return count;
+  }, [enableExport, enableUpload, enableDocumentUpload]);
+
+  const showCollapsedMenu = enabledButtonCount >= 3;
+
+  // 點擊外部關閉選單
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return (): void => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const onChange = useCallback<ChangeEventHandler<HTMLTextAreaElement>>(event => {
     const element = event.target as HTMLTextAreaElement;
@@ -424,49 +460,124 @@ export function ChatbotFooter(): ReactNode {
       )}
 
       <div className={styles.chatbot_footer__content} style={contentStyles}>
+        {/* Hidden file input for image upload */}
+        {enableUpload && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            onChange={handleFileSelect}
+            className={styles.file_input_hidden}
+          />
+        )}
+
         <div className={styles.attachment_buttons}>
-          {enableExport && (
-            <button
-              className={styles.attachment_button}
-              style={chatbot.footer?.attachmentButton?.style}
-              onClick={handleDownloadClick}
-              title="下載"
-            >
-              <DownloadSvg />
-            </button>
-          )}
-          {enableUpload && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                onChange={handleFileSelect}
-                className={styles.file_input_hidden}
-              />
+          {showCollapsedMenu ? (
+            <div className={styles.attachment_menu_container} ref={menuRef}>
               <button
                 className={styles.attachment_button}
                 style={chatbot.footer?.attachmentButton?.style}
-                onClick={handleGalleryClick}
-                title="選擇照片"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                title="更多選項"
               >
-                <GallerySvg />
+                <PlusSvg />
               </button>
+              {isMenuOpen && (
+                <div
+                  className={styles.attachment_menu}
+                  style={{ backgroundColor: chatbot?.backgroundColor, borderColor: chatbot?.borderColor }}
+                >
+                  {enableDocumentUpload && (
+                    <button
+                      className={styles.attachment_menu_item}
+                      style={{ color: chatbot?.primaryComponent?.secondaryColor }}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx';
+                        input.onchange = (e): void => {
+                          const files = (e.target as HTMLInputElement).files;
+
+                          if (files && files.length > 0) {
+                            setSelectedFiles([]);
+                            setFilePreviewUrls([]);
+                            setSelectedDocuments(prev => [...prev, ...Array.from(files)]);
+                          }
+                        };
+
+                        input.click();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <DocumentSvg />
+                      <span>Document</span>
+                    </button>
+                  )}
+                  {enableUpload && (
+                    <button
+                      className={styles.attachment_menu_item}
+                      style={{ color: chatbot?.primaryComponent?.secondaryColor }}
+                      onClick={() => {
+                        handleGalleryClick();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <GallerySvg />
+                      <span>Image</span>
+                    </button>
+                  )}
+                  {enableExport && (
+                    <button
+                      className={styles.attachment_menu_item}
+                      style={{ color: chatbot?.primaryComponent?.secondaryColor }}
+                      onClick={() => {
+                        handleDownloadClick();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <DownloadSvg />
+                      <span>Export History</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {enableExport && (
+                <button
+                  className={styles.attachment_button}
+                  style={chatbot.footer?.attachmentButton?.style}
+                  onClick={handleDownloadClick}
+                  title="下載"
+                >
+                  <DownloadSvg />
+                </button>
+              )}
+              {enableUpload && (
+                <button
+                  className={styles.attachment_button}
+                  style={chatbot.footer?.attachmentButton?.style}
+                  onClick={handleGalleryClick}
+                  title="選擇照片"
+                >
+                  <GallerySvg />
+                </button>
+              )}
+              {enableDocumentUpload && (
+                <DocumentUploadButton
+                  currentCount={selectedDocuments.length}
+                  onDocumentsChange={files => {
+                    setSelectedFiles([]);
+                    setFilePreviewUrls([]);
+                    setSelectedDocuments(prev => [...prev, ...files]);
+                  }}
+                  className={styles.attachment_button}
+                  style={chatbot.footer?.attachmentButton?.style}
+                />
+              )}
             </>
-          )}
-          {enableDocumentUpload && (
-            <DocumentUploadButton
-              currentCount={selectedDocuments.length}
-              onDocumentsChange={files => {
-                // 清除已選的圖片（圖片和文件只能擇一）
-                setSelectedFiles([]);
-                setFilePreviewUrls([]);
-                setSelectedDocuments(prev => [...prev, ...files]);
-              }}
-              className={styles.attachment_button}
-              style={chatbot.footer?.attachmentButton?.style}
-            />
           )}
         </div>
         <textarea
