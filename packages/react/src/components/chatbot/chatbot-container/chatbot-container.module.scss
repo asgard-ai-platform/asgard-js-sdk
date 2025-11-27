@@ -28,4 +28,6 @@
   display: grid;
   grid-template-rows: max-content auto max-content;
   background-color: var(--asg-color-bg);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }

@@ -89,6 +89,7 @@ export function ChatbotBody(): ReactNode {
         ref={scrollContainerRef}
         className={clsx('asgard-chatbot-body', styles.chatbot_body)}
         style={chatbot?.body?.style}
+        data-scrollable="true"
       >
         <div ref={contentRef} className={styles.chatbot_body__content} style={contentStyles}>
           {Array.from(messages?.values() ?? []).map((message, index) => (
