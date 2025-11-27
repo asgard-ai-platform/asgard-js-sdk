@@ -20,9 +20,14 @@ import { SpeechInputButton } from './speech-input-button';
 import { DocumentUploadButton } from './document-upload-button';
 import clsx from 'clsx';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
-import { validateImageFiles } from '../../../utils/file-validation';
+import {
+  validateImageFiles,
+  SUPPORTED_DOCUMENT_EXTENSIONS,
+  SUPPORTED_DOCUMENT_TYPES,
+} from '../../../utils/file-validation';
 
 const MAX_IMAGE_COUNT = 5;
+const MAX_DOCUMENT_COUNT = 5;
 
 export function ChatbotFooter(): ReactNode {
   const {
@@ -495,14 +500,22 @@ export function ChatbotFooter(): ReactNode {
                       onClick={() => {
                         const input = document.createElement('input');
                         input.type = 'file';
-                        input.accept = '.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx';
+                        input.multiple = true;
+                        input.accept = [...SUPPORTED_DOCUMENT_TYPES, ...SUPPORTED_DOCUMENT_EXTENSIONS].join(',');
                         input.onchange = (e): void => {
                           const files = (e.target as HTMLInputElement).files;
 
                           if (files && files.length > 0) {
                             setSelectedFiles([]);
                             setFilePreviewUrls([]);
-                            setSelectedDocuments(prev => [...prev, ...Array.from(files)]);
+                            const remainingSlots = MAX_DOCUMENT_COUNT - selectedDocuments.length;
+                            const filesToAdd = Array.from(files).slice(0, remainingSlots);
+
+                            if (files.length > remainingSlots) {
+                              alert(`最多只能上傳 ${MAX_DOCUMENT_COUNT} 個檔案，已選擇前 ${remainingSlots} 個`);
+                            }
+
+                            setSelectedDocuments(prev => [...prev, ...filesToAdd]);
                           }
                         };
 
