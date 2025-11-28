@@ -173,13 +173,25 @@ export function ChatbotFooter(): ReactNode {
     setValue(event.target.value);
   }, []);
 
-  // 當 textarea 獲得焦點時（特別是 iOS 虛擬鍵盤彈出），滾動到底部
+  // 控制 textarea 的 focused 狀態，用於觸發 CSS 動畫防止 iOS scroll chaining
+  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
+
+  // 當 textarea 獲得焦點時，觸發 CSS 動畫防止 iOS Safari 自動滾動
+  // 並延遲滾動 chatbot 內部到底部
   const onFocus = useCallback(() => {
-    // 延遲執行讓 iOS 虛擬鍵盤有時間彈出並調整 viewport
+    // 觸發 CSS 動畫防止 iOS scroll chaining
+    setIsTextareaFocused(true);
+
+    // 延遲執行讓 iOS 虛擬鍵盤有時間彈出並調整 viewport，然後滾動 chatbot 到底部
     setTimeout(() => {
       programmaticScrollToBottom('smooth');
     }, 300);
   }, [programmaticScrollToBottom]);
+
+  // 動畫結束後重置狀態，確保下次 focus 時動畫會重新執行
+  const onAnimationEnd = useCallback(() => {
+    setIsTextareaFocused(false);
+  }, []);
 
   const onSubmit = useCallback(async () => {
     if (!isComposing && !isConnecting) {
@@ -604,7 +616,7 @@ export function ChatbotFooter(): ReactNode {
         </div>
         <textarea
           ref={textareaRef}
-          className={styles.chatbot_textarea}
+          className={clsx(styles.chatbot_textarea, isTextareaFocused && styles['chatbot_textarea--focused'])}
           style={chatbot.footer?.textArea?.style}
           cols={40}
           value={value}
@@ -612,6 +624,7 @@ export function ChatbotFooter(): ReactNode {
           onChange={onChange}
           onKeyDown={onKeyDown}
           onFocus={onFocus}
+          onAnimationEnd={onAnimationEnd}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
         />

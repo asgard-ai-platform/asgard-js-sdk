@@ -12,6 +12,19 @@
   }
 }
 
+// iOS Safari 在 input focus 時會自動滾動頁面，這個動畫可以防止這個行為
+// 原理：Safari 在元素 opacity 為 0 時不會觸發自動滾動
+// @see https://gist.github.com/kiding/72721a0553fa93198ae2bb6eefaa3299
+@keyframes prevent_ios_focus_scroll {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
 .chatbot_textarea {
   font: inherit;
   font-size: 16px;
@@ -28,6 +41,10 @@
 
   &::placeholder {
     color: var(--asg-color-text-placeholder);
+  }
+
+  &.chatbot_textarea--focused {
+    animation: prevent_ios_focus_scroll 0.01s;
   }
 }
 
