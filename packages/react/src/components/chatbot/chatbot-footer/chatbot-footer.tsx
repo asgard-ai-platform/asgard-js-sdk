@@ -41,6 +41,7 @@ export function ChatbotFooter(): ReactNode {
     enableDocumentUpload: enableDocumentUploadProp,
     messages,
     title,
+    programmaticScrollToBottom,
   } = useAsgardContext();
   const { data } = useAsgardAppInitializationContext();
 
@@ -171,6 +172,14 @@ export function ChatbotFooter(): ReactNode {
 
     setValue(event.target.value);
   }, []);
+
+  // 當 textarea 獲得焦點時（特別是 iOS 虛擬鍵盤彈出），滾動到底部
+  const onFocus = useCallback(() => {
+    // 延遲執行讓 iOS 虛擬鍵盤有時間彈出並調整 viewport
+    setTimeout(() => {
+      programmaticScrollToBottom('smooth');
+    }, 300);
+  }, [programmaticScrollToBottom]);
 
   const onSubmit = useCallback(async () => {
     if (!isComposing && !isConnecting) {
@@ -602,6 +611,7 @@ export function ChatbotFooter(): ReactNode {
           placeholder={inputPlaceholder || 'Enter message'}
           onChange={onChange}
           onKeyDown={onKeyDown}
+          onFocus={onFocus}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
         />
