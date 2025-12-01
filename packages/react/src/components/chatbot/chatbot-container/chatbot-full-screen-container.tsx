@@ -1,47 +1,83 @@
-import { PropsWithChildren, ReactNode, useMemo, useRef } from 'react';
-import clsx from 'clsx';
-import {
-  useIsOnScreenKeyboardOpen,
-  useOnScreenKeyboardScrollFix,
-  usePreventOverScrolling,
-  useViewportSize,
-} from '../../../hooks';
+import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef } from 'react';
 import classes from './chatbot-container.module.scss';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
+import { useVisualViewport } from '../../../hooks';
 
 export function ChatbotFullScreenContainer(props: PropsWithChildren): ReactNode {
   const { children } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
-
+  const chatbotContainerRef = useRef<HTMLDivElement>(null);
   const theme = useAsgardThemeContext();
 
-  usePreventOverScrolling(containerRef);
+  // Handle iOS virtual keyboard by tracking visualViewport changes
+  useVisualViewport(containerRef);
 
-  const [, height] = useViewportSize() ?? [];
+  // Prevent scroll chaining to parent page
+  useEffect(() => {
+    const container = chatbotContainerRef.current;
+    if (!container) return;
 
-  const isOnScreenKeyboardOpen = useIsOnScreenKeyboardOpen();
+    let touchStartY = 0;
 
-  useOnScreenKeyboardScrollFix(isOnScreenKeyboardOpen);
+    const handleWheel = (e: WheelEvent): void => {
+      const target = e.target as HTMLElement;
+      const scrollableParent = target.closest('[data-scrollable="true"]');
+
+      if (scrollableParent) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollableParent;
+        const isAtTop = scrollTop === 0 && e.deltaY < 0;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight && e.deltaY > 0;
+
+        if (isAtTop || isAtBottom) {
+          e.preventDefault();
+        }
+      } else {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent): void => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent): void => {
+      const target = e.target as HTMLElement;
+      const scrollableParent = target.closest('[data-scrollable="true"]');
+      const touchCurrentY = e.touches[0].clientY;
+      const deltaY = touchStartY - touchCurrentY;
+
+      if (scrollableParent) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollableParent;
+        const isAtTop = scrollTop === 0 && deltaY < 0;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight && deltaY > 0;
+
+        if (isAtTop || isAtBottom) {
+          e.preventDefault();
+        }
+      } else {
+        e.preventDefault();
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return (): void => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, []);
 
   const styles = useMemo(() => {
-    return Object.assign(
-      theme?.chatbot?.backgroundColor
-        ? {
-            backgroundColor: theme.chatbot?.backgroundColor,
-          }
-        : {},
-      isOnScreenKeyboardOpen ? { height } : {},
-    );
-  }, [height, isOnScreenKeyboardOpen, theme]);
+    return theme?.chatbot?.backgroundColor ? { backgroundColor: theme.chatbot?.backgroundColor } : {};
+  }, [theme]);
 
   return (
-    <div className={classes.full_screen}>
-      <div
-        ref={containerRef}
-        className={clsx(classes.chatbot_container, isOnScreenKeyboardOpen && classes.screen_keyboard_open)}
-        style={styles}
-      >
+    <div ref={containerRef} className={classes.full_screen}>
+      <div ref={chatbotContainerRef} className={classes.chatbot_container} style={styles}>
         {children}
       </div>
     </div>

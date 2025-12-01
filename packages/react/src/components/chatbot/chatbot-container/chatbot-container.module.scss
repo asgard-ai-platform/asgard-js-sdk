@@ -15,20 +15,12 @@
 
 .full_screen {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: calc(var(--vh, 1vh) * 100);
+  inset: 0;
   background-color: var(--asg-color-bg);
 
   .chatbot_container {
     height: 100%;
-    transition: all 0.1s;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-
-    &.screen_keyboard_open {
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
-    }
   }
 }
 
@@ -36,4 +28,6 @@
   display: grid;
   grid-template-rows: max-content auto max-content;
   background-color: var(--asg-color-bg);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }

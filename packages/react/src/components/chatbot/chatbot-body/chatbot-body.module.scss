@@ -11,6 +11,7 @@
   min-height: 0;
   overflow-x: hidden;
   overflow-y: scroll;
+  overscroll-behavior-y: contain;
 
   .chatbot_body__content {
     margin: 0 auto;
