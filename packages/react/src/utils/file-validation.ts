@@ -1,5 +1,28 @@
 export const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
+/**
+ * 上傳狀態
+ */
+export type UploadStatus = 'pending' | 'uploading' | 'success' | 'error';
+
+/**
+ * 可上傳的圖片
+ */
+export interface UploadableImage {
+  /** 唯一識別碼 */
+  id: string;
+  /** 原始檔案 */
+  file: File;
+  /** 用於顯示縮圖的 Data URL */
+  previewUrl: string;
+  /** 上傳狀態 */
+  uploadStatus: UploadStatus;
+  /** 上傳成功後的 blobId */
+  blobId?: string;
+  /** 上傳失敗的錯誤訊息 */
+  error?: string;
+}
+
 // 支援的文件類型 MIME types
 export const SUPPORTED_DOCUMENT_TYPES = [
   // Office documents
