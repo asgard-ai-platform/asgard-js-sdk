@@ -93,9 +93,18 @@ export function ChatbotFooter(): ReactNode {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // 檢查是否有圖片正在上傳
+  const isImageUploading = useMemo(
+    () => uploadableImages.some(img => img.uploadStatus === 'uploading'),
+    [uploadableImages],
+  );
+
   const disabled = useMemo(
-    () => isConnecting || (!value.trim() && uploadableImages.length === 0 && selectedDocuments.length === 0),
-    [isConnecting, value, uploadableImages.length, selectedDocuments.length],
+    () =>
+      isConnecting ||
+      isImageUploading ||
+      (!value.trim() && uploadableImages.length === 0 && selectedDocuments.length === 0),
+    [isConnecting, isImageUploading, value, uploadableImages.length, selectedDocuments.length],
   );
 
   const contentStyles = useMemo(
@@ -447,7 +456,13 @@ export function ChatbotFooter(): ReactNode {
         <div className={styles.file_preview_container} style={{ maxWidth: contentStyles.maxWidth }}>
           <div className={styles.file_preview_grid}>
             {uploadableImages.map(image => (
-              <div key={image.id} className={styles.file_preview_item}>
+              <div
+                key={image.id}
+                className={clsx(
+                  styles.file_preview_item,
+                  image.uploadStatus === 'error' && styles.file_preview_item__error,
+                )}
+              >
                 <div className={styles.file_preview_image_area}>
                   <img
                     src={image.previewUrl}
@@ -457,6 +472,33 @@ export function ChatbotFooter(): ReactNode {
                       setPreviewImage({ url: image.previewUrl, name: image.file.name });
                     }}
                   />
+
+                  {/* 上傳中遮罩 */}
+                  {image.uploadStatus === 'uploading' && (
+                    <div className={styles.file_upload_overlay}>
+                      <div className={styles.file_upload_spinner} />
+                    </div>
+                  )}
+
+                  {/* 上傳失敗遮罩 */}
+                  {image.uploadStatus === 'error' && (
+                    <div className={styles.file_error_overlay}>
+                      <svg
+                        className={styles.file_error_icon}
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => handleRemoveImage(image.id)}

@@ -235,6 +235,57 @@
   padding: 0;
 }
 
+// 圖片上傳中的遮罩
+.file_upload_overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Loading spinner
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.file_upload_spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+// 上傳失敗的邊框
+.file_preview_item__error {
+  border-color: #ef4444;
+}
+
+// 上傳失敗的遮罩
+.file_error_overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(239, 68, 68, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file_error_icon {
+  width: 24px;
+  height: 24px;
+  color: #ef4444;
+}
+
 .image_modal {
   position: fixed;
   inset: 0;
