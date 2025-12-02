@@ -204,31 +204,16 @@ export function ChatbotFooter(): ReactNode {
 
   const onSubmit = useCallback(async () => {
     if (!isComposing && !isConnecting) {
-      const hasImages = uploadableImages.length > 0;
       const hasDocuments = selectedDocuments.length > 0;
       const messageText = value.trim();
 
       try {
         let blobIds: string[] | undefined;
 
-        // 上傳圖片檔案
-        if (hasImages && client?.uploadFile && customChannelId) {
-          blobIds = [];
-
-          for (const image of uploadableImages) {
-            try {
-              const response = await client.uploadFile(image.file, customChannelId);
-
-              if (response.isSuccess && response.data?.[0]) {
-                const blobData = response.data[0];
-                blobIds.push(blobData.blobId);
-              } else {
-                // Upload failed, continue with next file
-              }
-            } catch {
-              alert(`檔案 ${image.file.name} 上傳失敗`);
-            }
-          }
+        // 取得已上傳成功的圖片 blobIds（圖片已在選擇時上傳完成）
+        const successfulImages = uploadableImages.filter(img => img.uploadStatus === 'success' && img.blobId);
+        if (successfulImages.length > 0) {
+          blobIds = successfulImages.map(img => img.blobId!);
         }
 
         // 上傳文件檔案
@@ -253,15 +238,15 @@ export function ChatbotFooter(): ReactNode {
           }
         }
 
-        // 如果有檔案但全部上傳失敗，則不發送訊息
-        if ((hasImages || hasDocuments) && (!blobIds || blobIds.length === 0)) {
-          return;
-        }
+        // 取得圖片預覽 URL（只取上傳成功的）
+        const filePreviewUrls = successfulImages.map(img => img.previewUrl);
 
-        // 取得圖片預覽 URL
-        const filePreviewUrls = uploadableImages.map(img => img.previewUrl);
-
-        if (messageText || blobIds || filePreviewUrls.length > 0 || selectedDocuments.length > 0) {
+        if (
+          messageText ||
+          (blobIds && blobIds.length > 0) ||
+          filePreviewUrls.length > 0 ||
+          selectedDocuments.length > 0
+        ) {
           const payload: {
             text: string;
             blobIds?: string[];
