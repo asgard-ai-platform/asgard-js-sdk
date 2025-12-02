@@ -31,7 +31,18 @@ export function LocationTemplate(props: LocationTemplateProps): ReactNode {
         time={message.time}
         quickReplies={template?.quickReplies}
       >
-        <LocationCard template={template} />
+        <LocationCard
+          template={template}
+          customStyle={{
+            style: themeTemplate?.LocationMessageTemplate?.style,
+            title: {
+              style: themeTemplate?.LocationMessageTemplate?.title?.style ?? {},
+            },
+            description: {
+              style: themeTemplate?.LocationMessageTemplate?.description?.style ?? {},
+            },
+          }}
+        />
       </TemplateBoxContent>
     </TemplateBox>
   );

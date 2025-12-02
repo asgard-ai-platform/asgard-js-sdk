@@ -1,20 +1,29 @@
-import { ReactNode } from 'react';
+import { ReactNode, CSSProperties } from 'react';
 import styles from './location-card.module.scss';
 import { LocationMessageTemplate } from '@asgard-js/core';
 import { safeWindowOpen } from '../../../utils/uri-validation';
 
 interface LocationCardProps {
   template: LocationMessageTemplate;
+  customStyle?: {
+    style?: CSSProperties;
+    title?: {
+      style?: CSSProperties;
+    };
+    description?: {
+      style?: CSSProperties;
+    };
+  };
 }
 
 export function LocationCard(props: LocationCardProps): ReactNode {
-  const { template } = props;
+  const { template, customStyle } = props;
 
   // Generate Google Maps embed URL (similar to URL preview in chat products, no API key required)
   const mapEmbedUrl = `https://www.google.com/maps?q=${template.latitude},${template.longitude}&output=embed&z=15`;
 
   // Open Google Maps in a new tab when card is clicked
-  const handleCardClick = () => {
+  const handleCardClick = (): void => {
     const googleMapsUrl = `https://www.google.com/maps?q=${template.latitude},${template.longitude}`;
     safeWindowOpen(googleMapsUrl, '_blank');
   };
@@ -25,13 +34,13 @@ export function LocationCard(props: LocationCardProps): ReactNode {
       onClick={handleCardClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
+      onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           handleCardClick();
         }
       }}
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'pointer', ...customStyle?.style }}
     >
       <div className={styles.map_container}>
         <iframe
@@ -45,8 +54,12 @@ export function LocationCard(props: LocationCardProps): ReactNode {
         />
       </div>
       <div className={styles.card_content}>
-        <h5 className={styles.card_title}>{template?.title}</h5>
-        <div className={styles.card_description}>{template?.text}</div>
+        <h5 className={styles.card_title} style={customStyle?.title?.style}>
+          {template?.title}
+        </h5>
+        <div className={styles.card_description} style={customStyle?.description?.style}>
+          {template?.text}
+        </div>
       </div>
     </div>
   );

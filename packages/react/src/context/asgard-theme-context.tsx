@@ -100,7 +100,15 @@ export interface AsgardThemeContextValue {
     /**
      * TBD: Fill the necessary properties based on the requirements.
      */
-    LocationMessageTemplate: Partial<{ style: CSSProperties }>;
+    LocationMessageTemplate: Partial<{
+      style: CSSProperties;
+      title?: {
+        style: CSSProperties;
+      };
+      description?: {
+        style: CSSProperties;
+      };
+    }>;
     /**
      * TBD: Fill the necessary properties based on the requirements.
      */
@@ -216,6 +224,12 @@ export const defaultAsgardThemeContextValue: AsgardThemeContextValue = {
     },
     LocationMessageTemplate: {
       style: {},
+      title: {
+        style: {},
+      },
+      description: {
+        style: {},
+      },
     },
     ChartMessageTemplate: {
       style: {},
@@ -531,6 +545,11 @@ export function AsgardThemeContextProvider(
         if (mergedTheme.template?.CarouselMessageTemplate?.card?.style) {
           mergedTheme.template.CarouselMessageTemplate.card.style.backgroundColor = cardBgColor;
         }
+
+        // Apply to location template card background color
+        if (mergedTheme.template?.LocationMessageTemplate?.style) {
+          mergedTheme.template.LocationMessageTemplate.style.backgroundColor = cardBgColor;
+        }
       }
 
       // Ensure prop-level chatbot.primaryComponent.secondaryColor is also applied to titles and text
@@ -556,6 +575,11 @@ export function AsgardThemeContextProvider(
         if (mergedTheme.template?.CarouselMessageTemplate?.card?.title?.style) {
           mergedTheme.template.CarouselMessageTemplate.card.title.style.color = titleColor;
         }
+
+        // Apply to location template card title color
+        if (mergedTheme.template?.LocationMessageTemplate?.title?.style) {
+          mergedTheme.template.LocationMessageTemplate.title.style.color = titleColor;
+        }
       }
 
       // Ensure prop-level chatbot.inactiveColor is also applied to card descriptions
@@ -568,6 +592,11 @@ export function AsgardThemeContextProvider(
         // Apply to carousel card description color
         if (mergedTheme.template?.CarouselMessageTemplate?.card?.description?.style) {
           mergedTheme.template.CarouselMessageTemplate.card.description.style.color = theme.chatbot.inactiveColor;
+        }
+
+        // Apply to location template card description color
+        if (mergedTheme.template?.LocationMessageTemplate?.description?.style) {
+          mergedTheme.template.LocationMessageTemplate.description.style.color = theme.chatbot.inactiveColor;
         }
       }
 
