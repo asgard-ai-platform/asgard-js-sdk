@@ -305,6 +305,43 @@ export function ChatbotFooter(): ReactNode {
     [isComposing, isConnecting, value, uploadableImages.length, selectedDocuments.length, onSubmit],
   );
 
+  // 上傳單一圖片
+  const uploadImage = useCallback(
+    async (imageId: string, file: File) => {
+      if (!client?.uploadFile || !customChannelId) {
+        setUploadableImages(prev =>
+          prev.map(img =>
+            img.id === imageId ? { ...img, uploadStatus: 'error' as const, error: '上傳服務不可用' } : img,
+          ),
+        );
+
+        return;
+      }
+
+      try {
+        const response = await client.uploadFile(file, customChannelId);
+
+        if (response.isSuccess && response.data?.[0]) {
+          const blobData = response.data[0];
+          setUploadableImages(prev =>
+            prev.map(img =>
+              img.id === imageId ? { ...img, uploadStatus: 'success' as const, blobId: blobData.blobId } : img,
+            ),
+          );
+        } else {
+          setUploadableImages(prev =>
+            prev.map(img => (img.id === imageId ? { ...img, uploadStatus: 'error' as const, error: '上傳失敗' } : img)),
+          );
+        }
+      } catch {
+        setUploadableImages(prev =>
+          prev.map(img => (img.id === imageId ? { ...img, uploadStatus: 'error' as const, error: '上傳失敗' } : img)),
+        );
+      }
+    },
+    [client, customChannelId],
+  );
+
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
@@ -327,7 +364,7 @@ export function ChatbotFooter(): ReactNode {
             // 清除已選的文件（圖片和文件只能擇一）
             setSelectedDocuments([]);
 
-            // 為每個檔案建立 UploadableImage 並讀取預覽 URL
+            // 為每個檔案建立 UploadableImage 並讀取預覽 URL，然後立即上傳
             for (const file of filesToAdd) {
               const id = crypto.randomUUID();
               const reader = new FileReader();
@@ -338,9 +375,12 @@ export function ChatbotFooter(): ReactNode {
                     id,
                     file,
                     previewUrl: e.target.result,
-                    uploadStatus: 'pending',
+                    uploadStatus: 'uploading',
                   };
                   setUploadableImages(prev => [...prev, newImage]);
+
+                  // 立即開始上傳
+                  uploadImage(id, file);
                 }
               };
 
@@ -352,7 +392,7 @@ export function ChatbotFooter(): ReactNode {
 
       event.target.value = '';
     },
-    [uploadableImages.length],
+    [uploadableImages.length, uploadImage],
   );
 
   const handleGalleryClick = useCallback(() => {
