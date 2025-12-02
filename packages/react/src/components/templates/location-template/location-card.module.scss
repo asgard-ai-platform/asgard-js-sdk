@@ -2,7 +2,6 @@
   width: 255px;
   max-height: 380px;
   border-radius: 8px;
-  background: rgba(51, 51, 51, 1);
   overflow: hidden;
   display: grid;
   grid-template-rows: max-content auto;
@@ -29,6 +28,8 @@
   gap: var(--asg-spacing-2);
   padding: 12px;
   line-height: 1.5em;
+  background: rgba(51, 51, 51, 1);
+  border-radius: 0 0 8px 8px;
 }
 
 .card_title {

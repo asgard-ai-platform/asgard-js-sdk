@@ -28,6 +28,17 @@ export function LocationCard(props: LocationCardProps): ReactNode {
     safeWindowOpen(googleMapsUrl, '_blank');
   };
 
+  // Extract background-related styles to apply only to content area
+  const { backgroundColor, background, ...rootStyles } = customStyle?.style || {};
+  const contentStyle: CSSProperties = {};
+  if (backgroundColor) {
+    contentStyle.backgroundColor = backgroundColor;
+  }
+
+  if (background) {
+    contentStyle.background = background;
+  }
+
   return (
     <div
       className={`asgard-location-card ${styles.card_root}`}
@@ -40,7 +51,7 @@ export function LocationCard(props: LocationCardProps): ReactNode {
           handleCardClick();
         }
       }}
-      style={{ cursor: 'pointer', ...customStyle?.style }}
+      style={{ cursor: 'pointer', ...rootStyles }}
     >
       <div className={styles.map_container}>
         <iframe
@@ -53,7 +64,7 @@ export function LocationCard(props: LocationCardProps): ReactNode {
           referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
-      <div className={styles.card_content}>
+      <div className={styles.card_content} style={contentStyle}>
         <h5 className={styles.card_title} style={customStyle?.title?.style}>
           {template?.title}
         </h5>
