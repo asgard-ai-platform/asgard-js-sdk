@@ -22,9 +22,11 @@ import clsx from 'clsx';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import {
   validateImageFiles,
+  validateDocumentFiles,
   SUPPORTED_DOCUMENT_EXTENSIONS,
   SUPPORTED_DOCUMENT_TYPES,
   UploadableImage,
+  UploadableDocument,
 } from '../../../utils/file-validation';
 
 const MAX_IMAGE_COUNT = 5;
@@ -87,7 +89,7 @@ export function ChatbotFooter(): ReactNode {
     url: string;
     name: string;
   } | null>(null);
-  const [selectedDocuments, setSelectedDocuments] = useState<File[]>([]);
+  const [uploadableDocuments, setUploadableDocuments] = useState<UploadableDocument[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,12 +101,19 @@ export function ChatbotFooter(): ReactNode {
     [uploadableImages],
   );
 
+  // 檢查是否有文件正在上傳
+  const isDocumentUploading = useMemo(
+    () => uploadableDocuments.some(doc => doc.uploadStatus === 'uploading'),
+    [uploadableDocuments],
+  );
+
   const disabled = useMemo(
     () =>
       isConnecting ||
       isImageUploading ||
-      (!value.trim() && uploadableImages.length === 0 && selectedDocuments.length === 0),
-    [isConnecting, isImageUploading, value, uploadableImages.length, selectedDocuments.length],
+      isDocumentUploading ||
+      (!value.trim() && uploadableImages.length === 0 && uploadableDocuments.length === 0),
+    [isConnecting, isImageUploading, isDocumentUploading, value, uploadableImages.length, uploadableDocuments.length],
   );
 
   const contentStyles = useMemo(
@@ -202,87 +211,56 @@ export function ChatbotFooter(): ReactNode {
     setIsTextareaFocused(false);
   }, []);
 
-  const onSubmit = useCallback(async () => {
+  const onSubmit = useCallback(() => {
     if (!isComposing && !isConnecting) {
-      const hasDocuments = selectedDocuments.length > 0;
       const messageText = value.trim();
 
-      try {
-        let blobIds: string[] | undefined;
+      // 取得已上傳成功的圖片 blobIds（圖片已在選擇時上傳完成）
+      const successfulImages = uploadableImages.filter(img => img.uploadStatus === 'success' && img.blobId);
 
-        // 取得已上傳成功的圖片 blobIds（圖片已在選擇時上傳完成）
-        const successfulImages = uploadableImages.filter(img => img.uploadStatus === 'success' && img.blobId);
-        if (successfulImages.length > 0) {
-          blobIds = successfulImages.map(img => img.blobId!);
+      // 取得已上傳成功的文件 blobIds（文件已在選擇時上傳完成）
+      const successfulDocuments = uploadableDocuments.filter(doc => doc.uploadStatus === 'success' && doc.blobId);
+
+      // 合併所有 blobIds
+      const allBlobIds = [...successfulImages.map(img => img.blobId!), ...successfulDocuments.map(doc => doc.blobId!)];
+
+      // 取得圖片預覽 URL（只取上傳成功的）
+      const filePreviewUrls = successfulImages.map(img => img.previewUrl);
+
+      if (messageText || allBlobIds.length > 0 || filePreviewUrls.length > 0 || successfulDocuments.length > 0) {
+        const payload: {
+          text: string;
+          blobIds?: string[];
+          filePreviewUrls?: string[];
+          documentNames?: string[];
+        } = {
+          text: messageText || '',
+        };
+
+        if (allBlobIds.length > 0) {
+          payload.blobIds = allBlobIds;
         }
 
-        // 上傳文件檔案
-        if (hasDocuments && client?.uploadFile && customChannelId) {
-          if (!blobIds) {
-            blobIds = [];
-          }
-
-          for (const file of selectedDocuments) {
-            try {
-              const response = await client.uploadFile(file, customChannelId);
-
-              if (response.isSuccess && response.data?.[0]) {
-                const blobData = response.data[0];
-                blobIds.push(blobData.blobId);
-              } else {
-                // Upload failed, continue with next file
-              }
-            } catch {
-              alert(`檔案 ${file.name} 上傳失敗`);
-            }
-          }
+        if (filePreviewUrls.length > 0) {
+          payload.filePreviewUrls = filePreviewUrls;
         }
 
-        // 取得圖片預覽 URL（只取上傳成功的）
-        const filePreviewUrls = successfulImages.map(img => img.previewUrl);
-
-        if (
-          messageText ||
-          (blobIds && blobIds.length > 0) ||
-          filePreviewUrls.length > 0 ||
-          selectedDocuments.length > 0
-        ) {
-          const payload: {
-            text: string;
-            blobIds?: string[];
-            filePreviewUrls?: string[];
-            documentNames?: string[];
-          } = {
-            text: messageText || '',
-          };
-
-          if (blobIds && blobIds.length > 0) {
-            payload.blobIds = blobIds;
-          }
-
-          if (filePreviewUrls.length > 0) {
-            payload.filePreviewUrls = filePreviewUrls;
-          }
-
-          if (selectedDocuments.length > 0) {
-            payload.documentNames = selectedDocuments.map(file => file.name);
-          }
-
-          sendMessage?.(payload);
+        if (successfulDocuments.length > 0) {
+          payload.documentNames = successfulDocuments.map(doc => doc.file.name);
         }
 
-        setValue('');
-        setUploadableImages([]);
-        setSelectedDocuments([]);
+        sendMessage?.(payload);
+      }
 
-        if (textareaRef.current) {
-          textareaRef.current.style.height = '36px';
-        }
-      } catch {
-        alert('發送訊息失敗，請重試');
+      setValue('');
+      setUploadableImages([]);
+      setUploadableDocuments([]);
+
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '36px';
       }
     }
-  }, [isComposing, isConnecting, sendMessage, value, uploadableImages, selectedDocuments, client, customChannelId]);
+  }, [isComposing, isConnecting, sendMessage, value, uploadableImages, uploadableDocuments]);
 
   const onKeyDown = useCallback<KeyboardEventHandler<HTMLTextAreaElement>>(
     event => {
@@ -290,13 +268,13 @@ export function ChatbotFooter(): ReactNode {
         event.key === 'Enter' &&
         !isComposing &&
         !isConnecting &&
-        (value.trim() || uploadableImages.length > 0 || selectedDocuments.length > 0)
+        (value.trim() || uploadableImages.length > 0 || uploadableDocuments.length > 0)
       ) {
         event.preventDefault();
         onSubmit();
       }
     },
-    [isComposing, isConnecting, value, uploadableImages.length, selectedDocuments.length, onSubmit],
+    [isComposing, isConnecting, value, uploadableImages.length, uploadableDocuments.length, onSubmit],
   );
 
   // 上傳單一圖片
@@ -356,7 +334,7 @@ export function ChatbotFooter(): ReactNode {
 
           if (filesToAdd.length > 0) {
             // 清除已選的文件（圖片和文件只能擇一）
-            setSelectedDocuments([]);
+            setUploadableDocuments([]);
 
             // 為每個檔案建立 UploadableImage 並讀取預覽 URL，然後立即上傳
             for (const file of filesToAdd) {
@@ -402,6 +380,83 @@ export function ChatbotFooter(): ReactNode {
   const handleRemoveImage = useCallback((id: string) => {
     setUploadableImages(prev => prev.filter(img => img.id !== id));
   }, []);
+
+  // 上傳單一文件
+  const uploadDocument = useCallback(
+    async (docId: string, file: File) => {
+      if (!client?.uploadFile || !customChannelId) {
+        setUploadableDocuments(prev =>
+          prev.map(doc =>
+            doc.id === docId ? { ...doc, uploadStatus: 'error' as const, error: '上傳服務不可用' } : doc,
+          ),
+        );
+
+        return;
+      }
+
+      try {
+        const response = await client.uploadFile(file, customChannelId);
+
+        if (response.isSuccess && response.data?.[0]) {
+          const blobData = response.data[0];
+          setUploadableDocuments(prev =>
+            prev.map(doc =>
+              doc.id === docId ? { ...doc, uploadStatus: 'success' as const, blobId: blobData.blobId } : doc,
+            ),
+          );
+        } else {
+          setUploadableDocuments(prev =>
+            prev.map(doc => (doc.id === docId ? { ...doc, uploadStatus: 'error' as const, error: '上傳失敗' } : doc)),
+          );
+        }
+      } catch {
+        setUploadableDocuments(prev =>
+          prev.map(doc => (doc.id === docId ? { ...doc, uploadStatus: 'error' as const, error: '上傳失敗' } : doc)),
+        );
+      }
+    },
+    [client, customChannelId],
+  );
+
+  // 處理文件選擇（共用邏輯）
+  const handleDocumentSelect = useCallback(
+    (files: FileList | File[]) => {
+      const { validFiles, errors } = validateDocumentFiles(files);
+
+      if (errors.length > 0) {
+        alert('檔案驗證錯誤:\n' + errors.join('\n'));
+      }
+
+      if (validFiles.length > 0) {
+        const remainingSlots = MAX_DOCUMENT_COUNT - uploadableDocuments.length;
+        const filesToAdd = validFiles.slice(0, remainingSlots);
+
+        if (validFiles.length > remainingSlots) {
+          alert(`最多只能上傳 ${MAX_DOCUMENT_COUNT} 個檔案，已選擇前 ${remainingSlots} 個`);
+        }
+
+        if (filesToAdd.length > 0) {
+          // 清除已選的圖片（圖片和文件只能擇一）
+          setUploadableImages([]);
+
+          // 建立新文件並立即開始上傳
+          for (const file of filesToAdd) {
+            const id = crypto.randomUUID();
+            const newDoc: UploadableDocument = {
+              id,
+              file,
+              uploadStatus: 'uploading',
+            };
+            setUploadableDocuments(prev => [...prev, newDoc]);
+
+            // 立即開始上傳
+            uploadDocument(id, file);
+          }
+        }
+      }
+    },
+    [uploadableDocuments.length, uploadDocument],
+  );
 
   const handleDownloadClick = useCallback(async () => {
     if (!messages) {
@@ -499,11 +554,18 @@ export function ChatbotFooter(): ReactNode {
         </div>
       )}
 
-      {enableDocumentUpload && selectedDocuments.length > 0 && (
+      {enableDocumentUpload && uploadableDocuments.length > 0 && (
         <div className={styles.file_preview_container} style={{ maxWidth: contentStyles.maxWidth }}>
           <div className={styles.document_preview_grid}>
-            {selectedDocuments.map((file, index) => (
-              <div key={index} className={styles.document_preview_item} style={documentPreviewStyles}>
+            {uploadableDocuments.map(doc => (
+              <div
+                key={doc.id}
+                className={clsx(
+                  styles.document_preview_item,
+                  doc.uploadStatus === 'error' && styles.file_preview_item__error,
+                )}
+                style={documentPreviewStyles}
+              >
                 <div className={styles.document_preview_icon_wrapper}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -525,11 +587,39 @@ export function ChatbotFooter(): ReactNode {
                     <path d="M16 17H8" />
                   </svg>
                 </div>
-                <span className={styles.document_preview_name} style={documentPreviewTextStyles} title={file.name}>
-                  {file.name}
+                <span className={styles.document_preview_name} style={documentPreviewTextStyles} title={doc.file.name}>
+                  {doc.file.name}
                 </span>
+
+                {/* 上傳中遮罩 */}
+                {doc.uploadStatus === 'uploading' && (
+                  <div className={styles.file_upload_overlay}>
+                    <div className={styles.file_upload_spinner} />
+                  </div>
+                )}
+
+                {/* 上傳失敗遮罩 */}
+                {doc.uploadStatus === 'error' && (
+                  <div className={styles.file_error_overlay}>
+                    <svg
+                      className={styles.file_error_icon}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  </div>
+                )}
+
                 <button
-                  onClick={() => setSelectedDocuments(prev => prev.filter((_, i) => i !== index))}
+                  onClick={() => setUploadableDocuments(prev => prev.filter(d => d.id !== doc.id))}
                   className={styles.file_remove_button}
                   aria-label="移除"
                 >
@@ -583,15 +673,7 @@ export function ChatbotFooter(): ReactNode {
                           const files = (e.target as HTMLInputElement).files;
 
                           if (files && files.length > 0) {
-                            setUploadableImages([]);
-                            const remainingSlots = MAX_DOCUMENT_COUNT - selectedDocuments.length;
-                            const filesToAdd = Array.from(files).slice(0, remainingSlots);
-
-                            if (files.length > remainingSlots) {
-                              alert(`最多只能上傳 ${MAX_DOCUMENT_COUNT} 個檔案，已選擇前 ${remainingSlots} 個`);
-                            }
-
-                            setSelectedDocuments(prev => [...prev, ...filesToAdd]);
+                            handleDocumentSelect(files);
                           }
                         };
 
@@ -656,11 +738,8 @@ export function ChatbotFooter(): ReactNode {
               )}
               {enableDocumentUpload && (
                 <DocumentUploadButton
-                  currentCount={selectedDocuments.length}
-                  onDocumentsChange={files => {
-                    setUploadableImages([]);
-                    setSelectedDocuments(prev => [...prev, ...files]);
-                  }}
+                  currentCount={uploadableDocuments.length}
+                  onDocumentsChange={files => handleDocumentSelect(files)}
                   className={styles.attachment_button}
                   style={chatbot.footer?.attachmentButton?.style}
                 />
@@ -682,7 +761,7 @@ export function ChatbotFooter(): ReactNode {
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
         />
-        {value || uploadableImages.length > 0 || selectedDocuments.length > 0 ? (
+        {value || uploadableImages.length > 0 || uploadableDocuments.length > 0 ? (
           <button
             className={clsx(styles.chatbot_submit_button, disabled && styles.chatbot_submit_button__disabled)}
             style={chatbot.footer?.submitButton?.style}

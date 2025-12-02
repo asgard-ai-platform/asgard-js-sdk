@@ -23,6 +23,22 @@ export interface UploadableImage {
   error?: string;
 }
 
+/**
+ * 可上傳的文件
+ */
+export interface UploadableDocument {
+  /** 唯一識別碼 */
+  id: string;
+  /** 原始檔案 */
+  file: File;
+  /** 上傳狀態 */
+  uploadStatus: UploadStatus;
+  /** 上傳成功後的 blobId */
+  blobId?: string;
+  /** 上傳失敗的錯誤訊息 */
+  error?: string;
+}
+
 // 支援的文件類型 MIME types
 export const SUPPORTED_DOCUMENT_TYPES = [
   // Office documents
