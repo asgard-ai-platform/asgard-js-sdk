@@ -54,21 +54,25 @@
 
 .video_player_wrapper {
   position: relative;
-  width: 100%;
   border-radius: 8px;
   overflow: hidden;
   background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .video_player {
   width: 100%;
+  height: 100%;
   display: block;
   border-radius: 8px;
+  object-fit: contain;
 }
 
 .youtube_player {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  height: 100%;
   border-radius: 8px;
   border: none;
 }
