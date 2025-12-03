@@ -29,7 +29,8 @@ export function LocationCard(props: LocationCardProps): ReactNode {
   };
 
   // Extract background-related styles to apply only to content area
-  const { backgroundColor, background, ...rootStyles } = customStyle?.style || {};
+  // Don't apply any styles to card_root to avoid overflow issues
+  const { backgroundColor, background } = customStyle?.style || {};
   const contentStyle: CSSProperties = {};
   if (backgroundColor) {
     contentStyle.backgroundColor = backgroundColor;
@@ -51,7 +52,7 @@ export function LocationCard(props: LocationCardProps): ReactNode {
           handleCardClick();
         }
       }}
-      style={{ cursor: 'pointer', ...rootStyles }}
+      style={{ cursor: 'pointer' }}
     >
       <div className={styles.map_container}>
         <iframe

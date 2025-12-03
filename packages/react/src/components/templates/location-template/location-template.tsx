@@ -20,17 +20,9 @@ export function LocationTemplate(props: LocationTemplateProps): ReactNode {
   const template = message.message.template as LocationMessageTemplate;
 
   return (
-    <TemplateBox
-      className="asgard-location-template"
-      type="bot"
-      direction="horizontal"
-      style={themeTemplate?.LocationMessageTemplate?.style}
-    >
+    <TemplateBox className="asgard-location-template" type="bot" direction="horizontal">
       <Avatar avatar={avatar} />
-      <TemplateBoxContent
-        time={message.time}
-        quickReplies={template?.quickReplies}
-      >
+      <TemplateBoxContent time={message.time} quickReplies={template?.quickReplies}>
         <LocationCard
           template={template}
           customStyle={{
@@ -47,4 +39,3 @@ export function LocationTemplate(props: LocationTemplateProps): ReactNode {
     </TemplateBox>
   );
 }
-
