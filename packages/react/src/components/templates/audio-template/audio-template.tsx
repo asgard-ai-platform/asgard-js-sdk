@@ -37,10 +37,7 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
       style={themeTemplate?.AudioMessageTemplate?.style}
     >
       <Avatar avatar={avatar} />
-      <TemplateBoxContent
-        quickReplies={template.quickReplies}
-        time={message.time}
-      >
+      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time}>
         <div className={styles.audio_box}>
           <audio
             className={styles.audio_player}

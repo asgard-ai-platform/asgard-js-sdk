@@ -14,18 +14,17 @@
   width: 100%;
   min-width: 250px;
   border-radius: 8px;
-  
+
   // Hide certain buttons in native controls (as much as possible)
   &::-webkit-media-controls-download-button {
     display: none;
   }
-  
+
   &::-webkit-media-controls-fullscreen-button {
     display: none;
   }
-  
+
   &::-webkit-media-controls-remote-playback-button {
     display: none;
   }
 }
-
