@@ -1,11 +1,64 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
-import { BotTypingPlaceholder } from '../../templates';
+import { BotTypingPlaceholder, ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import clsx from 'clsx';
 import { useResizeObserver } from '../../../hooks';
+
+// Helper type for grouped messages
+type MessageGroup =
+  | { type: 'message'; message: ConversationMessage }
+  | { type: 'tool-call-group'; toolCalls: ConversationToolCallMessage[] };
+
+// Group consecutive tool-call messages together
+function groupMessages(messages: ConversationMessage[]): MessageGroup[] {
+  const groups: MessageGroup[] = [];
+  let currentToolCallGroup: ConversationToolCallMessage[] = [];
+
+  for (const message of messages) {
+    if (message.type === 'tool-call') {
+      currentToolCallGroup.push(message);
+    } else {
+      // Flush any pending tool-call group
+      if (currentToolCallGroup.length > 0) {
+        groups.push({ type: 'tool-call-group', toolCalls: currentToolCallGroup });
+        currentToolCallGroup = [];
+      }
+
+      groups.push({ type: 'message', message });
+    }
+  }
+
+  // Flush remaining tool-call group
+  if (currentToolCallGroup.length > 0) {
+    groups.push({ type: 'tool-call-group', toolCalls: currentToolCallGroup });
+  }
+
+  return groups;
+}
+
+// Convert tool-call message to ToolCallItemData
+function toolCallToItemData(toolCall: ConversationToolCallMessage): ToolCallItemData {
+  let status: ToolCallStatus = 'pending';
+  if (toolCall.isComplete) {
+    status = toolCall.result?.error ? 'error' : 'completed';
+  }
+
+  return {
+    id: toolCall.messageId,
+    label: toolCall.toolName,
+    status,
+    initial: {
+      toolsetName: toolCall.toolsetName,
+      toolName: toolCall.toolName,
+      parameter: toolCall.parameter,
+    },
+    result: toolCall.result,
+  };
+}
 
 /** 判斷「是否在底部」的閾值 */
 const BOTTOM_THRESHOLD = 50;
@@ -92,12 +145,27 @@ export function ChatbotBody(): ReactNode {
         data-scrollable="true"
       >
         <div ref={contentRef} className={styles.chatbot_body__content} style={contentStyles}>
-          {Array.from(messages?.values() ?? []).map((message, index) => (
-            <ConversationMessageRenderer
-              key={message.messageId || `${message.type}-${index}-${message.time.getTime()}`}
-              message={message}
-            />
-          ))}
+          {groupMessages(Array.from(messages?.values() ?? [])).map((group, index) => {
+            if (group.type === 'tool-call-group') {
+              const items = group.toolCalls.map(toolCallToItemData);
+              const firstToolCall = group.toolCalls[0];
+
+              return (
+                <ToolCallGroupTemplate
+                  key={`tool-call-group-${firstToolCall?.processId || index}`}
+                  items={items}
+                  time={firstToolCall?.time}
+                />
+              );
+            }
+
+            return (
+              <ConversationMessageRenderer
+                key={group.message.messageId || `${group.message.type}-${index}-${group.message.time.getTime()}`}
+                message={group.message}
+              />
+            );
+          })}
           <BotTypingPlaceholder placeholder={botTypingPlaceholder ?? '正在輸入訊息'} />
           <div ref={messageBoxBottomRef} />
         </div>

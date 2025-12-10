@@ -10,5 +10,6 @@ export * from './video-template';
 export * from './audio-template';
 export * from './location-template';
 export * from './user-image-template';
+export * from './tool-call-group';
 
 export * from './quick-replies';

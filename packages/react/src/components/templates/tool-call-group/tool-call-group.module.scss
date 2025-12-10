@@ -1,0 +1,309 @@
+// ToolCallGroup - 外層氣泡樣式
+.tool_call_group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool_call_group__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool_call_group__chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--asgard-tool-call-icon, #8c8c8c);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tool_call_group__chevron--expanded {
+  transform: rotate(90deg);
+}
+
+.tool_call_group__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--asgard-tool-call-text, #fff);
+}
+
+.tool_call_group__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// ToolCallItem styles - 每個項目是一個獨立的深色卡片
+.tool_call_item {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--asgard-tool-call-item-bg, #1a1a1a);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tool_call_item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--asgard-tool-call-hover, rgba(255, 255, 255, 0.05));
+  }
+}
+
+.tool_call_item__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool_call_item__chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--asgard-tool-call-icon, #8c8c8c);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tool_call_item__chevron--expanded {
+  transform: rotate(90deg);
+}
+
+.tool_call_item__label {
+  font-size: 14px;
+  color: var(--asgard-tool-call-text, #fff);
+}
+
+.tool_call_item__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.tool_call_item__status_icon {
+  width: 20px;
+  height: 20px;
+}
+
+.tool_call_item__status_icon--completed {
+  color: #52c41a;
+}
+
+.tool_call_item__status_icon--error {
+  color: #ff4d4f;
+}
+
+.tool_call_item__status_icon--pending {
+  color: #faad14;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.tool_call_item__content {
+  padding: 0 16px 12px 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// JsonViewer styles
+.json_viewer {
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--asgard-json-viewer-bg, #141414);
+  border: 1px solid var(--asgard-tool-call-border, #333);
+}
+
+.json_viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background-color: var(--asgard-json-viewer-header-bg, #1f1f1f);
+  border-bottom: 1px solid var(--asgard-tool-call-border, #333);
+}
+
+.json_viewer__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--asgard-tool-call-text-secondary, #8c8c8c);
+}
+
+.json_viewer__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.json_viewer__action_btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--asgard-tool-call-icon, #8c8c8c);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--asgard-tool-call-hover, rgba(255, 255, 255, 0.1));
+    color: var(--asgard-tool-call-text, #fff);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.json_viewer__content {
+  padding: 8px 10px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.json_viewer__code {
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--asgard-json-viewer-text, #d4d4d4);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+// JSON Syntax Highlighting Colors
+.json_token--key {
+  color: #9cdcfe; // Light blue for keys
+}
+
+.json_token--string {
+  color: #ce9178; // Orange/brown for strings
+}
+
+.json_token--number {
+  color: #b5cea8; // Light green for numbers
+}
+
+.json_token--boolean {
+  color: #569cd6; // Blue for booleans
+}
+
+.json_token--null {
+  color: #569cd6; // Blue for null
+}
+
+.json_token--punctuation {
+  color: #d4d4d4; // Default gray for punctuation
+}
+
+// Modal styles
+.json_modal__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.json_modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  background-color: var(--asgard-json-viewer-bg, #141414);
+  border: 1px solid var(--asgard-tool-call-border, #333);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.json_modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--asgard-json-viewer-header-bg, #1f1f1f);
+  border-bottom: 1px solid var(--asgard-tool-call-border, #333);
+}
+
+.json_modal__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--asgard-tool-call-text, #fff);
+}
+
+.json_modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.json_modal__action_btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--asgard-tool-call-icon, #8c8c8c);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--asgard-tool-call-hover, rgba(255, 255, 255, 0.1));
+    color: var(--asgard-tool-call-text, #fff);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.json_modal__content {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+
+  .json_viewer__code {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}

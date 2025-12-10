@@ -1,4 +1,10 @@
-import { ConversationMessage, EventType, Message, MessageTemplateType } from '@asgard-js/core';
+import {
+  ConversationMessage,
+  ConversationToolCallMessage,
+  EventType,
+  Message,
+  MessageTemplateType,
+} from '@asgard-js/core';
 import { nanoid } from 'nanoid';
 
 const quickReplies = [
@@ -467,7 +473,7 @@ $$\\nabla \\cdot \\mathbf{B} = 0$$
 
 $$\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}$$
 
-$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \mathbf{E}}{\partial t}$$
+$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}$$
 
 ### Matrix Operations
 $$\\begin{pmatrix} a & b \\ c & d \\end{pmatrix} \\begin{pmatrix} x \\ y \\end{pmatrix} = \\begin{pmatrix} ax + by \\ cx + dy \\end{pmatrix}$$
@@ -800,4 +806,134 @@ export function createTableExample(): ConversationMessage {
       quickReplies: [],
     },
   });
+}
+
+// ==================== Thinking Process (Tool Call) Examples ====================
+
+/**
+ * Create a tool call message example (completed state)
+ */
+export function createToolCallExample(options?: {
+  processId?: string;
+  callSeq?: number;
+  toolName?: string;
+  toolsetName?: string;
+  parameter?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  isComplete?: boolean;
+}): ConversationToolCallMessage {
+  const processId = options?.processId ?? `proc-${nanoid(8)}`;
+  const callSeq = options?.callSeq ?? 0;
+
+  return {
+    type: 'tool-call',
+    messageId: `${processId}-${callSeq}`,
+    eventType: options?.isComplete === false ? EventType.TOOL_CALL_START : EventType.TOOL_CALL_COMPLETE,
+    processId,
+    callSeq,
+    toolName: options?.toolName ?? 'get_database_semantic_model',
+    toolsetName: options?.toolsetName ?? 'database',
+    parameter: options?.parameter ?? { database: 'sales_db' },
+    result: options?.isComplete === false ? undefined : options?.result ?? { tables: ['users', 'orders', 'products'] },
+    isComplete: options?.isComplete ?? true,
+    time: new Date(),
+  };
+}
+
+/**
+ * Create a series of tool call examples simulating a typical query flow
+ */
+export function createThinkingProcessExamples(): ConversationMessage[] {
+  const processId = `proc-${nanoid(8)}`;
+
+  return [
+    // Step 1: Analyze database structure
+    createToolCallExample({
+      processId,
+      callSeq: 0,
+      toolName: 'get_database_semantic_model',
+      toolsetName: 'database',
+      parameter: { database: 'sales_db' },
+      result: {
+        tables: ['users', 'orders', 'products', 'categories'],
+        relationships: [
+          { from: 'orders', to: 'users', type: 'many-to-one' },
+          { from: 'orders', to: 'products', type: 'many-to-many' },
+        ],
+      },
+      isComplete: true,
+    }),
+
+    // Step 2: Validate SQL query
+    createToolCallExample({
+      processId,
+      callSeq: 1,
+      toolName: 'dry_run_database_query',
+      toolsetName: 'database',
+      parameter: {
+        sql: 'SELECT u.name, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY order_count DESC LIMIT 5',
+      },
+      result: {
+        valid: true,
+        estimatedRows: 5,
+        executionPlan: 'Index Scan on users',
+      },
+      isComplete: true,
+    }),
+
+    // Step 3: Execute query
+    createToolCallExample({
+      processId,
+      callSeq: 2,
+      toolName: 'execute_database_query',
+      toolsetName: 'database',
+      parameter: {
+        sql: 'SELECT u.name, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY order_count DESC LIMIT 5',
+      },
+      result: {
+        rows: [
+          { name: 'Alice', order_count: 42 },
+          { name: 'Bob', order_count: 35 },
+          { name: 'Charlie', order_count: 28 },
+          { name: 'Diana', order_count: 21 },
+          { name: 'Eve', order_count: 15 },
+        ],
+        totalRows: 5,
+        executionTime: '23ms',
+      },
+      isComplete: true,
+    }),
+  ];
+}
+
+/**
+ * Create a pending (in-progress) tool call example
+ */
+export function createPendingToolCallExample(): ConversationToolCallMessage {
+  return createToolCallExample({
+    toolName: 'analyze_data_patterns',
+    toolsetName: 'analytics',
+    parameter: { dataset: 'user_behavior', timeRange: '30d' },
+    isComplete: false,
+  });
+}
+
+/**
+ * Tool name to display name mapping (for demo purposes)
+ */
+export const TOOL_NAME_MAP: Record<string, string> = {
+  get_database_semantic_model: 'Analyzing database structure',
+  dry_run_database_query: 'Validating SQL query',
+  execute_database_query: 'Executing data sample',
+  generate_sql_statement: 'Generating SQL statement',
+  analyze_data_patterns: 'Analyzing data patterns',
+  analyze_query_performance: 'Analyzing query performance',
+  optimize_sql_query: 'Optimizing SQL query',
+};
+
+/**
+ * Get display name for a tool
+ */
+export function getToolDisplayName(toolName: string): string {
+  return TOOL_NAME_MAP[toolName] || toolName;
 }

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { EventType } from '../constants/enum';
-import { ConversationMessage, SseResponse } from '../types';
+import { ConversationMessage, ConversationToolCallMessage, SseResponse } from '../types';
 
 interface IConversation {
   messages: Map<string, ConversationMessage> | null;
@@ -28,6 +28,10 @@ export default class Conversation implements IConversation {
         return this.onMessageDelta(response as SseResponse<EventType.MESSAGE_DELTA>);
       case EventType.MESSAGE_COMPLETE:
         return this.onMessageComplete(response as SseResponse<EventType.MESSAGE_COMPLETE>);
+      case EventType.TOOL_CALL_START:
+        return this.onToolCallStart(response as SseResponse<EventType.TOOL_CALL_START>);
+      case EventType.TOOL_CALL_COMPLETE:
+        return this.onToolCallComplete(response as SseResponse<EventType.TOOL_CALL_COMPLETE>);
       case EventType.ERROR:
         return this.onMessageError(response as SseResponse<EventType.ERROR>);
       default:
@@ -113,6 +117,51 @@ export default class Conversation implements IConversation {
       time: new Date(),
       traceId: response.traceId,
     });
+
+    return new Conversation({ messages });
+  }
+
+  onToolCallStart(response: SseResponse<EventType.TOOL_CALL_START>): Conversation {
+    const toolCallStart = response.fact.toolCallStart;
+    const messages = new Map(this.messages);
+    const toolCallKey = `${toolCallStart.processId}-${toolCallStart.callSeq}`;
+
+    const toolCallMessage: ConversationToolCallMessage = {
+      type: 'tool-call',
+      eventType: EventType.TOOL_CALL_START,
+      messageId: toolCallKey,
+      processId: toolCallStart.processId,
+      callSeq: toolCallStart.callSeq,
+      toolName: toolCallStart.toolCall.toolName,
+      toolsetName: toolCallStart.toolCall.toolsetName,
+      parameter: toolCallStart.toolCall.parameter,
+      isComplete: false,
+      time: new Date(),
+      traceId: response.traceId,
+    };
+
+    messages.set(toolCallKey, toolCallMessage);
+
+    return new Conversation({ messages });
+  }
+
+  onToolCallComplete(response: SseResponse<EventType.TOOL_CALL_COMPLETE>): Conversation {
+    const toolCallComplete = response.fact.toolCallComplete;
+    const messages = new Map(this.messages);
+    const toolCallKey = `${toolCallComplete.processId}-${toolCallComplete.callSeq}`;
+
+    const existingMessage = messages.get(toolCallKey);
+
+    if (existingMessage?.type === 'tool-call') {
+      const updatedMessage: ConversationToolCallMessage = {
+        ...existingMessage,
+        eventType: EventType.TOOL_CALL_COMPLETE,
+        result: toolCallComplete.toolCallResult,
+        isComplete: true,
+        traceId: response.traceId ?? existingMessage.traceId,
+      };
+      messages.set(toolCallKey, updatedMessage);
+    }
 
     return new Conversation({ messages });
   }

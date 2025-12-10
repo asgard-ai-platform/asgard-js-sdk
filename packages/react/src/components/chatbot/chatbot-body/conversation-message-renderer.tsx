@@ -33,6 +33,11 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
     return <HintTemplate message={message} />;
   }
 
+  // tool-call messages are not rendered in the message flow for now
+  if (message.type === 'tool-call') {
+    return null;
+  }
+
   if (message.isTyping) {
     return <BotTypingBox isTyping={message.isTyping} typingText={message.typingText} />;
   }

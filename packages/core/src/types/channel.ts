@@ -50,4 +50,23 @@ export type ConversationErrorMessage = {
   traceId?: string;
 };
 
-export type ConversationMessage = ConversationUserMessage | ConversationBotMessage | ConversationErrorMessage;
+export type ConversationToolCallMessage = {
+  type: 'tool-call';
+  messageId: string; // `${processId}-${callSeq}`
+  eventType: EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE;
+  processId: string;
+  callSeq: number;
+  toolName: string;
+  toolsetName: string;
+  parameter: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  isComplete: boolean;
+  time: Date;
+  traceId?: string;
+};
+
+export type ConversationMessage =
+  | ConversationUserMessage
+  | ConversationBotMessage
+  | ConversationErrorMessage
+  | ConversationToolCallMessage;
