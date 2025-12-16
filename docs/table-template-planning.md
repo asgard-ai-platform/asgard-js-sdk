@@ -48,7 +48,76 @@ TABLE template 的完整實作位於 **asgard-ai-data-insight-web** 專案中。
 
 ---
 
-## 關鍵型別定義
+## 後端資料結構（SDK 實際使用）
+
+```typescript
+interface TableMessageTemplate {
+  type: 'TABLE';
+  title: string; // 表格標題，例如 "每月銷售額統計"
+  table: {
+    rowType: 'OBJECT' | 'ARRAY'; // 資料列格式
+    columns: Array<{
+      header: string; // 表頭顯示名稱
+      key?: string; // 當 rowType = OBJECT 時，用於存取資料的鍵
+      format?: 'DATE' | 'DATE_TIME' | 'CURRENCY'; // 格式化類型
+    }>;
+    pagination: {
+      size: number; // 每頁筆數
+    } | null; // null 表示不需要分頁
+    data: Record<string, unknown>[] | unknown[][]; // OBJECT 或 ARRAY 格式
+  };
+}
+```
+
+### 資料範例
+
+**rowType = OBJECT:**
+
+```json
+{
+  "type": "TABLE",
+  "title": "每月銷售額統計",
+  "table": {
+    "rowType": "OBJECT",
+    "columns": [
+      { "header": "姓名", "key": "name" },
+      { "header": "年齡", "key": "age" },
+      { "header": "建立時間", "key": "createdAt", "format": "DATE_TIME" }
+    ],
+    "pagination": { "size": 10 },
+    "data": [
+      { "name": "XXX", "age": 30, "createdAt": "2002-10-02T10:00:00-05:00" },
+      { "name": "YYY", "age": 40, "createdAt": "2002-10-02T10:00:00-05:00" }
+    ]
+  }
+}
+```
+
+**rowType = ARRAY:**
+
+```json
+{
+  "type": "TABLE",
+  "title": "每月銷售額統計",
+  "table": {
+    "rowType": "ARRAY",
+    "columns": [
+      { "header": "姓名" },
+      { "header": "年齡" },
+      { "header": "建立時間", "format": "DATE_TIME" }
+    ],
+    "pagination": null,
+    "data": [
+      ["XXX", "30", "2002-10-02T10:00:00-05:00"],
+      ["YYY", "40", "2002-10-02T10:00:00-05:00"]
+    ]
+  }
+}
+```
+
+---
+
+## Data Insight Web 型別定義（參考）
 
 ### VisualSchemaChoice (聯合型別)
 
@@ -75,6 +144,19 @@ interface DomTableSchema {
 ```typescript
 type VisualizationType = 'DOM_TABLE' | 'VEGA';
 ```
+
+---
+
+## 結構對照表
+
+| SDK（後端提供）       | Data Insight Web      | 說明                          |
+| --------------------- | --------------------- | ----------------------------- |
+| `columns.key`         | `columns.name`        | 資料存取鍵                    |
+| `columns.header`      | `columns.display_name`| 表頭顯示名稱                  |
+| `columns.format`      | ❌ 無                 | 格式化：DATE/DATE_TIME/CURRENCY |
+| `rowType`             | ❌ 僅 OBJECT          | 支援 OBJECT 和 ARRAY 兩種格式 |
+| `pagination.size`     | 硬編碼 20             | 可配置每頁筆數                |
+| `title`               | 從外部傳入            | 表格標題                      |
 
 ---
 
@@ -152,7 +234,7 @@ interface DomTableVisualizationProps {
 
 1. **型別定義**
 
-   - `packages/core/src/types/sse-response.ts` - 新增 `DomTableSchema`、`TableMessageTemplate`
+   - `packages/core/src/types/sse-response.ts` - 新增 `TableMessageTemplate`、相關介面
    - `packages/core/src/constants/enum.ts` - 新增 `MessageTemplateType.TABLE`
 
 2. **UI 元件**
@@ -166,15 +248,62 @@ interface DomTableVisualizationProps {
 
 ### 實作優先順序
 
-1. [ ] 新增型別定義
+1. [ ] 新增型別定義（TableMessageTemplate、TableColumn、TablePagination 等）
 2. [ ] 建立 TableTemplate 元件
+   - [ ] 基本表格渲染（支援 OBJECT 和 ARRAY rowType）
+   - [ ] 格式化功能（DATE、DATE_TIME、CURRENCY）
+   - [ ] 分頁功能（當 pagination 不為 null 時）
 3. [ ] 整合到訊息渲染流程
-4. [ ] 新增分頁功能（可選）
+4. [ ] 新增主題支援
+
+### 實作細節
+
+#### 格式化函數
+
+```typescript
+type ColumnFormat = 'DATE' | 'DATE_TIME' | 'CURRENCY';
+
+function formatCellValue(value: unknown, format?: ColumnFormat): string {
+  if (value == null) return '';
+
+  switch (format) {
+    case 'DATE':
+      return new Date(value as string).toLocaleDateString();
+    case 'DATE_TIME':
+      return new Date(value as string).toLocaleString();
+    case 'CURRENCY':
+      return new Intl.NumberFormat('zh-TW', {
+        style: 'currency',
+        currency: 'TWD'
+      }).format(value as number);
+    default:
+      return String(value);
+  }
+}
+```
+
+#### 資料存取邏輯
+
+```typescript
+function getCellValue(
+  row: Record<string, unknown> | unknown[],
+  column: TableColumn,
+  columnIndex: number,
+  rowType: 'OBJECT' | 'ARRAY'
+): unknown {
+  if (rowType === 'ARRAY') {
+    return (row as unknown[])[columnIndex];
+  }
+  return (row as Record<string, unknown>)[column.key!];
+}
+```
 
 ---
 
 ## 待確認事項
 
-1. SDK 是否需要支援分頁？Data Insight 有分頁功能。
+1. ~~SDK 是否需要支援分頁？~~ ✅ 是，由後端 `pagination` 欄位控制
 2. 表格樣式是否需要自訂主題？
-3. 是否需要支援 VEGA 圖表？還是只需要 DOM_TABLE？
+3. ~~是否需要支援 VEGA 圖表？~~ 目前只需要 TABLE
+4. CURRENCY 格式的貨幣單位是否需要可配置？（目前假設 TWD）
+5. 日期格式化是否需要支援 locale 配置？

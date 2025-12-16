@@ -146,6 +146,10 @@ export interface AsgardThemeContextValue {
         };
       };
     }>;
+    /**
+     * TBD: Fill the necessary properties based on the requirements.
+     */
+    TableMessageTemplate: Partial<{ style: CSSProperties }>;
   }>;
 }
 
@@ -264,6 +268,9 @@ export const defaultAsgardThemeContextValue: AsgardThemeContextValue = {
           },
         },
       },
+    },
+    TableMessageTemplate: {
+      style: {},
     },
   },
 };

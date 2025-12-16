@@ -13,6 +13,8 @@ import {
   createImageTemplateExample,
   createMathTemplateExample,
   createEmitButtonTemplateExample,
+  createTableTemplateExample,
+  createTableArrayTemplateExample,
 } from './const';
 
 const { VITE_API_KEY, VITE_BOT_PROVIDER_ENDPOINT } = import.meta.env;
@@ -29,6 +31,8 @@ export function Root(): ReactNode {
     createButtonTemplateExample(),
     createCarouselTemplateExample(),
     createChartTemplateExample(),
+    createTableTemplateExample(),
+    createTableArrayTemplateExample(),
     createImageTemplateExample(400, 600),
     createImageTemplateExample(600, 400),
     createEmitButtonTemplateExample(),
