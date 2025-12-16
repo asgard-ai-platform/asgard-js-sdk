@@ -29,8 +29,8 @@ import {
   UploadableDocument,
 } from '../../../utils/file-validation';
 
-const MAX_IMAGE_COUNT = 5;
-const MAX_DOCUMENT_COUNT = 5;
+const MAX_IMAGE_COUNT = 10;
+const MAX_DOCUMENT_COUNT = 10;
 
 export function ChatbotFooter(): ReactNode {
   const {

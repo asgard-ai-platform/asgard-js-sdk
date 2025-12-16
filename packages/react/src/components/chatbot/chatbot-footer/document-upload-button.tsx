@@ -3,7 +3,7 @@ import DocumentSvg from '../../../icons/document.svg?react';
 import { validateDocumentFiles, SUPPORTED_DOCUMENT_EXTENSIONS } from '../../../utils/file-validation';
 import styles from './chatbot-footer.module.scss';
 
-const MAX_DOCUMENT_COUNT = 5;
+const MAX_DOCUMENT_COUNT = 10;
 
 interface DocumentUploadButtonProps {
   currentCount: number;
