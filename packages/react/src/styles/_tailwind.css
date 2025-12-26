@@ -1,7 +1,11 @@
 /**
- * Tailwind CSS v4 configuration for Streamdown
+ * Tailwind CSS v4 for Streamdown (no preflight)
+ *
+ * 不引入 preflight 以避免污染消費者應用的全域樣式。
+ * 只引入 theme（CSS 變數）和 utilities（工具類）。
  */
-@import 'tailwindcss';
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/utilities.css';
 
 /* Only scan streamdown's compiled JavaScript for class names */
 @source "../../../../node_modules/streamdown/dist/*.js";

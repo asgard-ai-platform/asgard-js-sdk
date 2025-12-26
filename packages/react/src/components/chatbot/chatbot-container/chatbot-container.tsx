@@ -79,7 +79,10 @@ export function ChatbotContainer(props: ChatbotContainerProps): ReactNode {
   }, []);
 
   return (
-    <div className={clsx(classes.chatbot_root, className)} style={Object.assign({}, rootStyle, style)}>
+    <div
+      className={clsx('asgard-chatbot', classes.chatbot_root, className)}
+      style={Object.assign({}, rootStyle, style)}
+    >
       {fullScreen ? (
         <ChatbotFullScreenContainer>{children}</ChatbotFullScreenContainer>
       ) : (
