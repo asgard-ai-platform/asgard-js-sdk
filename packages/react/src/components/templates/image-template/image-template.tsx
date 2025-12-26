@@ -39,7 +39,7 @@ export function ImageTemplate(props: ImageTemplateProps): ReactNode {
       style={themeTemplate?.ImageMessageTemplate?.style}
     >
       <Avatar avatar={avatar} />
-      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time}>
+      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time} message={message}>
         <div className={styles.image_box} onClick={() => setIsFullScreen(true)}>
           <img src={previewImageUrl} alt="Conversation content" />
         </div>

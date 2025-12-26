@@ -42,18 +42,22 @@ const scopeUtilities = prefixSelector({
     if (filePath && filePath.includes('.module.')) {
       return selector;
     }
+
     // Skip CSS Variables definitions
     if (selector.includes(':root') || selector.includes(':host')) {
       return selector;
     }
+
     // Skip selectors that already have .asgard-chatbot
     if (selector.includes('.asgard-chatbot')) {
       return selector;
     }
+
     // Skip @keyframes internal rules
     if (rule.parent?.type === 'atrule' && rule.parent.name === 'keyframes') {
       return selector;
     }
+
     return prefixedSelector;
   },
 });

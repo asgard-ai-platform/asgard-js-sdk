@@ -40,6 +40,9 @@ export function HintTemplate(props: HintTemplateProps): ReactNode {
       </div>
     );
 
+  // Only bot messages have the message.template property
+  if (message.type !== 'bot') return null;
+
   const template = message.message.template;
 
   if (template.type !== MessageTemplateType.HINT) return null;

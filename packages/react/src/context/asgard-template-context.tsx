@@ -1,5 +1,15 @@
 import { createContext, PropsWithChildren, ReactNode, useContext, useMemo } from 'react';
-import { ConversationErrorMessage, FetchSsePayload } from '@asgard-js/core';
+import { ConversationBotMessage, ConversationErrorMessage, FetchSsePayload } from '@asgard-js/core';
+
+/**
+ * Configuration for a message action button
+ */
+export interface MessageActionConfig {
+  /** Unique identifier for the action */
+  id: string;
+  /** Display label for the action button */
+  label: string;
+}
 
 export interface AsgardTemplateContextValue {
   onErrorClick?: (message: ConversationErrorMessage) => void;
@@ -15,6 +25,10 @@ export interface AsgardTemplateContextValue {
     },
   ) => void;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
+  /** Function to define which actions to display for each bot message */
+  messageActions?: (message: ConversationBotMessage) => MessageActionConfig[];
+  /** Callback when a message action button is clicked */
+  onMessageAction?: (actionId: string, message: ConversationBotMessage) => void;
 }
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
@@ -22,6 +36,8 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   errorMessageRenderer: undefined,
   onTemplateBtnClick: undefined,
   defaultLinkTarget: undefined,
+  messageActions: undefined,
+  onMessageAction: undefined,
 });
 
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
@@ -38,10 +54,20 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
     },
   ) => void;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
+  messageActions?: (message: ConversationBotMessage) => MessageActionConfig[];
+  onMessageAction?: (actionId: string, message: ConversationBotMessage) => void;
 }
 
 export function AsgardTemplateContextProvider(props: AsgardTemplateContextProviderProps): ReactNode {
-  const { children, onErrorClick, errorMessageRenderer, onTemplateBtnClick, defaultLinkTarget } = props;
+  const {
+    children,
+    onErrorClick,
+    errorMessageRenderer,
+    onTemplateBtnClick,
+    defaultLinkTarget,
+    messageActions,
+    onMessageAction,
+  } = props;
 
   const contextValue = useMemo(
     () => ({
@@ -49,8 +75,10 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       errorMessageRenderer,
       onTemplateBtnClick,
       defaultLinkTarget,
+      messageActions,
+      onMessageAction,
     }),
-    [errorMessageRenderer, onErrorClick, onTemplateBtnClick, defaultLinkTarget],
+    [errorMessageRenderer, onErrorClick, onTemplateBtnClick, defaultLinkTarget, messageActions, onMessageAction],
   );
 
   return <AsgardTemplateContext.Provider value={contextValue}>{children}</AsgardTemplateContext.Provider>;

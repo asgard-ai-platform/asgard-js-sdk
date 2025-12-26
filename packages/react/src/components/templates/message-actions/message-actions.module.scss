@@ -1,0 +1,21 @@
+.message_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.message_action {
+  font: inherit;
+  font-size: 13px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #4a9eff;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

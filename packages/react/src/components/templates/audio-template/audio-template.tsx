@@ -26,7 +26,7 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
       }
     }, 100);
 
-    return () => clearTimeout(timer);
+    return (): void => clearTimeout(timer);
   }, [messageBoxBottomRef]);
 
   return (
@@ -37,7 +37,7 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
       style={themeTemplate?.AudioMessageTemplate?.style}
     >
       <Avatar avatar={avatar} />
-      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time}>
+      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time} message={message}>
         <div className={styles.audio_box}>
           <audio
             className={styles.audio_player}
