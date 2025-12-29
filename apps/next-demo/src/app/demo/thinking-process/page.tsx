@@ -19,8 +19,7 @@ export default function ThinkingProcessDemoPage(): ReactElement {
       <Chatbot
         customChannelId={nanoid()}
         config={{
-          botProviderEndpoint:
-            'https://api.dev.asgard-ai.com/ns/proj-dd7ad3e6-fb6a-4471-a273-de843ed343ad/bot-provider/bp-asgard-dd7ad3e6-fb6a-4471-a273-de843ed343ad',
+          botProviderEndpoint: process.env.NEXT_PUBLIC_BOT_PROVIDER_ENDPOINT || 'http://localhost:4300/api/mock-sse',
           apiKey: process.env.NEXT_PUBLIC_API_KEY || '',
         }}
         fullScreen={true}

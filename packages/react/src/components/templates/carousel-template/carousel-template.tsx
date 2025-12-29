@@ -28,7 +28,7 @@ export function CarouselTemplate(props: CarouselTemplateProps): ReactNode {
       style={themeTemplate?.CarouselMessageTemplate?.style}
     >
       <Avatar avatar={avatar} />
-      <TemplateBoxContent quickReplies={template.quickReplies}>
+      <TemplateBoxContent quickReplies={template.quickReplies} references={template.references}>
         <div className={styles.carousel_root}>
           {template.columns?.map((column: Omit<ButtonMessageTemplate, 'type' | 'quickReplies'>, index: number) => (
             <Card

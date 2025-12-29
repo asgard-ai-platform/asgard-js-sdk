@@ -22,7 +22,7 @@ export function ButtonTemplate(props: ButtonTemplateProps): ReactNode {
   return (
     <TemplateBox className="asgard-button-template" type="bot" direction="horizontal">
       <Avatar avatar={avatar} />
-      <TemplateBoxContent time={message.time} quickReplies={template?.quickReplies}>
+      <TemplateBoxContent time={message.time} quickReplies={template?.quickReplies} references={template?.references}>
         <Card
           template={template}
           customStyle={{

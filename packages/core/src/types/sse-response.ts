@@ -1,7 +1,13 @@
 import { EventType, MessageTemplateType } from '../constants/enum';
 
+export interface Reference {
+  title: string;
+  uri: string;
+}
+
 export interface MessageTemplate {
   quickReplies: { text: string }[];
+  references?: Reference[];
 }
 
 export interface TextMessageTemplate extends MessageTemplate {

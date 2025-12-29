@@ -22,7 +22,7 @@ export function LocationTemplate(props: LocationTemplateProps): ReactNode {
   return (
     <TemplateBox className="asgard-location-template" type="bot" direction="horizontal">
       <Avatar avatar={avatar} />
-      <TemplateBoxContent time={message.time} quickReplies={template?.quickReplies}>
+      <TemplateBoxContent time={message.time} quickReplies={template?.quickReplies} references={template?.references}>
         <LocationCard
           template={template}
           customStyle={{
