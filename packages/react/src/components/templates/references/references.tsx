@@ -15,7 +15,7 @@ interface ReferencesProps {
 export function References(props: ReferencesProps): ReactNode {
   const { references, time } = props;
 
-  const { template, botMessage } = useAsgardThemeContext();
+  const { template, botMessage, chatbot } = useAsgardThemeContext();
   const { defaultLinkTarget } = useAsgardTemplateContext();
 
   const handleClick = useCallback(
@@ -34,6 +34,21 @@ export function References(props: ReferencesProps): ReactNode {
     [botMessage, template],
   );
 
+  const titleStyle = useMemo<CSSProperties>(
+    () => ({
+      color: chatbot?.inactiveColor,
+      ...template?.references?.title?.style,
+    }),
+    [chatbot, template],
+  );
+
+  const dividerStyle = useMemo<CSSProperties>(
+    () => ({
+      backgroundColor: chatbot?.borderColor,
+    }),
+    [chatbot],
+  );
+
   if (!references?.length) {
     return null;
   }
@@ -46,7 +61,10 @@ export function References(props: ReferencesProps): ReactNode {
       >
         <div className={styles.references_inner}>
           <div className={styles.references_header}>
-            <span className={styles.references_title}>References</span>
+            <span className={styles.references_title} style={titleStyle}>
+              Reference
+            </span>
+            <span className={styles.references_divider} style={dividerStyle} />
           </div>
           <div className={styles.references_list}>
             {references.map((reference, index) => (

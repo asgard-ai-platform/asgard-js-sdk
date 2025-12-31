@@ -10,7 +10,6 @@
   display: inline-block;
   padding: 8px 12px;
   border-radius: 8px;
-  color: white;
   word-break: break-all;
 }
 
@@ -26,14 +25,22 @@
 }
 
 .references_header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
 .references_title {
   font-size: inherit;
-  color: inherit;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.references_divider {
+  flex: 1;
+  height: 1px;
+  min-width: 0;
 }
 
 .references_list {
