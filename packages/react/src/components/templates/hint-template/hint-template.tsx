@@ -40,7 +40,10 @@ export function HintTemplate(props: HintTemplateProps): ReactNode {
       </div>
     );
 
-  const template = message.message.template;
+  const botConversationMessage = message.type === 'bot' ? message : undefined;
+  if (!botConversationMessage) return null;
+
+  const template = botConversationMessage.message.template;
 
   if (template.type !== MessageTemplateType.HINT) return null;
 
