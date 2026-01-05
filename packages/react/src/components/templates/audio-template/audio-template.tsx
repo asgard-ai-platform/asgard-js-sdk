@@ -26,7 +26,7 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
       }
     }, 100);
 
-    return () => clearTimeout(timer);
+    return (): void => clearTimeout(timer);
   }, [messageBoxBottomRef]);
 
   return (

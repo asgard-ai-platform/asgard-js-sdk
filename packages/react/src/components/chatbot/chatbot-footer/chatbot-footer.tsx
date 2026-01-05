@@ -216,13 +216,19 @@ export function ChatbotFooter(): ReactNode {
       const messageText = value.trim();
 
       // 取得已上傳成功的圖片 blobIds（圖片已在選擇時上傳完成）
-      const successfulImages = uploadableImages.filter(img => img.uploadStatus === 'success' && img.blobId);
+      const successfulImages = uploadableImages.filter(
+        (img): img is UploadableImage & { blobId: string } =>
+          img.uploadStatus === 'success' && img.blobId !== undefined,
+      );
 
       // 取得已上傳成功的文件 blobIds（文件已在選擇時上傳完成）
-      const successfulDocuments = uploadableDocuments.filter(doc => doc.uploadStatus === 'success' && doc.blobId);
+      const successfulDocuments = uploadableDocuments.filter(
+        (doc): doc is UploadableDocument & { blobId: string } =>
+          doc.uploadStatus === 'success' && doc.blobId !== undefined,
+      );
 
       // 合併所有 blobIds
-      const allBlobIds = [...successfulImages.map(img => img.blobId!), ...successfulDocuments.map(doc => doc.blobId!)];
+      const allBlobIds = [...successfulImages.map(img => img.blobId), ...successfulDocuments.map(doc => doc.blobId)];
 
       // 取得圖片預覽 URL（只取上傳成功的）
       const filePreviewUrls = successfulImages.map(img => img.previewUrl);

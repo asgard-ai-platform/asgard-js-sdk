@@ -64,6 +64,8 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
     );
   }
 
+  if (message.type !== 'bot') return null;
+
   return (
     <TemplateBox
       className="asgard-text-template asgard-text-template--bot"
