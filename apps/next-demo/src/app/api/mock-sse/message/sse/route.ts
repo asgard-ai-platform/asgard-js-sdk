@@ -1,8 +1,7 @@
-import { NextRequest } from 'next/server';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-export async function POST(request: NextRequest) {
+export async function POST(): Promise<Response> {
   // 延遲模擬處理時間
   await new Promise(resolve => setTimeout(resolve, 1200));
 
@@ -19,10 +18,10 @@ export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
-    async start(controller) {
+    async start(controller: ReadableStreamDefaultController<Uint8Array>): Promise<void> {
       try {
-        // 讀取 sse.txt 檔案（同目錄下）
-        const sseFilePath = join(process.cwd(), 'src/app/api/mock-sse/message/sse/sse2.txt');
+        // 讀取 demo.txt 檔案（同目錄下）
+        const sseFilePath = join(process.cwd(), 'src/app/api/mock-sse/message/sse/demo.txt');
         const sseContent = readFileSync(sseFilePath, 'utf-8');
 
         // 將檔案內容按行分割
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
               const modifiedData = `data:${JSON.stringify(dataObj)}`;
               const message = `${currentEvent}\n${modifiedData}\n\n`;
               controller.enqueue(encoder.encode(message));
-            } catch (e) {
+            } catch {
               // 如果解析失敗，直接發送原始資料
               const message = `${currentEvent}\n${currentData}\n\n`;
               controller.enqueue(encoder.encode(message));
@@ -86,7 +85,7 @@ export async function POST(request: NextRequest) {
             const modifiedData = `data:${JSON.stringify(dataObj)}`;
             const message = `${currentEvent}\n${modifiedData}\n\n`;
             controller.enqueue(encoder.encode(message));
-          } catch (e) {
+          } catch {
             const message = `${currentEvent}\n${currentData}\n\n`;
             controller.enqueue(encoder.encode(message));
           }
@@ -97,7 +96,8 @@ export async function POST(request: NextRequest) {
           controller.close();
         }, delay);
       } catch (error) {
-        console.error('Error reading sse.txt:', error);
+        // eslint-disable-next-line no-console
+        console.error('Error reading demo:', error);
         controller.error(error);
       }
     },
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 }
 
 // 處理 OPTIONS 請求 (CORS preflight)
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<Response> {
   return new Response(null, {
     status: 200,
     headers: {
