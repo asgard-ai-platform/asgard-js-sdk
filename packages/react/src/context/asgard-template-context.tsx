@@ -8,10 +8,12 @@ export interface AsgardTemplateContextValue {
     payload: Record<string, unknown>,
     {
       sse,
+      eventName,
     }: {
       sse: {
         sendMessage: (payload: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
       };
+      eventName: string;
     },
   ) => void;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
@@ -31,10 +33,12 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
     payload: Record<string, unknown>,
     {
       sse,
+      eventName,
     }: {
       sse: {
         sendMessage: (payload: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
       };
+      eventName: string;
     },
   ) => void;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';

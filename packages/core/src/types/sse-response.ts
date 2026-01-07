@@ -68,7 +68,8 @@ export type ButtonAction =
     }
   | {
       type: 'emit' | 'EMIT';
-      payload: Record<string, unknown>;
+      eventName?: string;
+      payload?: Record<string, unknown>;
     };
 
 export interface ButtonMessageTemplate extends MessageTemplate {

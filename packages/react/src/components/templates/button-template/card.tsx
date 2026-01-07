@@ -61,13 +61,16 @@ export function Card(props: CardProps): ReactNode {
             return;
           case 'emit':
           case 'EMIT':
-            onTemplateBtnClick?.(action.payload, {
-              sse: {
-                sendMessage: payload => {
-                  sendMessage?.(payload);
+            if (onTemplateBtnClick) {
+              onTemplateBtnClick(action.payload || {}, {
+                sse: {
+                  sendMessage: payload => {
+                    sendMessage?.(payload);
+                  },
                 },
-              },
-            });
+                eventName: action.eventName || '',
+              });
+            }
 
             return;
         }
