@@ -202,6 +202,7 @@ config: {
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
 - **authState?**: `AuthState` - Authentication state for dynamic API key management. Available states: `'loading'`, `'needApiKey'`, `'authenticated'`, `'error'`, `'invalidApiKey'`
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
+- **onTemplateBtnClick?**: `(payload: Record<string, unknown>, options: { eventName: string; sse: { sendMessage: (payload: { text: string; payload?: Record<string, unknown> }) => void } }) => void` - Callback function when a button with EMIT action type is clicked. Required for handling EMIT actions. See [Button Actions](#button-actions) section for details.
 - **onReset**: `() => void` - Callback function when chat is reset
 - **onClose**: `() => void` - Callback function when chat is closed
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.

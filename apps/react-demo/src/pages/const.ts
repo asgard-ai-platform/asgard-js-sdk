@@ -106,6 +106,57 @@ export function createButtonTemplateExample(): ConversationMessage {
   });
 }
 
+export function createEmitButtonTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '這是一個 EMIT 事件示範範例。點擊下方「立刻訂票」按鈕，系統會觸發 EMIT 事件並顯示訂票資訊。',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.BUTTON,
+      title: '電影：死侍與金鋼狼',
+      text: '這是 EMIT 事件示範：點擊「立刻訂票」按鈕會觸發自訂事件，並在彈窗中顯示訂票資訊。',
+      thumbnailImageUrl: 'https://capi.showtimes.com.tw/assets/57/576ed12bedb3ae6e548c6bfa50e9cbb5.jpg',
+      imageAspectRatio: 'rectangle',
+      imageSize: 'cover',
+      imageBackgroundColor: '#FFFFFF',
+      buttons: [
+        {
+          label: '立刻訂票',
+          action: {
+            type: 'emit' as const,
+            eventName: 'book_ticket',
+            payload: {
+              movieId: '11502',
+              movieTitle: '死侍與金鋼狼',
+              moviePoster: 'https://capi.showtimes.com.tw/assets/57/576ed12bedb3ae6e548c6bfa50e9cbb5.jpg',
+              showtime: '2024-08-15 19:30',
+              theater: '板橋秀泰影城',
+              seatCount: 2,
+              totalPrice: 600,
+              currency: 'TWD',
+              timestamp: Math.floor(Date.now() / 1000),
+            },
+          } as {
+            type: 'emit';
+            eventName: string;
+            payload: Record<string, unknown>;
+          },
+        },
+      ],
+      defaultAction: {
+        type: 'uri',
+        uri: 'https://www.showtimes.com.tw/programs/11502',
+      },
+      quickReplies: [],
+    },
+  });
+}
+
 export function createCarouselTemplateExample(): ConversationMessage {
   const messageId = nanoid();
 
@@ -467,7 +518,8 @@ $$\\nabla \\cdot \\mathbf{B} = 0$$
 
 $$\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}$$
 
-$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \mathbf{E}}{\partial t}$$
+// eslint-disable-next-line no-useless-escape
+$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}$$
 
 ### Matrix Operations
 $$\\begin{pmatrix} a & b \\ c & d \\end{pmatrix} \\begin{pmatrix} x \\ y \\end{pmatrix} = \\begin{pmatrix} ax + by \\ cx + dy \\end{pmatrix}$$

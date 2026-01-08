@@ -1,8 +1,8 @@
-import { Chatbot, ChatbotRef } from '@asgard-js/react';
 import { ReactNode, useCallback, useRef, useState } from 'react';
 import clsx from 'clsx';
 import styles from './root.module.scss';
 import { ConversationMessage, AuthState } from '@asgard-js/core';
+import { Chatbot, ChatbotRef } from '@asgard-js/react';
 import { nanoid } from 'nanoid';
 import {
   createButtonTemplateExample,
@@ -12,6 +12,7 @@ import {
   createChartTemplateExample,
   createImageTemplateExample,
   createMathTemplateExample,
+  createEmitButtonTemplateExample,
 } from './const';
 
 const { VITE_API_KEY, VITE_BOT_PROVIDER_ENDPOINT } = import.meta.env;
@@ -30,6 +31,7 @@ export function Root(): ReactNode {
     createChartTemplateExample(),
     createImageTemplateExample(400, 600),
     createImageTemplateExample(600, 400),
+    createEmitButtonTemplateExample(),
   ]);
 
   const chatbotRef = useRef<ChatbotRef>(null);
@@ -48,6 +50,58 @@ export function Root(): ReactNode {
       setAuthState('authenticated');
     }
   }, []);
+
+  const handleTemplateBtnClick = useCallback(
+    (
+      payload: Record<string, unknown>,
+      {
+        eventName,
+      }: {
+        sse: {
+          sendMessage: (payload: { text: string; payload?: Record<string, unknown> }) => void;
+        };
+        eventName: string;
+      },
+    ): void => {
+      switch (eventName) {
+        case 'support_request': {
+          const category = payload.category as string;
+          const priority = payload.priority as string;
+          const description = payload.description as string;
+          const timestamp = payload.timestamp as number;
+          const date = timestamp ? new Date(timestamp * 1000).toLocaleString('zh-TW') : 'N/A';
+          const payloadStr = JSON.stringify(payload, null, 2);
+          window.alert(
+            `【支援請求已建立】\n\n問題描述：\n${description}\n\n詳細資訊：\n類別: ${category}\n優先級: ${priority}\n時間: ${date}\n\nPayload：\n${payloadStr}`,
+          );
+
+          break;
+        }
+
+        case 'book_ticket': {
+          const movieId = payload.movieId as string;
+          const movieTitle = payload.movieTitle as string;
+          const showtime = payload.showtime as string;
+          const theater = payload.theater as string;
+          const seatCount = payload.seatCount as number;
+          const totalPrice = payload.totalPrice as number;
+          const currency = payload.currency as string;
+          const timestamp = payload.timestamp as number;
+          const date = timestamp ? new Date(timestamp * 1000).toLocaleString('zh-TW') : 'N/A';
+          const payloadStr = JSON.stringify(payload, null, 2);
+          window.alert(
+            `【訂票資訊】\n\n電影：${movieTitle}\n電影 ID：${movieId}\n場次時間：${showtime}\n影城：${theater}\n座位數：${seatCount} 位\n總金額：${totalPrice} ${currency}\n建立時間：${date}\n\n完整 Payload：\n${payloadStr}`,
+          );
+
+          break;
+        }
+
+        default:
+          break;
+      }
+    },
+    [],
+  );
 
   return (
     <>
@@ -146,6 +200,7 @@ export function Root(): ReactNode {
             // Auth state prop
             authState={authState}
             onApiKeySubmit={handleApiKeySubmit}
+            onTemplateBtnClick={handleTemplateBtnClick}
             onClose={() => {
               setIsOpen(false);
             }}
