@@ -1,6 +1,6 @@
 {
   "name": "@asgard-js/core",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
     "rxjs": "^7.8.1",
