@@ -34,7 +34,8 @@ npm run serve:next-demo   # Next.js demo
 
 ## Links
 
+- [Developer Documentation](https://www.asgard-ai.com/docs/developer-reference/welcome)
 - [GitHub Repository](https://github.com/asgard-ai-platform/asgard-js-sdk)
 - [@asgard-js/core on npm](https://www.npmjs.com/package/@asgard-js/core)
 - [@asgard-js/react on npm](https://www.npmjs.com/package/@asgard-js/react)
-- [Asgard AI Platform](https://www.asgard-ai.com)
+- [Asgard AI](https://www.asgard-ai.com)
