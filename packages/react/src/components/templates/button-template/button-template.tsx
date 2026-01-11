@@ -25,6 +25,7 @@ export function ButtonTemplate(props: ButtonTemplateProps): ReactNode {
       <TemplateBoxContent time={message.time} quickReplies={template?.quickReplies}>
         <Card
           template={template}
+          raw={message.raw}
           customStyle={{
             style: themeTemplate?.ButtonMessageTemplate?.style,
             title: {

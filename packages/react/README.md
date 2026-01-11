@@ -243,71 +243,17 @@ config: {
 
 **Backward Compatibility:** Existing code using `endpoint` will continue to work but may show deprecation warnings when `debugMode` is enabled.
 
-### Button Actions
+### EMIT Action
 
-Button templates support the following action types:
+EMIT buttons allow you to handle custom actions in your application. Implement the `onTemplateBtnClick` callback to process these events. See the [EMIT Action documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-emit) for details.
 
-- **MESSAGE**: Automatically sends a message to the bot when clicked. [Documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-message)
-- **URI**: Automatically opens a URL when clicked. [Documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-uri)
-- **EMIT**: Requires custom handling logic in your application. [Documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-emit)
+The callback receives the following parameters:
 
-#### EMIT Action
+1. `payload` (optional): Custom data from the button action
+2. `eventName` (required): Event name specified in the button action
+3. `raw` (required): Complete SSE response data as JSON string. Use this when you need information beyond `payload` and `eventName`. Parse it to access additional fields from the original SSE response. See [SSE Response documentation](https://www.asgard-ai.com/docs/developer-reference/api-doc/send-message/sse-response/message-complete) for the complete response structure.
 
-EMIT is a special action type that dispatches events to your application for custom handling. Unlike MESSAGE and URI actions which are handled automatically by the SDK, EMIT requires you to implement the `onTemplateBtnClick` callback.
-
-When a user clicks an EMIT button, the SDK calls your `onTemplateBtnClick` callback function with the following parameters:
-
-1. **`payload`** (optional): `Record<string, unknown>` - Custom data defined in the button action, or `{}` if not provided
-2. **`options`**: An object containing:
-   - **`eventName`** (required): `string` - The event name specified in the button action. If missing from backend, SDK passes empty string `''` as a safety mechanism
-   - `sse.sendMessage`: Function to send messages back to the bot (optional, for advanced use cases)
-
-**Important**: The SDK only dispatches the event. How you handle `eventName` and `payload` is completely your responsibility.
-
-#### EMIT Example
-
-```typescript
-import { useCallback } from 'react';
-
-const handleTemplateBtnClick = useCallback(
-  (
-    payload: Record<string, unknown>,
-    {
-      eventName,
-      sse,
-    }: {
-      eventName: string;
-      sse: {
-        sendMessage: (payload: { text: string; payload?: Record<string, unknown> }) => void;
-      };
-    },
-  ): void => {
-    switch (eventName) {
-      case 'support_request':
-        // Example: Show support request alert
-        const category = payload.category as string;
-        const priority = payload.priority as string;
-        const payloadStr = JSON.stringify(payload, null, 2);
-        window.alert(
-          `Support request created\n\nCategory: ${category}\nPriority: ${priority}\n\nFull Payload:\n${payloadStr}`,
-        );
-        break;
-
-      default:
-        // Handle other eventNames or unknown events
-        console.log('Received event:', eventName, 'with payload:', payload);
-    }
-  },
-  [],
-);
-
-// Pass the handler to Chatbot
-<Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;
-```
-
-#### Backend Configuration
-
-In your backend SSE response, configure EMIT buttons according to the specification:
+Configure EMIT buttons in your backend SSE response:
 
 ```json
 {
@@ -326,29 +272,40 @@ In your backend SSE response, configure EMIT buttons according to the specificat
             "priority": "high"
           }
         }
-      },
-      {
-        "label": "Custom Action",
-        "action": {
-          "type": "EMIT",
-          "eventName": "custom_action",
-          "payload": {
-            "actionType": "custom",
-            "data": "example"
-          }
-        }
       }
     ]
   }
 }
 ```
 
-**Note**: The `payload` can contain any structured data you need. For a complete example with more fields, check the demo implementation in `apps/react-demo`.
+#### EMIT Example
 
-- `eventName` is required (use underscore-separated naming like `support_request`)
-- `payload` is optional and can contain any structured data you need for your use case
-- The SDK will pass these values to your `onTemplateBtnClick` callback
-- If `eventName` is missing, the SDK passes an empty string (`''`) as a safety mechanism
+```typescript
+import { useCallback } from 'react';
+
+const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, eventName: string, raw: string): void => {
+  if (eventName === 'support_request') {
+    // Access payload data
+    const category = payload.category as string;
+    const priority = payload.priority as string;
+
+    // Optionally parse raw SSE data to access additional fields
+    let customChannelId: string | undefined;
+    try {
+      const sseData = JSON.parse(raw);
+      customChannelId = sseData.customChannelId;
+    } catch {
+      // Handle parse error if needed
+    }
+
+    const channelInfo = customChannelId ? `\nChannel ID: ${customChannelId}` : '';
+    window.alert(`Support request created\n\nCategory: ${category}\nPriority: ${priority}${channelInfo}`);
+  }
+}, []);
+
+// Pass the handler to Chatbot
+<Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;
+```
 
 ### Chatbot Component Props
 
@@ -384,7 +341,7 @@ In your backend SSE response, configure EMIT buttons according to the specificat
 - **onClose**: `() => void` - Callback function when chat is closed
 - **authState?**: `AuthState` - Authentication state for dynamic API key management. Available states: `'loading'`, `'needApiKey'`, `'authenticated'`, `'error'`, `'invalidApiKey'`
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
-- **onTemplateBtnClick?**: `(payload: Record<string, unknown>, options: { eventName: string; sse: { sendMessage: (payload: { text: string; payload?: Record<string, unknown> }) => void } }) => void` - Callback function when a button with EMIT action type is clicked. Required for handling EMIT actions. See [Button Actions](#button-actions) section for details.
+- **onTemplateBtnClick?**: `(payload: Record<string, unknown>, eventName: string, raw: string) => void` - Callback for EMIT button actions. See [EMIT Action](#emit-action) section for details.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
 - **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. ChatbotRef extends the ref of the chatbot instance and provides some additional methods like `serviceContext.sendMessage` to interact with the chatbot instance.
 

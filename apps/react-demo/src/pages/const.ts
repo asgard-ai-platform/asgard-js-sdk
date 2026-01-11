@@ -10,6 +10,16 @@ const quickReplies = [
 ];
 
 export function createBaseTemplateExample(message: Message): ConversationMessage {
+  // Create a mock SSE response structure for the raw property
+  const mockSseResponse = {
+    eventType: EventType.MESSAGE_COMPLETE,
+    fact: {
+      messageComplete: {
+        message,
+      },
+    },
+  };
+
   return {
     type: 'bot',
     messageId: message.messageId,
@@ -18,6 +28,7 @@ export function createBaseTemplateExample(message: Message): ConversationMessage
     eventType: EventType.MESSAGE_COMPLETE,
     time: new Date(),
     message,
+    raw: JSON.stringify(mockSseResponse),
   };
 }
 

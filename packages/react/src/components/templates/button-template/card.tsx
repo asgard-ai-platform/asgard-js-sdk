@@ -8,6 +8,7 @@ import clsx from 'clsx';
 
 interface CardProps {
   template: ButtonMessageTemplate | CarouselMessageTemplate['columns'][number];
+  raw: string;
   customStyle?: {
     style?: CSSProperties;
     title?: {
@@ -23,7 +24,7 @@ interface CardProps {
 }
 
 export function Card(props: CardProps): ReactNode {
-  const { template, customStyle } = props;
+  const { template, raw, customStyle } = props;
 
   const { sendMessage } = useAsgardContext();
   const { onTemplateBtnClick, defaultLinkTarget } = useAsgardTemplateContext();
@@ -62,21 +63,14 @@ export function Card(props: CardProps): ReactNode {
           case 'emit':
           case 'EMIT':
             if (onTemplateBtnClick) {
-              onTemplateBtnClick(action.payload || {}, {
-                sse: {
-                  sendMessage: payload => {
-                    sendMessage?.(payload);
-                  },
-                },
-                eventName: action.eventName || '',
-              });
+              onTemplateBtnClick(action.payload || {}, action.eventName || '', raw);
             }
 
             return;
         }
       };
     },
-    [sendMessage, onTemplateBtnClick, defaultLinkTarget],
+    [sendMessage, onTemplateBtnClick, defaultLinkTarget, raw],
   );
 
   return (

@@ -39,6 +39,7 @@ export type ConversationBotMessage = {
   message: Message;
   time: Date;
   traceId?: string;
+  raw: string;
 };
 
 export type ConversationErrorMessage = {
