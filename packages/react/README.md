@@ -243,70 +243,6 @@ config: {
 
 **Backward Compatibility:** Existing code using `endpoint` will continue to work but may show deprecation warnings when `debugMode` is enabled.
 
-### EMIT Action
-
-EMIT buttons allow you to handle custom actions in your application. Implement the `onTemplateBtnClick` callback to process these events. See the [EMIT Action documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-emit) for details.
-
-The callback receives the following parameters:
-
-1. `payload` (optional): Custom data from the button action
-2. `eventName` (required): Event name specified in the button action
-3. `raw` (required): Complete SSE response data as JSON string. Use this when you need information beyond `payload` and `eventName`. Parse it to access additional fields from the original SSE response. See [SSE Response documentation](https://www.asgard-ai.com/docs/developer-reference/api-doc/send-message/sse-response/message-complete) for the complete response structure.
-
-Configure EMIT buttons in your backend SSE response:
-
-```json
-{
-  "template": {
-    "type": "BUTTON",
-    "title": "Action Menu",
-    "text": "Please select an action:",
-    "buttons": [
-      {
-        "label": "Support Request",
-        "action": {
-          "type": "EMIT",
-          "eventName": "support_request",
-          "payload": {
-            "category": "technical",
-            "priority": "high"
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-#### EMIT Example
-
-```typescript
-import { useCallback } from 'react';
-
-const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, eventName: string, raw: string): void => {
-  if (eventName === 'support_request') {
-    // Access payload data
-    const category = payload.category as string;
-    const priority = payload.priority as string;
-
-    // Optionally parse raw SSE data to access additional fields
-    let customChannelId: string | undefined;
-    try {
-      const sseData = JSON.parse(raw);
-      customChannelId = sseData.customChannelId;
-    } catch {
-      // Handle parse error if needed
-    }
-
-    const channelInfo = customChannelId ? `\nChannel ID: ${customChannelId}` : '';
-    window.alert(`Support request created\n\nCategory: ${category}\nPriority: ${priority}${channelInfo}`);
-  }
-}, []);
-
-// Pass the handler to Chatbot
-<Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;
-```
-
 ### Chatbot Component Props
 
 - **title?**: `string` - The title of the chatbot (optional). If not provided, will use the value from the API if available.
@@ -552,7 +488,7 @@ const defaultTheme = {
 };
 ```
 
-### Usage Example
+#### Usage Example
 
 ```javascript
 const App = () => {
@@ -582,6 +518,70 @@ const App = () => {
 ```
 
 Note: When `fullScreen` prop is set to `true`, the chatbot's width and height will be set to `100vw` and `100vh` respectively, and `borderRadius` will be set to zero, regardless of theme settings.
+
+### EMIT Action
+
+EMIT buttons allow you to handle custom actions in your application. Implement the `onTemplateBtnClick` callback to process these events. See the [EMIT Action documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-emit) for details.
+
+The callback receives the following parameters:
+
+1. `payload` (optional): Custom data from the button action
+2. `eventName` (required): Event name specified in the button action
+3. `raw` (required): Complete SSE response data as JSON string. Use this when you need information beyond `payload` and `eventName`. Parse it to access additional fields from the original SSE response. See [SSE Response documentation](https://www.asgard-ai.com/docs/developer-reference/api-doc/send-message/sse-response/message-complete) for the complete response structure.
+
+Configure EMIT buttons in your backend SSE response:
+
+```json
+{
+  "template": {
+    "type": "BUTTON",
+    "title": "Action Menu",
+    "text": "Please select an action:",
+    "buttons": [
+      {
+        "label": "Support Request",
+        "action": {
+          "type": "EMIT",
+          "eventName": "support_request",
+          "payload": {
+            "category": "technical",
+            "priority": "high"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+#### Usage Example
+
+```typescript
+import { useCallback } from 'react';
+
+const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, eventName: string, raw: string): void => {
+  if (eventName === 'support_request') {
+    // Access payload data
+    const category = payload.category as string;
+    const priority = payload.priority as string;
+
+    // Optionally parse raw SSE data to access additional fields
+    let customChannelId: string | undefined;
+    try {
+      const sseData = JSON.parse(raw);
+      customChannelId = sseData.customChannelId;
+    } catch {
+      // Handle parse error if needed
+    }
+
+    const channelInfo = customChannelId ? `\nChannel ID: ${customChannelId}` : '';
+    window.alert(`Support request created\n\nCategory: ${category}\nPriority: ${priority}${channelInfo}`);
+  }
+}, []);
+
+// Pass the handler to Chatbot
+<Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;
+```
 
 ## Testing
 
