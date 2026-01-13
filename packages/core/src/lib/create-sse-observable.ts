@@ -8,10 +8,11 @@ interface CreateSseObservableOptions {
   apiKey?: string;
   debugMode?: boolean;
   payload: FetchSsePayload;
+  customHeaders?: Record<string, string>;
 }
 
 export function createSseObservable(options: CreateSseObservableOptions): Observable<SseResponse<EventType>> {
-  const { endpoint, apiKey, payload, debugMode } = options;
+  const { endpoint, apiKey, payload, debugMode, customHeaders } = options;
 
   return new Observable<SseResponse<EventType>>(subscriber => {
     const controller = new AbortController();
@@ -19,6 +20,7 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...customHeaders,
     };
 
     if (apiKey) {
