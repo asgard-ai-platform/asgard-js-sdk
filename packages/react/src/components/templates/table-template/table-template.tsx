@@ -51,6 +51,7 @@ function getCellValue(
   if (rowType === 'ARRAY') {
     return (row as unknown[])[columnIndex];
   }
+
   return (row as Record<string, unknown>)[column.key ?? ''];
 }
 
@@ -58,6 +59,7 @@ function escapeCsvValue(value: string): string {
   if (value.includes(',') || value.includes('"') || value.includes('\n')) {
     return `"${value.replace(/"/g, '""')}"`;
   }
+
   return value;
 }
 
@@ -66,13 +68,14 @@ function convertToCsv(
   data: Record<string, unknown>[] | unknown[][],
   rowType: TableRowType,
 ): string {
-  const headers = columns.map((col) => escapeCsvValue(col.header)).join(',');
+  const headers = columns.map(col => escapeCsvValue(col.header)).join(',');
 
-  const rows = data.map((row) => {
+  const rows = data.map(row => {
     return columns
       .map((column, colIndex) => {
         const rawValue = getCellValue(row, column, colIndex, rowType);
         const formattedValue = formatCellValue(rawValue, column.format);
+
         return escapeCsvValue(formattedValue);
       })
       .join(',');
@@ -112,8 +115,10 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
 
   const paginatedData = useMemo(() => {
     if (!pagination) return data;
+
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
+
     return data.slice(startIndex, endIndex);
   }, [data, pagination, currentPage, pageSize]);
 
@@ -126,11 +131,11 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
   );
 
   const handlePrevPage = (): void => {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
+    setCurrentPage(prev => Math.max(1, prev - 1));
   };
 
   const handleNextPage = (): void => {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+    setCurrentPage(prev => Math.min(totalPages, prev + 1));
   };
 
   const handleDownload = useCallback((): void => {
@@ -163,6 +168,7 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
     if (snackbar.blobUrl) {
       URL.revokeObjectURL(snackbar.blobUrl);
     }
+
     setSnackbar({ visible: false, fileName: '', blobUrl: null });
   }, [snackbar.blobUrl]);
 
@@ -171,8 +177,11 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
       const timer = setTimeout(() => {
         handleCloseSnackbar();
       }, 5000);
-      return () => clearTimeout(timer);
+
+      return (): void => clearTimeout(timer);
     }
+
+    return;
   }, [snackbar.visible, handleCloseSnackbar]);
 
   return (
@@ -220,6 +229,7 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                         {columns.map((column, colIndex) => {
                           const rawValue = getCellValue(row, column, colIndex, rowType);
                           const formattedValue = formatCellValue(rawValue, column.format);
+
                           return (
                             <td key={colIndex} className={classes.table_cell}>
                               {formattedValue}
