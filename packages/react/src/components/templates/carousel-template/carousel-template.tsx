@@ -34,6 +34,7 @@ export function CarouselTemplate(props: CarouselTemplateProps): ReactNode {
             <Card
               key={index}
               template={column}
+              raw={message.raw}
               customStyle={{
                 style: themeTemplate?.CarouselMessageTemplate?.card?.style,
                 title: {

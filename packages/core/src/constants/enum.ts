@@ -29,4 +29,5 @@ export enum MessageTemplateType {
   LOCATION = 'LOCATION',
   CAROUSEL = 'CAROUSEL',
   CHART = 'CHART',
+  TABLE = 'TABLE',
 }

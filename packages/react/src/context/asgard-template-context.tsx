@@ -1,19 +1,10 @@
 import { createContext, PropsWithChildren, ReactNode, useContext, useMemo } from 'react';
-import { ConversationErrorMessage, FetchSsePayload } from '@asgard-js/core';
+import { ConversationErrorMessage } from '@asgard-js/core';
 
 export interface AsgardTemplateContextValue {
   onErrorClick?: (message: ConversationErrorMessage) => void;
   errorMessageRenderer?: (message: ConversationErrorMessage) => ReactNode;
-  onTemplateBtnClick?: (
-    payload: Record<string, unknown>,
-    {
-      sse,
-    }: {
-      sse: {
-        sendMessage: (payload: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
-      };
-    },
-  ) => void;
+  onTemplateBtnClick?: (payload: Record<string, unknown>, eventName: string, raw: string) => void;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
 
@@ -27,16 +18,7 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   onErrorClick?: (message: ConversationErrorMessage) => void;
   errorMessageRenderer?: (message: ConversationErrorMessage) => ReactNode;
-  onTemplateBtnClick?: (
-    payload: Record<string, unknown>,
-    {
-      sse,
-    }: {
-      sse: {
-        sendMessage: (payload: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
-      };
-    },
-  ) => void;
+  onTemplateBtnClick?: (payload: Record<string, unknown>, eventName: string, raw: string) => void;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
 

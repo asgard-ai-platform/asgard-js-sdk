@@ -1,4 +1,4 @@
-import { ConversationMessage, EventType, Message, MessageTemplateType } from '@asgard-js/core';
+import { ConversationMessage, EventType, Message, MessageTemplateType, TableMessageTemplate } from '@asgard-js/core';
 import { nanoid } from 'nanoid';
 
 const quickReplies = [
@@ -10,6 +10,16 @@ const quickReplies = [
 ];
 
 export function createBaseTemplateExample(message: Message): ConversationMessage {
+  // Create a mock SSE response structure for the raw property
+  const mockSseResponse = {
+    eventType: EventType.MESSAGE_COMPLETE,
+    fact: {
+      messageComplete: {
+        message,
+      },
+    },
+  };
+
   return {
     type: 'bot',
     messageId: message.messageId,
@@ -18,6 +28,7 @@ export function createBaseTemplateExample(message: Message): ConversationMessage
     eventType: EventType.MESSAGE_COMPLETE,
     time: new Date(),
     message,
+    raw: JSON.stringify(mockSseResponse),
   };
 }
 
@@ -102,6 +113,57 @@ export function createButtonTemplateExample(): ConversationMessage {
         uri: 'https://www.showtimes.com.tw/programs/11502',
       },
       quickReplies,
+    },
+  });
+}
+
+export function createEmitButtonTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '這是一個 EMIT 事件示範範例。點擊下方「立刻訂票」按鈕，系統會觸發 EMIT 事件並顯示訂票資訊。',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.BUTTON,
+      title: '電影：死侍與金鋼狼',
+      text: '這是 EMIT 事件示範：點擊「立刻訂票」按鈕會觸發自訂事件，並在彈窗中顯示訂票資訊。',
+      thumbnailImageUrl: 'https://capi.showtimes.com.tw/assets/57/576ed12bedb3ae6e548c6bfa50e9cbb5.jpg',
+      imageAspectRatio: 'rectangle',
+      imageSize: 'cover',
+      imageBackgroundColor: '#FFFFFF',
+      buttons: [
+        {
+          label: '立刻訂票',
+          action: {
+            type: 'emit' as const,
+            eventName: 'book_ticket',
+            payload: {
+              movieId: '11502',
+              movieTitle: '死侍與金鋼狼',
+              moviePoster: 'https://capi.showtimes.com.tw/assets/57/576ed12bedb3ae6e548c6bfa50e9cbb5.jpg',
+              showtime: '2024-08-15 19:30',
+              theater: '板橋秀泰影城',
+              seatCount: 2,
+              totalPrice: 600,
+              currency: 'TWD',
+              timestamp: Math.floor(Date.now() / 1000),
+            },
+          } as {
+            type: 'emit';
+            eventName: string;
+            payload: Record<string, unknown>;
+          },
+        },
+      ],
+      defaultAction: {
+        type: 'uri',
+        uri: 'https://www.showtimes.com.tw/programs/11502',
+      },
+      quickReplies: [],
     },
   });
 }
@@ -467,7 +529,8 @@ $$\\nabla \\cdot \\mathbf{B} = 0$$
 
 $$\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}$$
 
-$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \mathbf{E}}{\partial t}$$
+// eslint-disable-next-line no-useless-escape
+$$\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}$$
 
 ### Matrix Operations
 $$\\begin{pmatrix} a & b \\ c & d \\end{pmatrix} \\begin{pmatrix} x \\ y \\end{pmatrix} = \\begin{pmatrix} ax + by \\ cx + dy \\end{pmatrix}$$
@@ -528,7 +591,7 @@ export function createTextWithLinksTemplateExample(): ConversationMessage {
 這是測試超連結顏色的範例：
 
 - 官方網站：[秀泰影城](https://www.showtimes.com.tw)
-- 電話：[客服專線](tel:0800-123-456)  
+- 電話：[客服專線](tel:0800-123-456)
 - 電郵：[service@showtimes.com.tw](mailto:service@showtimes.com.tw)
 
 超連結顏色會比 botMessage.backgroundColor 深 20%。`,
@@ -542,5 +605,130 @@ export function createTextWithLinksTemplateExample(): ConversationMessage {
     payload: undefined,
     isDebug: false,
     idx: 0,
+  });
+}
+
+export function createTableTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  const template: TableMessageTemplate = {
+    type: MessageTemplateType.TABLE,
+    title: '每月銷售額統計',
+    table: {
+      rowType: 'OBJECT',
+      columns: [
+        { header: '姓名', key: 'name' },
+        { header: '部門', key: 'department' },
+        { header: '銷售額', key: 'sales', format: 'CURRENCY' },
+        { header: '入職日期', key: 'joinDate', format: 'DATE' },
+        { header: '最後更新', key: 'updatedAt', format: 'DATE_TIME' },
+      ],
+      pagination: { size: 5 },
+      data: [
+        {
+          name: '王小明',
+          department: '業務部',
+          sales: 150000,
+          joinDate: '2022-03-15',
+          updatedAt: '2024-12-01T10:30:00',
+        },
+        {
+          name: '李美玲',
+          department: '行銷部',
+          sales: 120000,
+          joinDate: '2021-08-20',
+          updatedAt: '2024-12-02T14:20:00',
+        },
+        {
+          name: '張大偉',
+          department: '業務部',
+          sales: 180000,
+          joinDate: '2020-01-10',
+          updatedAt: '2024-12-03T09:15:00',
+        },
+        {
+          name: '陳小芳',
+          department: '客服部',
+          sales: 95000,
+          joinDate: '2023-05-01',
+          updatedAt: '2024-12-04T16:45:00',
+        },
+        {
+          name: '林志豪',
+          department: '業務部',
+          sales: 210000,
+          joinDate: '2019-11-25',
+          updatedAt: '2024-12-05T11:00:00',
+        },
+        {
+          name: '黃雅琪',
+          department: '行銷部',
+          sales: 135000,
+          joinDate: '2022-07-08',
+          updatedAt: '2024-12-06T13:30:00',
+        },
+        {
+          name: '吳建宏',
+          department: '業務部',
+          sales: 165000,
+          joinDate: '2021-02-14',
+          updatedAt: '2024-12-07T08:45:00',
+        },
+        {
+          name: '周美君',
+          department: '客服部',
+          sales: 88000,
+          joinDate: '2023-09-12',
+          updatedAt: '2024-12-08T15:20:00',
+        },
+      ],
+    },
+    quickReplies: [{ text: '查看更多統計' }, { text: '匯出報表' }],
+  };
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '這是表格範例',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template,
+  });
+}
+
+export function createTableArrayTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  const template: TableMessageTemplate = {
+    type: MessageTemplateType.TABLE,
+    title: '產品庫存清單',
+    table: {
+      rowType: 'ARRAY',
+      columns: [
+        { header: '產品編號' },
+        { header: '產品名稱' },
+        { header: '庫存數量' },
+        { header: '單價', format: 'CURRENCY' },
+      ],
+      pagination: null,
+      data: [
+        ['P001', '無線滑鼠', '150', 599],
+        ['P002', '機械鍵盤', '80', 2499],
+        ['P003', 'USB 集線器', '200', 399],
+        ['P004', '螢幕支架', '45', 1299],
+      ],
+    },
+    quickReplies: [{ text: '補貨通知' }, { text: '查看詳情' }],
+  };
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '這是 Array 格式表格範例',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template,
   });
 }

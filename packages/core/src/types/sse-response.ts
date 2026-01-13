@@ -60,6 +60,33 @@ export interface ChartMessageTemplate extends MessageTemplate {
   quickReplies: { text: string }[];
 }
 
+export type TableColumnFormat = 'DATE' | 'DATE_TIME' | 'CURRENCY';
+
+export type TableRowType = 'OBJECT' | 'ARRAY';
+
+export interface TableColumn {
+  header: string;
+  key?: string;
+  format?: TableColumnFormat;
+}
+
+export interface TablePagination {
+  size: number;
+}
+
+export interface TableData {
+  rowType: TableRowType;
+  columns: TableColumn[];
+  pagination: TablePagination | null;
+  data: Record<string, unknown>[] | unknown[][];
+}
+
+export interface TableMessageTemplate extends MessageTemplate {
+  type: MessageTemplateType.TABLE;
+  title: string;
+  table: TableData;
+}
+
 export type ButtonAction =
   | {
       type: 'message' | 'MESSAGE';
@@ -74,7 +101,8 @@ export type ButtonAction =
     }
   | {
       type: 'emit' | 'EMIT';
-      payload: Record<string, unknown>;
+      eventName?: string;
+      payload?: Record<string, unknown>;
     };
 
 export interface ButtonMessageTemplate extends MessageTemplate {
@@ -110,7 +138,8 @@ export interface Message<Payload = unknown> {
     | AudioMessageTemplate
     | LocationMessageTemplate
     | CarouselMessageTemplate
-    | ChartMessageTemplate;
+    | ChartMessageTemplate
+    | TableMessageTemplate;
 }
 
 export type IsEqual<A, B, DataType> = A extends B ? (B extends A ? DataType : null) : null;
