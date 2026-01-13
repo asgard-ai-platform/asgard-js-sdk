@@ -310,6 +310,8 @@ config: {
 - **authState?**: `AuthState` - Authentication state for dynamic API key management. Available states: `'loading'`, `'needApiKey'`, `'authenticated'`, `'error'`, `'invalidApiKey'`
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
 - **onTemplateBtnClick?**: `(payload: Record<string, unknown>, eventName: string, raw: string) => void` - Callback for EMIT button actions. See [EMIT Action](#emit-action) section for details.
+- **messageActions?**: `(message: ConversationBotMessage) => MessageActionConfig[]` - Function to define which action buttons to display for each bot message. Returns an array of `{ id: string, label: string }` objects. See [Message Actions](#message-actions) section for details.
+- **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
 - **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. ChatbotRef extends the ref of the chatbot instance and provides some additional methods like `serviceContext.sendMessage` to interact with the chatbot instance.
 
@@ -737,6 +739,78 @@ const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, ev
 
 // Pass the handler to Chatbot
 <Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;
+```
+
+<a id="message-actions"></a>
+<br/>
+
+### Message Actions
+
+Message Actions allow you to add custom action buttons to bot messages. This is useful for implementing features like "Save as Topic", "Copy", "Share", or any other custom actions on individual messages.
+
+The `messageActions` prop is a function that receives a bot message and returns an array of action configurations. The `onMessageAction` callback is triggered when a user clicks on an action button.
+
+#### MessageActionConfig Interface
+
+```typescript
+interface MessageActionConfig {
+  /** Unique identifier for the action */
+  id: string;
+  /** Display label for the action button */
+  label: string;
+}
+```
+
+#### Usage Example
+
+```typescript
+import { useCallback } from 'react';
+import { ConversationBotMessage } from '@asgard-js/core';
+
+const App = () => {
+  const handleMessageAction = useCallback((actionId: string, message: ConversationBotMessage) => {
+    if (actionId === 'save-topic') {
+      const content = message.message.text;
+      console.log('Save as topic:', content);
+      // Implement your save logic here
+    } else if (actionId === 'copy') {
+      navigator.clipboard.writeText(message.message.text);
+      alert('Copied to clipboard!');
+    }
+  }, []);
+
+  return (
+    <Chatbot
+      config={config}
+      customChannelId="your-channel-id"
+      messageActions={message => {
+        // Return different actions based on message content or type
+        return [
+          { id: 'save-topic', label: 'Save as Topic' },
+          { id: 'copy', label: 'Copy' },
+        ];
+      }}
+      onMessageAction={handleMessageAction}
+    />
+  );
+};
+```
+
+#### Conditional Actions
+
+You can return different actions based on the message content:
+
+```typescript
+messageActions={(message) => {
+  const actions = [{ id: 'copy', label: 'Copy' }];
+
+  // Only show "Save as Topic" for longer messages
+  if (message.message.text.length > 100) {
+    actions.push({ id: 'save-topic', label: 'Save as Topic' });
+  }
+
+  return actions;
+}}
 ```
 
 <a id="testing"></a>
