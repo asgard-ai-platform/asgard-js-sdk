@@ -282,6 +282,7 @@ config: {
   - `botProviderEndpoint`: `string` (required) - Bot provider endpoint URL (SSE endpoint will be auto-derived)
   - `endpoint?`: `string` (deprecated) - Legacy API endpoint URL. Use `botProviderEndpoint` instead.
   - `transformSsePayload?`: `(payload: FetchSsePayload) => FetchSsePayload` - SSE payload transformer
+  - `customHeaders?`: `Record<string, string>` - Custom headers to include in SSE and API requests (e.g., Bearer token via `Authorization` header)
   - `debugMode?`: `boolean` - Enable debug mode, defaults to `false`
   - `onRunInit?`: `InitEventHandler` - Handler for run initialization events
   - `onMessage?`: `MessageEventHandler` - Handler for message events
