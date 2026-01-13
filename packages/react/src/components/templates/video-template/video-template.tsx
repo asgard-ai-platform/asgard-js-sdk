@@ -228,7 +228,7 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
       style={themeTemplate?.VideoMessageTemplate?.style}
     >
       <Avatar avatar={avatar} />
-      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time}>
+      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time} message={message}>
         <div ref={videoBoxRef} className={styles.video_box}>
           {!isPlaying ? (
             <div className={styles.video_preview} onClick={handlePlayClick}>
