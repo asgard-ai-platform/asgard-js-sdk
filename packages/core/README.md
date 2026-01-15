@@ -2,6 +2,9 @@
 
 This package contains the core functionalities of the AsgardJs SDK, providing essential tools for interacting with the Asgard AI platform through Server-Sent Events (SSE) and conversation management.
 
+<a id="installation"></a>
+<br/>
+
 ## Installation
 
 To install the core package, use the following command:
@@ -9,6 +12,9 @@ To install the core package, use the following command:
 ```sh
 npm install @asgard-js/core
 ```
+
+<a id="usage"></a>
+<br/>
 
 ## Usage
 
@@ -68,7 +74,10 @@ client.on('ERROR', error => {
 });
 ```
 
-## Migration from `endpoint` to `botProviderEndpoint`
+<a id="migration-from-endpoint-to-botproviderendpoint"></a>
+<br/>
+
+## Migration from endpoint to botProviderEndpoint
 
 **Important**: The `endpoint` configuration option is deprecated. Use `botProviderEndpoint` instead for simplified configuration.
 
@@ -100,9 +109,15 @@ const client = new AsgardServiceClient({
 
 **Backward Compatibility:** Existing code using `endpoint` will continue to work but may show deprecation warnings when `debugMode` is enabled.
 
+<a id="api-reference"></a>
+<br/>
+
 ## API Reference
 
 The core package exports three main classes for different levels of abstraction and includes authentication types for dynamic API key management:
+
+<a id="asgardserviceclient"></a>
+<br/>
 
 ### AsgardServiceClient
 
@@ -115,6 +130,7 @@ The main client class for interacting with the Asgard AI platform.
 - **endpoint?**: `string` (deprecated) - Legacy API endpoint URL. Use `botProviderEndpoint` instead.
 - **debugMode?**: `boolean` - Enable debug mode for deprecation warnings, defaults to `false`
 - **transformSsePayload?**: `(payload: FetchSsePayload) => FetchSsePayload` - SSE payload transformer
+- **customHeaders?**: `Record<string, string>` - Custom headers to include in SSE and API requests (e.g., Bearer token via `Authorization` header)
 - **onRunInit?**: `InitEventHandler` - Handler for run initialization events
 - **onMessage?**: `MessageEventHandler` - Handler for message events
 - **onToolCall?**: `ToolCallEventHandler` - Handler for tool call events
@@ -137,6 +153,9 @@ The main client class for interacting with the Asgard AI platform.
 - **PROCESS**: Process events (start, complete)
 - **DONE**: Run completion events
 - **ERROR**: Error events
+
+<a id="channel"></a>
+<br/>
 
 ### Channel
 
@@ -190,6 +209,9 @@ const channel = await Channel.reset({
 await channel.sendMessage({ text: 'Hello, bot!' });
 ```
 
+<a id="conversation"></a>
+<br/>
+
 ### Conversation
 
 Immutable conversation state manager that handles message updates and SSE event processing.
@@ -233,6 +255,9 @@ const updatedConversation = conversation.pushMessage(userMessage);
 console.log('Messages:', Array.from(updatedConversation.messages.values()));
 ```
 
+<a id="file-upload-api"></a>
+<br/>
+
 ### File Upload API
 
 The core package includes file upload capabilities for sending images through the chatbot.
@@ -254,6 +279,9 @@ if (uploadResponse.isSuccess && uploadResponse.data[0]) {
 ```
 
 **Note**: `uploadFile` is optional - check `client.uploadFile` exists before use. Supports JPEG, PNG, GIF, WebP up to 20MB.
+
+<a id="authentication-types"></a>
+<br/>
 
 ### Authentication Types
 
@@ -292,6 +320,9 @@ function handleAuthState(state: AuthState) {
   }
 }
 ```
+
+<a id="testing"></a>
+<br/>
 
 ## Testing
 
@@ -347,6 +378,9 @@ describe('AsgardServiceClient', () => {
   });
 });
 ```
+
+<a id="development"></a>
+<br/>
 
 ## Development
 

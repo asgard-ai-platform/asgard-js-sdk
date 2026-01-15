@@ -78,6 +78,7 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
         time={message.time}
         quickReplies={botConversationMessage?.message.template?.quickReplies}
         references={botConversationMessage?.message.template?.references}
+        message={botConversationMessage}
       >
         <div className={clsx(classes.text, classes['text--bot'])} style={styles}>
           {isBot ? <StreamdownClient>{messageText}</StreamdownClient> : messageText}

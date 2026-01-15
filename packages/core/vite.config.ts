@@ -29,6 +29,7 @@ const viteConfig = defineConfig({
     minify: 'esbuild',
     emptyOutDir: true,
     reportCompressedSize: true,
+    sourcemap: true,
     commonjsOptions: {
       transformMixedEsModules: true,
     },
@@ -47,20 +48,17 @@ const viteConfig = defineConfig({
       output: [
         {
           format: 'es',
-          sourcemap: true,
           dir: 'dist',
           entryFileNames: 'index.mjs',
         },
         {
           format: 'cjs',
-          sourcemap: true,
           dir: 'dist',
           entryFileNames: 'index.cjs',
         },
         {
           format: 'umd',
           name: '@asgard-js/core',
-          sourcemap: true,
           dir: 'dist',
           entryFileNames: 'index.js',
         },

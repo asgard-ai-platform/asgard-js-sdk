@@ -20,6 +20,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
   private destroy$ = new Subject<void>();
   private sseEmitter = new EventEmitter<SseEvents>();
   private transformSsePayload?: (payload: FetchSsePayload) => FetchSsePayload;
+  private customHeaders?: Record<string, string>;
 
   constructor(config: ClientConfig) {
     // Validate that either endpoint or botProviderEndpoint is provided
@@ -31,6 +32,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     this.debugMode = config.debugMode;
     this.transformSsePayload = config.transformSsePayload;
     this.botProviderEndpoint = config.botProviderEndpoint;
+    this.customHeaders = config.customHeaders;
 
     // Handle endpoint derivation and deprecation
     if (!config.endpoint && config.botProviderEndpoint) {
@@ -99,6 +101,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       endpoint: this.endpoint,
       debugMode: this.debugMode,
       payload: this.transformSsePayload?.(payload) ?? payload,
+      customHeaders: this.customHeaders,
     })
       .pipe(
         concatMap(event => of(event).pipe(delay(options?.delayTime ?? 50))),
@@ -139,7 +142,9 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     formData.append('file', file);
     formData.append('customChannelId', customChannelId);
 
-    const headers: HeadersInit = {};
+    const headers: HeadersInit = {
+      ...this.customHeaders,
+    };
     if (this.apiKey) {
       headers['X-API-KEY'] = this.apiKey;
     }

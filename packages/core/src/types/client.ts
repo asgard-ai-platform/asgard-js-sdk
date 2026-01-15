@@ -30,6 +30,16 @@ export type ClientConfig = SseHandlers & {
   apiKey?: string;
   debugMode?: boolean;
   transformSsePayload?: (payload: FetchSsePayload) => FetchSsePayload;
+  /**
+   * Custom headers to include in SSE and API requests.
+   * Can be used to add Authorization headers (e.g., Bearer token) or other custom headers.
+   * @example
+   * customHeaders: {
+   *   'Authorization': 'Bearer your-token',
+   *   'X-Custom-Header': 'custom-value'
+   * }
+   */
+  customHeaders?: Record<string, string>;
 } & (
     | {
         /**

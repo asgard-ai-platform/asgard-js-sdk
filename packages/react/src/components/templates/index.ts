@@ -11,6 +11,8 @@ export * from './audio-template';
 export * from './location-template';
 export * from './user-image-template';
 export * from './tool-call-group';
+export * from './table-template';
 
 export * from './quick-replies';
 export * from './references';
+export * from './message-actions';

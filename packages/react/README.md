@@ -2,6 +2,9 @@
 
 This package provides React components and hooks for integrating with the Asgard AI platform, allowing you to build interactive chat interfaces.
 
+<a id="installation"></a>
+<br/>
+
 ## Installation
 
 To install the React package, use the following command:
@@ -10,7 +13,13 @@ To install the React package, use the following command:
 npm install @asgard-js/core @asgard-js/react
 ```
 
+<a id="usage"></a>
+<br/>
+
 ## Usage
+
+<a id="basic-usage"></a>
+<br/>
 
 ### Basic Usage
 
@@ -89,6 +98,9 @@ const App = () => {
 export default App;
 ```
 
+<a id="file-upload-support"></a>
+<br/>
+
 ### File Upload Support
 
 The Chatbot component includes built-in file upload capabilities for sending images. You can control this feature using the `enableUpload` prop.
@@ -129,6 +141,9 @@ When `enableLoadConfigFromService` is enabled, you can also control the upload f
 3. Default: `false`
 
 **Features**: Multiple file selection, image preview with modal view, and responsive design. Supports JPEG, PNG, GIF, WebP up to 20MB per file, maximum 10 files at once.
+
+<a id="conversation-export"></a>
+<br/>
 
 ### Conversation Export
 
@@ -171,6 +186,9 @@ When `enableLoadConfigFromService` is enabled, you can also control the export f
 
 **Features**: Download button in chatbot footer, exports conversation history with timestamps and trace IDs, human-readable filename format (`{BotName}_對話紀錄_{Date}_{Time}.md`).
 
+<a id="api-key-authentication"></a>
+<br/>
+
 ### API Key Authentication
 
 For applications that need dynamic API key input (such as embedded chatbots), you can use the authentication state management:
@@ -211,7 +229,7 @@ const EmbedApp = () => {
 };
 ```
 
-## Migration from `endpoint` to `botProviderEndpoint`
+## Migration from endpoint to botProviderEndpoint
 
 **Important**: The `endpoint` configuration option is deprecated. Use `botProviderEndpoint` instead for simplified configuration.
 
@@ -243,6 +261,19 @@ config: {
 
 **Backward Compatibility:** Existing code using `endpoint` will continue to work but may show deprecation warnings when `debugMode` is enabled.
 
+<a id="migration-from-endpoint-to-botproviderendpoint"></a>
+<br/>
+
+## Migration from endpoint to botProviderEndpoint
+
+<a id="api-reference"></a>
+<br/>
+
+## API Reference
+
+<a id="chatbot-component-props"></a>
+<br/>
+
 ### Chatbot Component Props
 
 - **title?**: `string` - The title of the chatbot (optional). If not provided, will use the value from the API if available.
@@ -251,10 +282,11 @@ config: {
   - `botProviderEndpoint`: `string` (required) - Bot provider endpoint URL (SSE endpoint will be auto-derived)
   - `endpoint?`: `string` (deprecated) - Legacy API endpoint URL. Use `botProviderEndpoint` instead.
   - `transformSsePayload?`: `(payload: FetchSsePayload) => FetchSsePayload` - SSE payload transformer
+  - `customHeaders?`: `Record<string, string>` - Custom headers to include in SSE and API requests (e.g., Bearer token via `Authorization` header)
   - `debugMode?`: `boolean` - Enable debug mode, defaults to `false`
   - `onRunInit?`: `InitEventHandler` - Handler for run initialization events
   - `onMessage?`: `MessageEventHandler` - Handler for message events
-  - `onToolCall?`: `ToolCallEventHandler` - Handler for tool call events
+  - `onToolCall?`: `ToolCallEventHandler` - Handler for tool call events. See [Tool Call Handler](#tool-call-handler) section for details.
   - `onProcess?`: `ProcessEventHandler` - Handler for process events
   - `onRunDone?`: `DoneEventHandler` - Handler for run completion events
   - `onRunError?`: `ErrorEventHandler` - Error handler for execution errors
@@ -277,8 +309,14 @@ config: {
 - **onClose**: `() => void` - Callback function when chat is closed
 - **authState?**: `AuthState` - Authentication state for dynamic API key management. Available states: `'loading'`, `'needApiKey'`, `'authenticated'`, `'error'`, `'invalidApiKey'`
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
+- **onTemplateBtnClick?**: `(payload: Record<string, unknown>, eventName: string, raw: string) => void` - Callback for EMIT button actions. See [EMIT Action](#emit-action) section for details.
+- **messageActions?**: `(message: ConversationBotMessage) => MessageActionConfig[]` - Function to define which action buttons to display for each bot message. Returns an array of `{ id: string, label: string }` objects. See [Message Actions](#message-actions) section for details.
+- **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
 - **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. ChatbotRef extends the ref of the chatbot instance and provides some additional methods like `serviceContext.sendMessage` to interact with the chatbot instance.
+
+<a id="theme-configuration"></a>
+<br/>
 
 ### Theme Configuration
 
@@ -289,6 +327,8 @@ The priority of themes is as follows (high to low):
 1. Theme from props
 2. Theme from annotations from bot provider metadata
 3. Default theme
+
+### Theme Interface
 
 ```typescript
 export interface AsgardThemeContextValue {
@@ -505,7 +545,7 @@ const defaultTheme = {
 };
 ```
 
-### Usage Example
+#### Usage Example
 
 ```javascript
 const App = () => {
@@ -535,6 +575,264 @@ const App = () => {
 ```
 
 Note: When `fullScreen` prop is set to `true`, the chatbot's width and height will be set to `100vw` and `100vh` respectively, and `borderRadius` will be set to zero, regardless of theme settings.
+
+<a id="event-handlers"></a>
+<br/>
+
+## Event Handlers
+
+<a id="tool-call-handler"></a>
+<br/>
+
+### Tool Call Handler
+
+The `onToolCall` callback allows you to handle tool call events from the bot. This handler is triggered when the bot starts or completes executing a tool call. See the [Tool Call Start documentation](https://www.asgard-ai.com/docs/developer-reference/api-doc/send-message/sse-response/asgard-tool-call-start) and [Tool Call Complete documentation](https://www.asgard-ai.com/docs/developer-reference/api-doc/send-message/sse-response/asgard-tool-call-complete) for details.
+
+The callback receives a `SseResponse` object with one of the following event types:
+
+- `EventType.TOOL_CALL_START`: Fired when a tool call begins execution
+- `EventType.TOOL_CALL_COMPLETE`: Fired when a tool call completes execution
+
+The response object contains the following data:
+
+For `TOOL_CALL_START`:
+
+- `processId`: `string` - Process identifier
+- `callSeq`: `number` - Call sequence number
+- `toolCall`: Object containing:
+  - `toolsetName`: `string` - Name of the toolset
+  - `toolName`: `string` - Name of the tool
+  - `parameter`: `Record<string, unknown>` - Tool call parameters
+
+For `TOOL_CALL_COMPLETE`:
+
+- All fields from `TOOL_CALL_START` plus:
+- `toolCallResult`: Object containing:
+  - `data`: `unknown` - Result data returned from the tool execution
+  - `error`: `unknown` - Error information if the tool call failed
+  - `errorCode`: `string | null` - Error code if the tool call failed
+  - `isSuccess`: `boolean` - Whether the tool call succeeded
+  - `paging`: `unknown` - Paging information if applicable
+
+Example SSE response for `TOOL_CALL_COMPLETE`:
+
+```json
+{
+  "eventType": "asgard.tool_call.complete",
+  "requestId": "295fcef49f270b06e6d53f6fb3656b0c",
+  "eventId": "1947548755242782720",
+  "namespace": "proj-4b2b31bb-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "botProviderName": "bp-reviewbot-f96def0f-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "customChannelId": "syDHHkS6cQMdAWTu3T2N2X",
+  "fact": {
+    "runInit": null,
+    "runDone": null,
+    "runError": null,
+    "processStart": null,
+    "processComplete": null,
+    "messageStart": null,
+    "messageDelta": null,
+    "messageComplete": null,
+    "toolCallStart": null,
+    "toolCallComplete": {
+      "processId": "f627cac52c576dc4",
+      "callSeq": 0,
+      "toolCall": {
+        "toolsetName": "ts-callool-4b2b31bb-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "toolName": "movie_search",
+        "parameter": {}
+      },
+      "toolCallResult": {
+        "data": null,
+        "error": null,
+        "errorCode": null,
+        "isSuccess": true,
+        "paging": null
+      }
+    }
+  }
+}
+```
+
+#### Usage Example
+
+```typescript
+import { useCallback } from 'react';
+import { EventType, SseResponse } from '@asgard-js/core';
+
+const handleToolCall = useCallback(
+  (response: SseResponse<EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE>): void => {
+    if (response.eventType === EventType.TOOL_CALL_COMPLETE) {
+      const { processId, callSeq, toolCall, toolCallResult } = response.fact.toolCallComplete;
+      console.log(`Tool call completed: ${toolCall.toolsetName}.${toolCall.toolName}`);
+
+      if (toolCallResult.isSuccess) {
+        console.log('Tool call succeeded. Data:', toolCallResult.data);
+        // Process successful results
+      } else {
+        console.error('Tool call failed:', toolCallResult.error);
+        console.error('Error code:', toolCallResult.errorCode);
+        // Handle errors
+      }
+
+      // You can process results, update UI, or trigger follow-up actions
+    }
+  },
+  [],
+);
+
+// Pass the handler to Chatbot config
+<Chatbot
+  config={{
+    apiKey: 'your-api-key',
+    botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+    onToolCall: handleToolCall,
+  }}
+  customChannelId="your-channel-id"
+/>;
+```
+
+<a id="emit-action"></a>
+<br/>
+
+### EMIT Action
+
+EMIT buttons allow you to handle custom actions in your application. Implement the `onTemplateBtnClick` callback to process these events. See the [EMIT Action documentation](https://www.asgard-ai.com/docs/developer-reference/asgard-builtin/message-template-action-object-emit) for details.
+
+The callback receives the following parameters:
+
+1. `payload` (optional): Custom data from the button action
+2. `eventName` (required): Event name specified in the button action
+3. `raw` (required): Complete SSE response data as JSON string. Use this when you need information beyond `payload` and `eventName`. Parse it to access additional fields from the original SSE response. See [SSE Response documentation](https://www.asgard-ai.com/docs/developer-reference/api-doc/send-message/sse-response/message-complete) for the complete response structure.
+
+Configure EMIT buttons in your backend SSE response:
+
+```json
+{
+  "template": {
+    "type": "BUTTON",
+    "title": "Action Menu",
+    "text": "Please select an action:",
+    "buttons": [
+      {
+        "label": "Support Request",
+        "action": {
+          "type": "EMIT",
+          "eventName": "support_request",
+          "payload": {
+            "category": "technical",
+            "priority": "high"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+#### Usage Example
+
+```typescript
+import { useCallback } from 'react';
+
+const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, eventName: string, raw: string): void => {
+  if (eventName === 'support_request') {
+    // Access payload data
+    const category = payload.category as string;
+    const priority = payload.priority as string;
+
+    // Optionally parse raw SSE data to access additional fields
+    let customChannelId: string | undefined;
+    try {
+      const sseData = JSON.parse(raw);
+      customChannelId = sseData.customChannelId;
+    } catch {
+      // Handle parse error if needed
+    }
+
+    const channelInfo = customChannelId ? `\nChannel ID: ${customChannelId}` : '';
+    window.alert(`Support request created\n\nCategory: ${category}\nPriority: ${priority}${channelInfo}`);
+  }
+}, []);
+
+// Pass the handler to Chatbot
+<Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;
+```
+
+<a id="message-actions"></a>
+<br/>
+
+### Message Actions
+
+Message Actions allow you to add custom action buttons to bot messages. This is useful for implementing features like "Save as Topic", "Copy", "Share", or any other custom actions on individual messages.
+
+The `messageActions` prop is a function that receives a bot message and returns an array of action configurations. The `onMessageAction` callback is triggered when a user clicks on an action button.
+
+#### MessageActionConfig Interface
+
+```typescript
+interface MessageActionConfig {
+  /** Unique identifier for the action */
+  id: string;
+  /** Display label for the action button */
+  label: string;
+}
+```
+
+#### Usage Example
+
+```typescript
+import { useCallback } from 'react';
+import { ConversationBotMessage } from '@asgard-js/core';
+
+const App = () => {
+  const handleMessageAction = useCallback((actionId: string, message: ConversationBotMessage) => {
+    if (actionId === 'save-topic') {
+      const content = message.message.text;
+      console.log('Save as topic:', content);
+      // Implement your save logic here
+    } else if (actionId === 'copy') {
+      navigator.clipboard.writeText(message.message.text);
+      alert('Copied to clipboard!');
+    }
+  }, []);
+
+  return (
+    <Chatbot
+      config={config}
+      customChannelId="your-channel-id"
+      messageActions={message => {
+        // Return different actions based on message content or type
+        return [
+          { id: 'save-topic', label: 'Save as Topic' },
+          { id: 'copy', label: 'Copy' },
+        ];
+      }}
+      onMessageAction={handleMessageAction}
+    />
+  );
+};
+```
+
+#### Conditional Actions
+
+You can return different actions based on the message content:
+
+```typescript
+messageActions={(message) => {
+  const actions = [{ id: 'copy', label: 'Copy' }];
+
+  // Only show "Save as Topic" for longer messages
+  if (message.message.text.length > 100) {
+    actions.push({ id: 'save-topic', label: 'Save as Topic' });
+  }
+
+  return actions;
+}}
+```
+
+<a id="testing"></a>
+<br/>
 
 ## Testing
 
@@ -597,6 +895,9 @@ describe('Chatbot Component', () => {
   });
 });
 ```
+
+<a id="development"></a>
+<br/>
 
 ## Development
 

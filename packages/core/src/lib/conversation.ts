@@ -52,6 +52,7 @@ export default class Conversation implements IConversation {
       message,
       time: new Date(),
       traceId: response.traceId,
+      raw: '',
     });
 
     return new Conversation({ messages });
@@ -77,6 +78,7 @@ export default class Conversation implements IConversation {
       message,
       time: new Date(),
       traceId: response.traceId ?? currentMessage.traceId,
+      raw: currentMessage.raw,
     });
 
     return new Conversation({ messages });
@@ -98,6 +100,7 @@ export default class Conversation implements IConversation {
       message,
       time: new Date(),
       traceId: response.traceId ?? (currentMessage?.type === 'bot' ? currentMessage.traceId : undefined),
+      raw: JSON.stringify(response),
     });
 
     return new Conversation({ messages });

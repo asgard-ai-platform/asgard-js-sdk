@@ -12,6 +12,7 @@ import {
   AudioTemplate,
   LocationTemplate,
   UserImageTemplate,
+  TableTemplate,
 } from '../../templates';
 
 interface ConversationMessageRendererProps {
@@ -61,6 +62,8 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
       return <AudioTemplate message={message} />;
     case MessageTemplateType.LOCATION:
       return <LocationTemplate message={message} />;
+    case MessageTemplateType.TABLE:
+      return <TableTemplate message={message} />;
     default:
       return <div />;
   }
