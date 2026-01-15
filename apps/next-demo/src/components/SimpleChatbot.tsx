@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { RemoveScroll } from 'react-remove-scroll';
-import { EventType, MessageTemplateType, ConversationMessage, SseResponse } from '@asgard-js/core';
+import {
+  EventType,
+  MessageTemplateType,
+  ConversationMessage,
+  ConversationBotMessage,
+  SseResponse,
+} from '@asgard-js/core';
 import type { ChatbotRef } from '@asgard-js/react';
 import { nanoid } from 'nanoid';
 import { ChatIcon } from '~/icons';
@@ -61,10 +67,11 @@ const initMessages: ConversationMessage[] = [
       },
     },
     time: new Date(),
+    raw: '',
   },
 ];
 
-export default function SimpleChatbot() {
+export default function SimpleChatbot(): ReactNode {
   const chatbotRef = useRef<ChatbotRef>(null);
   const questionToSendRef = useRef<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -75,7 +82,7 @@ export default function SimpleChatbot() {
     setCustomChannelId(nanoid());
 
     // 檢查螢幕寬度
-    const checkScreenSize = () => {
+    const checkScreenSize = (): void => {
       setIsMobile(window.innerWidth <= 768);
     };
 
@@ -85,13 +92,13 @@ export default function SimpleChatbot() {
     // 監聽視窗大小變化
     window.addEventListener('resize', checkScreenSize);
 
-    return () => {
+    return (): void => {
       window.removeEventListener('resize', checkScreenSize);
     };
   }, []);
 
   // 處理快速問題按鈕點擊
-  const handleQuestionClick = (question: string) => {
+  const handleQuestionClick = (question: string): void => {
     if (!isOpen) {
       questionToSendRef.current = question;
       setIsOpen(true);
@@ -104,13 +111,13 @@ export default function SimpleChatbot() {
   };
 
   // 處理 SSE 訊息事件
-  const handleSseMessage = (response: SseResponse<EventType>) => {
+  const handleSseMessage = (response: SseResponse<EventType>): void => {
     // 當收到 asgard.run.done 事件時，發送待發送的問題
     if (questionToSendRef.current && response.eventType === EventType.DONE) {
       const textToSend = questionToSendRef.current.trim();
 
       // 如果 isConnecting 為 true，等待狀態更新
-      const waitAndSend = () => {
+      const waitAndSend = (): void => {
         if (chatbotRef.current?.serviceContext?.isConnecting) {
           setTimeout(waitAndSend, 0);
         } else if (textToSend && chatbotRef.current?.serviceContext?.sendMessage) {
@@ -174,6 +181,18 @@ export default function SimpleChatbot() {
               avatar="https://img.icons8.com/fluency/48/bot.png"
               enableUpload={true}
               enableExport
+              messageActions={() => {
+                // 為所有 bot 訊息顯示「將此則儲存為Topic」按鈕
+                return [{ id: 'save-topic', label: '將此則儲存為Topic' }];
+              }}
+              onMessageAction={(actionId: string, message: ConversationBotMessage) => {
+                if (actionId === 'save-topic') {
+                  const content = message.message.text;
+                  // eslint-disable-next-line no-console
+                  console.log('儲存為 Topic:', content);
+                  alert(`已儲存訊息：${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`);
+                }
+              }}
             />
           </div>
         </RemoveScroll>

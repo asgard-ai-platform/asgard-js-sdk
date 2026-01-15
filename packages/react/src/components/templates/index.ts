@@ -15,3 +15,4 @@ export * from './table-template';
 
 export * from './quick-replies';
 export * from './references';
+export * from './message-actions';

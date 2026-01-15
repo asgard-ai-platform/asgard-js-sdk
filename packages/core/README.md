@@ -130,6 +130,7 @@ The main client class for interacting with the Asgard AI platform.
 - **endpoint?**: `string` (deprecated) - Legacy API endpoint URL. Use `botProviderEndpoint` instead.
 - **debugMode?**: `boolean` - Enable debug mode for deprecation warnings, defaults to `false`
 - **transformSsePayload?**: `(payload: FetchSsePayload) => FetchSsePayload` - SSE payload transformer
+- **customHeaders?**: `Record<string, string>` - Custom headers to include in SSE and API requests (e.g., Bearer token via `Authorization` header)
 - **onRunInit?**: `InitEventHandler` - Handler for run initialization events
 - **onMessage?**: `MessageEventHandler` - Handler for message events
 - **onToolCall?**: `ToolCallEventHandler` - Handler for tool call events

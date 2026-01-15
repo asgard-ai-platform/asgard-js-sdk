@@ -64,7 +64,8 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
     );
   }
 
-  if (message.type !== 'bot') return null;
+  // At this point, message is either 'bot' or 'tool-call' type
+  const botConversationMessage = message.type === 'bot' ? message : undefined;
 
   return (
     <TemplateBox
@@ -74,7 +75,12 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
       style={rootStyle}
     >
       <Avatar avatar={avatar} />
-      <TemplateBoxContent time={message.time} quickReplies={message.message.template?.quickReplies}>
+      <TemplateBoxContent
+        time={message.time}
+        quickReplies={botConversationMessage?.message.template?.quickReplies}
+        references={botConversationMessage?.message.template?.references}
+        message={botConversationMessage}
+      >
         <div className={clsx(classes.text, classes['text--bot'])} style={styles}>
           {isBot ? <StreamdownClient>{messageText}</StreamdownClient> : messageText}
         </div>
