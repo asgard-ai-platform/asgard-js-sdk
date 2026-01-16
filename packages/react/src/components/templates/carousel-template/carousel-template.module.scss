@@ -4,6 +4,7 @@
   flex-wrap: nowrap;
   overflow-x: scroll;
   gap: 8px;
+  align-items: stretch;
 
   > div {
     flex: 0 0 auto;

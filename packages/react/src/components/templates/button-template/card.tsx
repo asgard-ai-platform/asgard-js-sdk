@@ -1,4 +1,4 @@
-import { MouseEventHandler, ReactNode, useCallback, useMemo, CSSProperties } from 'react';
+import { MouseEventHandler, ReactNode, useCallback, useMemo, useState, CSSProperties } from 'react';
 import styles from './card.module.scss';
 import { ButtonAction, ButtonMessageTemplate, CarouselMessageTemplate } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
@@ -29,12 +29,13 @@ export function Card(props: CardProps): ReactNode {
   const { sendMessage } = useAsgardContext();
   const { onTemplateBtnClick, defaultLinkTarget } = useAsgardTemplateContext();
 
+  const [imageError, setImageError] = useState(false);
+
   const src = useMemo(() => {
-    return (
-      template?.thumbnailImageUrl?.replace(/^http:/, '').replace(/^https:/, '') ||
-      'https://via.assets.so/img.jpg?w=200&h=270&tc=white&bg=#eeeeee'
-    );
+    return template?.thumbnailImageUrl?.replace(/^http:/, '').replace(/^https:/, '') || '';
   }, [template]);
+
+  const showImage = Boolean(src) && !imageError;
 
   const aspectRatio = useMemo(() => {
     switch (template?.imageAspectRatio) {
@@ -75,10 +76,11 @@ export function Card(props: CardProps): ReactNode {
 
   return (
     <div className={clsx('asgard-card', styles.card_root)} style={customStyle?.style}>
-      {template?.thumbnailImageUrl && (
+      {showImage && (
         <img
           alt={template?.title}
           src={src}
+          onError={() => setImageError(true)}
           style={{
             display: 'block',
             width: '100%',
