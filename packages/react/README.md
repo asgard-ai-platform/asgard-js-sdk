@@ -657,29 +657,25 @@ Example SSE response for `TOOL_CALL_COMPLETE`:
 #### Usage Example
 
 ```typescript
-import { useCallback } from 'react';
 import { EventType, SseResponse } from '@asgard-js/core';
 
-const handleToolCall = useCallback(
-  (response: SseResponse<EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE>): void => {
-    if (response.eventType === EventType.TOOL_CALL_COMPLETE) {
-      const { processId, callSeq, toolCall, toolCallResult } = response.fact.toolCallComplete;
-      console.log(`Tool call completed: ${toolCall.toolsetName}.${toolCall.toolName}`);
+const handleToolCall = (response: SseResponse<EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE>): void => {
+  if (response.eventType === EventType.TOOL_CALL_COMPLETE) {
+    const { processId, callSeq, toolCall, toolCallResult } = response.fact.toolCallComplete;
+    console.log(`Tool call completed: ${toolCall.toolsetName}.${toolCall.toolName}`);
 
-      if (toolCallResult.isSuccess) {
-        console.log('Tool call succeeded. Data:', toolCallResult.data);
-        // Process successful results
-      } else {
-        console.error('Tool call failed:', toolCallResult.error);
-        console.error('Error code:', toolCallResult.errorCode);
-        // Handle errors
-      }
-
-      // You can process results, update UI, or trigger follow-up actions
+    if (toolCallResult.isSuccess) {
+      console.log('Tool call succeeded. Data:', toolCallResult.data);
+      // Process successful results
+    } else {
+      console.error('Tool call failed:', toolCallResult.error);
+      console.error('Error code:', toolCallResult.errorCode);
+      // Handle errors
     }
-  },
-  [],
-);
+
+    // You can process results, update UI, or trigger follow-up actions
+  }
+};
 
 // Pass the handler to Chatbot config
 <Chatbot
@@ -733,9 +729,7 @@ Configure EMIT buttons in your backend SSE response:
 #### Usage Example
 
 ```typescript
-import { useCallback } from 'react';
-
-const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, eventName: string, raw: string): void => {
+const handleTemplateBtnClick = (payload: Record<string, unknown>, eventName: string, raw: string): void => {
   if (eventName === 'support_request') {
     // Access payload data
     const category = payload.category as string;
@@ -753,7 +747,7 @@ const handleTemplateBtnClick = useCallback((payload: Record<string, unknown>, ev
     const channelInfo = customChannelId ? `\nChannel ID: ${customChannelId}` : '';
     window.alert(`Support request created\n\nCategory: ${category}\nPriority: ${priority}${channelInfo}`);
   }
-}, []);
+};
 
 // Pass the handler to Chatbot
 <Chatbot config={config} customChannelId={nanoid()} onTemplateBtnClick={handleTemplateBtnClick} />;

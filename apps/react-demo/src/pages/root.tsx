@@ -56,42 +56,39 @@ export function Root(): ReactNode {
     }
   }, []);
 
-  const handleTemplateBtnClick = useCallback(
-    (payload: Record<string, unknown>, eventName: string, raw: string): void => {
-      switch (eventName) {
-        case 'book_ticket': {
-          const movieId = payload.movieId as string;
-          const movieTitle = payload.movieTitle as string;
-          const showtime = payload.showtime as string;
-          const theater = payload.theater as string;
-          const seatCount = payload.seatCount as number;
-          const totalPrice = payload.totalPrice as number;
-          const currency = payload.currency as string;
-          const timestamp = payload.timestamp as number;
-          const date = timestamp ? new Date(timestamp * 1000).toLocaleString('zh-TW') : 'N/A';
-          window.alert(
-            `【訂票資訊】\n\n電影：${movieTitle}\n電影 ID：${movieId}\n場次時間：${showtime}\n影城：${theater}\n座位數：${seatCount} 位\n總金額：${totalPrice} ${currency}\n建立時間：${date}\n\nRaw SSE Data：\n${raw}`,
-          );
+  const handleTemplateBtnClick = (payload: Record<string, unknown>, eventName: string, raw: string): void => {
+    switch (eventName) {
+      case 'book_ticket': {
+        const movieId = payload.movieId as string;
+        const movieTitle = payload.movieTitle as string;
+        const showtime = payload.showtime as string;
+        const theater = payload.theater as string;
+        const seatCount = payload.seatCount as number;
+        const totalPrice = payload.totalPrice as number;
+        const currency = payload.currency as string;
+        const timestamp = payload.timestamp as number;
+        const date = timestamp ? new Date(timestamp * 1000).toLocaleString('zh-TW') : 'N/A';
+        window.alert(
+          `【訂票資訊】\n\n電影：${movieTitle}\n電影 ID：${movieId}\n場次時間：${showtime}\n影城：${theater}\n座位數：${seatCount} 位\n總金額：${totalPrice} ${currency}\n建立時間：${date}\n\nRaw SSE Data：\n${raw}`,
+        );
 
-          break;
+        break;
+      }
+
+      default:
+        // eslint-disable-next-line no-console
+        console.log('Received event:', eventName, 'with payload:', payload);
+        try {
+          // eslint-disable-next-line no-console
+          console.log('Raw SSE Data:', JSON.parse(raw));
+        } catch {
+          // eslint-disable-next-line no-console
+          console.log('Raw SSE Data (raw string):', raw);
         }
 
-        default:
-          // eslint-disable-next-line no-console
-          console.log('Received event:', eventName, 'with payload:', payload);
-          try {
-            // eslint-disable-next-line no-console
-            console.log('Raw SSE Data:', JSON.parse(raw));
-          } catch {
-            // eslint-disable-next-line no-console
-            console.log('Raw SSE Data (raw string):', raw);
-          }
-
-          break;
-      }
-    },
-    [],
-  );
+        break;
+    }
+  };
 
   return (
     <>
