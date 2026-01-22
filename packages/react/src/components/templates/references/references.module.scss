@@ -15,6 +15,8 @@
 
 .references_box--bot {
   max-width: 70%;
+  background: #585858;
+  color: white;
   border-top-left-radius: 0;
 }
 
@@ -35,12 +37,14 @@
   font-size: inherit;
   font-weight: bold;
   white-space: nowrap;
+  color: rgba(140, 140, 140, 1);
 }
 
 .references_divider {
   flex: 1;
   height: 1px;
   min-width: 0;
+  background-color: #3d3d3d;
 }
 
 .references_list {
