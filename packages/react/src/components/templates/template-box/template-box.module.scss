@@ -17,3 +17,8 @@
 .template_box--user {
   flex-direction: row-reverse;
 }
+
+// Empty message style: reduce spacing to make it appear as part of previous message
+.template_box--empty {
+  margin-top: -8px;
+}

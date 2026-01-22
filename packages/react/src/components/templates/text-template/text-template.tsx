@@ -67,6 +67,41 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
   // At this point, message is either 'bot' or 'tool-call' type
   const botConversationMessage = message.type === 'bot' ? message : undefined;
 
+  // Check if this is an empty message (no text but may have references or quick replies)
+  const hasText = messageText.trim() !== '';
+  const references = botConversationMessage?.message.template?.references;
+  const quickReplies = botConversationMessage?.message.template?.quickReplies;
+  const hasReferences = !!references?.length;
+  const hasQuickReplies = !!quickReplies?.length;
+  const isEmptyMessage = !hasText;
+
+  // If no text and no references and no quick replies, don't render anything
+  if (isEmptyMessage && !hasReferences && !hasQuickReplies) {
+    return null;
+  }
+
+  // Empty message with references or quick replies: invisible avatar placeholder, no message box
+  if (isEmptyMessage) {
+    return (
+      <TemplateBox
+        className={clsx('asgard-text-template', 'asgard-text-template--bot', 'asgard-text-template--empty')}
+        type="bot"
+        direction="horizontal"
+        style={rootStyle}
+        isEmpty
+      >
+        <Avatar invisible />
+        <TemplateBoxContent
+          time={message.time}
+          quickReplies={quickReplies}
+          references={references}
+          message={botConversationMessage}
+          isEmpty
+        />
+      </TemplateBox>
+    );
+  }
+
   return (
     <TemplateBox
       className="asgard-text-template asgard-text-template--bot"
@@ -77,8 +112,8 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
       <Avatar avatar={avatar} />
       <TemplateBoxContent
         time={message.time}
-        quickReplies={botConversationMessage?.message.template?.quickReplies}
-        references={botConversationMessage?.message.template?.references}
+        quickReplies={quickReplies}
+        references={references}
         message={botConversationMessage}
       >
         <div className={clsx(classes.text, classes['text--bot'])} style={styles}>
