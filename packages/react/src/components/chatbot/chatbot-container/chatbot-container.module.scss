@@ -28,6 +28,8 @@
   display: grid;
   grid-template-rows: max-content auto max-content;
   background-color: var(--asg-color-bg);
-  overflow: hidden;
+  // Use 'clip' instead of 'hidden' to prevent scrollIntoView from scrolling this container
+  // 'overflow: hidden' still creates a scroll container that can be programmatically scrolled
+  overflow: clip;
   overscroll-behavior: contain;
 }
