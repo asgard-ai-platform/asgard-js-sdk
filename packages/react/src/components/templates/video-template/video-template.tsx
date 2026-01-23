@@ -75,7 +75,7 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
 
   const { template: themeTemplate } = useAsgardThemeContext();
 
-  const { avatar, messageBoxBottomRef } = useAsgardContext();
+  const { avatar, scrollToBottom } = useAsgardContext();
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoBoxRef = useRef<HTMLDivElement>(null);
@@ -87,24 +87,20 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
   useEffect(() => {
     // Delay slightly to ensure image has started loading
     const timer = setTimeout(() => {
-      if (messageBoxBottomRef.current) {
-        messageBoxBottomRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
+      scrollToBottom('smooth');
     }, 100);
 
     return (): void => {
       clearTimeout(timer);
     };
-  }, [messageBoxBottomRef]);
+  }, [scrollToBottom]);
 
   // Trigger scroll again when preview image is loaded (ensure image height is calculated)
   const handleImageLoad = (): void => {
-    if (messageBoxBottomRef.current) {
-      // Slight delay to ensure DOM is updated
-      setTimeout(() => {
-        messageBoxBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
-    }
+    // Slight delay to ensure DOM is updated
+    setTimeout(() => {
+      scrollToBottom('smooth');
+    }, 50);
   };
 
   // Check if it's a YouTube URL and get video ID

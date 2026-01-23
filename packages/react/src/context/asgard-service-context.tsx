@@ -118,9 +118,12 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
   // 用戶觸發的滾動 - 會恢復跟隨狀態
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const bottomElement = messageBoxBottomRef.current;
-    if (bottomElement) {
-      bottomElement.scrollIntoView({ behavior });
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior,
+      });
     }
 
     setIsFollowingLatest(true);
@@ -128,9 +131,12 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
   // 程式觸發的滾動（串流更新）- 不改變跟隨狀態
   const programmaticScrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const bottomElement = messageBoxBottomRef.current;
-    if (bottomElement) {
-      bottomElement.scrollIntoView({ behavior });
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior,
+      });
     }
   }, []);
 

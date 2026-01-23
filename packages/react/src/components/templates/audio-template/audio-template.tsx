@@ -16,18 +16,16 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
   const { originalContentUrl } = template;
 
   const { template: themeTemplate } = useAsgardThemeContext();
-  const { avatar, messageBoxBottomRef } = useAsgardContext();
+  const { avatar, scrollToBottom } = useAsgardContext();
 
   // Auto scroll to bottom when AUDIO message is rendered
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (messageBoxBottomRef.current) {
-        messageBoxBottomRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
+      scrollToBottom('smooth');
     }, 100);
 
     return (): void => clearTimeout(timer);
-  }, [messageBoxBottomRef]);
+  }, [scrollToBottom]);
 
   return (
     <TemplateBox
