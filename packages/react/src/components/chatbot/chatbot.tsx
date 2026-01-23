@@ -135,14 +135,20 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
       case 'subscriptionExpired':
         return (
           <div className={styles.chatbot__auth_state_container}>
-            <ServiceErrorState message="The service is currently unavailable. Please contact the service representative for assistance." />
+            <ServiceErrorState
+              avatar={avatar}
+              message="The service is currently unavailable. Please contact the service representative for assistance."
+            />
           </div>
         );
 
       case 'botNotFound':
         return (
           <div className={styles.chatbot__auth_state_container}>
-            <ServiceErrorState message="We couldn't find the service. Please contact the service representative for assistance." />
+            <ServiceErrorState
+              avatar={avatar}
+              message="We couldn't find the service. Please contact the service representative for assistance."
+            />
           </div>
         );
 
@@ -213,35 +219,19 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     );
   }
 
-  // For non-authenticated states, provide AsgardServiceContextProvider but without SSE connection
+  // For non-authenticated states, don't use AsgardServiceContextProvider to avoid SSE connection
   return (
     <AsgardThemeContextProvider theme={theme}>
-      <AsgardServiceContextProvider
-        parentRef={ref}
-        avatar={avatar}
-        title={title}
-        config={config}
-        customChannelId={customChannelId}
-        initMessages={initMessages}
-        onSseMessage={onSseMessage}
-        onAuthError={onAuthError}
-        botTypingPlaceholder={botTypingPlaceholder}
-        inputPlaceholder={inputPlaceholder}
-        enableUpload={enableUpload}
-        enableExport={enableExport}
-        enableDocumentUpload={enableDocumentUpload}
-      >
-        <ChatbotContainer fullScreen={fullScreen} className={className} style={style}>
-          <ChatbotHeader
-            title={title}
-            onReset={onReset}
-            onClose={onClose}
-            customActions={customActions}
-            maintainConnectionWhenClosed={maintainConnectionWhenClosed}
-          />
-          {renderContent()}
-        </ChatbotContainer>
-      </AsgardServiceContextProvider>
+      <ChatbotContainer fullScreen={fullScreen} className={className} style={style}>
+        <ChatbotHeader
+          title={title}
+          onReset={onReset}
+          onClose={onClose}
+          customActions={customActions}
+          maintainConnectionWhenClosed={maintainConnectionWhenClosed}
+        />
+        {renderContent()}
+      </ChatbotContainer>
     </AsgardThemeContextProvider>
   );
 });

@@ -1,15 +1,13 @@
 import { ReactElement } from 'react';
-import { useAsgardContext } from '../../../context/asgard-service-context';
 import { ProfileIcon } from '../profile-icon';
 import styles from './service-error-state.module.scss';
 
 interface ServiceErrorStateProps {
   message: string;
+  avatar?: string;
 }
 
-export function ServiceErrorState({ message }: ServiceErrorStateProps): ReactElement {
-  const { avatar } = useAsgardContext();
-
+export function ServiceErrorState({ message, avatar }: ServiceErrorStateProps): ReactElement {
   return (
     <div className={styles.container}>
       <div className={styles.avatar}>
