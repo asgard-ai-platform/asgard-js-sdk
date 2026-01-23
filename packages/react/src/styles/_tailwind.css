@@ -1,9 +1,0 @@
-/**
- * Tailwind CSS v4 configuration for Streamdown
- * Only includes utilities, not base styles, to avoid affecting consumer projects
- */
-@import 'tailwindcss/theme.css';
-@import 'tailwindcss/utilities.css';
-
-/* Only scan streamdown's compiled JavaScript for class names */
-@source "../../../../node_modules/streamdown/dist/index.js";

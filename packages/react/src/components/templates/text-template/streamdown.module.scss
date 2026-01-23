@@ -1,0 +1,204 @@
+// Streamdown Markdown custom styles
+// Replaces Tailwind CSS classes with scoped CSS Modules
+
+// Headings
+.h1 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+.h2 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.h5 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+// Paragraph
+.p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Lists
+.ul {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  list-style-type: disc;
+  list-style-position: inside;
+  white-space: normal;
+
+  .ul,
+  .ol {
+    padding-left: 1.5rem;
+  }
+}
+
+.ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  list-style-type: decimal;
+  list-style-position: inside;
+  white-space: normal;
+
+  .ul,
+  .ol {
+    padding-left: 1.5rem;
+  }
+}
+
+.li {
+  padding: 0.25rem 0;
+
+  > p {
+    display: inline;
+  }
+}
+
+// Link
+.a {
+  font-weight: 500;
+  color: var(--asgard-markdown-link, #3b82f6);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+
+  &:hover {
+    color: var(--asgard-markdown-link-hover, #2563eb);
+  }
+}
+
+// Blockquote
+.blockquote {
+  margin: 0.75rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 4px solid var(--asgard-markdown-blockquote-border, rgba(255, 255, 255, 0.3));
+  color: var(--asgard-markdown-blockquote, rgba(255, 255, 255, 0.7));
+  font-style: italic;
+
+  p {
+    margin: 0;
+  }
+}
+
+// Horizontal Rule
+.hr {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px solid var(--asgard-markdown-hr, rgba(255, 255, 255, 0.2));
+}
+
+// Inline elements
+.strong {
+  font-weight: 600;
+}
+
+.em {
+  font-style: italic;
+}
+
+// Code
+.code {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  background-color: var(--asgard-markdown-code-bg, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+}
+
+.pre {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background-color: var(--asgard-markdown-pre-bg, #1a1a1a);
+  border-radius: 6px;
+
+  code {
+    padding: 0;
+    font-size: inherit;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    background-color: transparent;
+    border-radius: 0;
+  }
+}
+
+// Image
+.img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+// Table
+.table {
+  width: 100%;
+  margin: 0.75rem 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.thead {
+  background-color: var(--asgard-markdown-table-header-bg, rgba(255, 255, 255, 0.05));
+}
+
+.tbody {
+  tr:nth-child(even) {
+    background-color: var(--asgard-markdown-table-row-alt, rgba(255, 255, 255, 0.02));
+  }
+}
+
+.tr {
+  border-bottom: 1px solid var(--asgard-markdown-table-border, rgba(255, 255, 255, 0.2));
+}
+
+.th,
+.td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: 1px solid var(--asgard-markdown-table-border, rgba(255, 255, 255, 0.2));
+}
+
+.th {
+  font-weight: 600;
+}

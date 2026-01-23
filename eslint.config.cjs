@@ -43,7 +43,13 @@ module.exports = [
     rules: {
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
       'no-console': 'warn',
       'padding-line-between-statements': [
         'error',
