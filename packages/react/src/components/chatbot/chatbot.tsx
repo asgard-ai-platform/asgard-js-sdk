@@ -16,6 +16,7 @@ import { ChatbotHeader } from './chatbot-header';
 import { ChatbotBody } from './chatbot-body';
 import { ChatbotFooter } from './chatbot-footer';
 import { ChatbotContainer } from './chatbot-container/chatbot-container';
+import { ServiceErrorState } from './service-error-state';
 import styles from './chatbot.module.scss';
 
 interface ChatbotProps extends AsgardTemplateContextValue {
@@ -131,6 +132,20 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
           </div>
         );
 
+      case 'serviceUnavailable':
+        return (
+          <div className={styles.chatbot__auth_state_container}>
+            <ServiceErrorState message="The service is currently unavailable. Please contact the service representative for assistance." />
+          </div>
+        );
+
+      case 'botNotFound':
+        return (
+          <div className={styles.chatbot__auth_state_container}>
+            <ServiceErrorState message="We couldn't find the service. Please contact the service representative for assistance." />
+          </div>
+        );
+
       case 'authenticated':
       default:
         return (
@@ -152,7 +167,13 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
   };
 
   // Don't initialize SSE connection when explicitly needing API key or in error state
-  if (authState !== 'needApiKey' && authState !== 'error' && authState !== 'invalidApiKey') {
+  if (
+    authState !== 'needApiKey' &&
+    authState !== 'error' &&
+    authState !== 'invalidApiKey' &&
+    authState !== 'serviceUnavailable' &&
+    authState !== 'botNotFound'
+  ) {
     return (
       <AsgardAppInitializationContextProvider
         enabled={enableLoadConfigFromService}

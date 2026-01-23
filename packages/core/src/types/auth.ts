@@ -1,1 +1,8 @@
-export type AuthState = 'loading' | 'needApiKey' | 'authenticated' | 'error' | 'invalidApiKey';
+export type AuthState =
+  | 'loading'
+  | 'needApiKey'
+  | 'authenticated'
+  | 'error'
+  | 'invalidApiKey'
+  | 'serviceUnavailable'
+  | 'botNotFound';
