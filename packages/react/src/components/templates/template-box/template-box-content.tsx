@@ -20,13 +20,7 @@ export function TemplateBoxContent(props: TemplateBoxContentProps): ReactNode {
   const { quickReplies, references, time, children, message, isEmpty } = props;
 
   return (
-    <div
-      className={clsx(
-        'asgard-template-box-content',
-        styles.template_box_content,
-        isEmpty && styles['template_box_content--empty'],
-      )}
-    >
+    <div className={clsx('asgard-template-box-content', styles.template_box_content)}>
       {!isEmpty && (
         <div className={styles.content}>
           {children}

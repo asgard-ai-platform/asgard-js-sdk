@@ -20,8 +20,9 @@ type TemplateBoxProps =
     };
 
 export function TemplateBox(props: TemplateBoxProps): ReactNode {
-  const { type, direction = 'horizontal', children, style, className } = props;
-  const isEmpty = type === 'bot' ? (props as { isEmpty?: boolean }).isEmpty : false;
+  const { type, children, style, className } = props;
+  const direction = props.type === 'bot' ? props.direction : 'horizontal';
+  const isEmpty = props.type === 'bot' ? props.isEmpty : false;
 
   const boxClassName = useMemo(() => {
     switch (type) {
