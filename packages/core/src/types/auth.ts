@@ -4,5 +4,5 @@ export type AuthState =
   | 'authenticated'
   | 'error'
   | 'invalidApiKey'
-  | 'serviceUnavailable'
+  | 'subscriptionExpired'
   | 'botNotFound';

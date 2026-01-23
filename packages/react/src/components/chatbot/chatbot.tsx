@@ -132,7 +132,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
           </div>
         );
 
-      case 'serviceUnavailable':
+      case 'subscriptionExpired':
         return (
           <div className={styles.chatbot__auth_state_container}>
             <ServiceErrorState message="The service is currently unavailable. Please contact the service representative for assistance." />
@@ -171,7 +171,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     authState !== 'needApiKey' &&
     authState !== 'error' &&
     authState !== 'invalidApiKey' &&
-    authState !== 'serviceUnavailable' &&
+    authState !== 'subscriptionExpired' &&
     authState !== 'botNotFound'
   ) {
     return (
