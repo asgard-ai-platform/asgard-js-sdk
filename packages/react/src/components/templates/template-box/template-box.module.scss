@@ -1,5 +1,6 @@
 .template_box {
   width: 100%;
+  min-width: 0;
   display: flex;
   gap: 8px;
 }

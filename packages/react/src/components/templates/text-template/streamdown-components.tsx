@@ -144,11 +144,13 @@ const Img = memo<ImgProps>(({ src, alt, node: _node, ...props }) => (
 ));
 Img.displayName = 'MarkdownImg';
 
-// Table
+// Table (wrapped in scrollable container)
 const Table = memo<ElementProps<'table'>>(({ children, node: _node, ...props }) => (
-  <table className={styles.table} data-streamdown="table" {...props}>
-    {children}
-  </table>
+  <div className={styles.table_wrapper}>
+    <table className={styles.table} data-streamdown="table" {...props}>
+      {children}
+    </table>
+  </div>
 ));
 Table.displayName = 'MarkdownTable';
 

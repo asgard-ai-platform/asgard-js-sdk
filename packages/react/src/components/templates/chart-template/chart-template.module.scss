@@ -25,9 +25,16 @@
 }
 
 .text--bot {
-  max-width: 70%;
+  max-width: 75%;
   background: #585858;
   border-top-left-radius: 0;
+  overflow: hidden;
+}
+
+.chart_wrapper {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .chart_time {

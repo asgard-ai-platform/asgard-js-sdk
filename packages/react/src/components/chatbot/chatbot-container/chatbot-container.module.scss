@@ -6,6 +6,9 @@
   @include styles.generate();
 
   font-family: 'Space Grotesk', 'Noto Sans TC', sans-serif;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 
   * {
     line-height: 1.5;
@@ -17,6 +20,7 @@
   position: fixed;
   inset: 0;
   background-color: var(--asg-color-bg);
+  overflow: hidden;
 
   .chatbot_container {
     height: 100%;
@@ -30,4 +34,5 @@
   background-color: var(--asg-color-bg);
   overflow: hidden;
   overscroll-behavior: contain;
+  min-width: 0;
 }

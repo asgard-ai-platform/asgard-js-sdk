@@ -63,7 +63,9 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
         </div>
       )}
       <TemplateBoxContent quickReplies={template?.quickReplies} references={template?.references} message={message}>
-        <VegaEmbed spec={spec} />
+        <div className={classes.chart_wrapper}>
+          <VegaEmbed spec={spec} />
+        </div>
       </TemplateBoxContent>
       <Time className={classes.chart_time} time={message.time} />
     </TemplateBox>

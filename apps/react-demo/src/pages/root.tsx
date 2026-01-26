@@ -137,8 +137,8 @@ export function Root(): ReactNode {
           Invalid API Key
         </button>
       </div>
-      <div style={{ width: '800px', position: 'relative' }}>
-        <div style={{ position: 'relative', display: isOpen ? 'block' : 'none' }}>
+      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        <div style={{ position: 'relative', display: isOpen ? 'block' : 'none', width: '100%', height: '100%' }}>
           {authState === 'authenticated' && (
             <button
               style={{

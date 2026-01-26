@@ -1,10 +1,12 @@
 .carousel_root {
   width: 100%;
+  min-width: 0;
   display: flex;
   flex-wrap: nowrap;
-  overflow-x: scroll;
+  overflow-x: auto;
   gap: 8px;
   align-items: stretch;
+  padding-bottom: 8px;
 
   > div {
     flex: 0 0 auto;

@@ -1,5 +1,6 @@
 .template_box_content {
   width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -7,6 +8,7 @@
 
 .content {
   width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: row;
   gap: 8px;
