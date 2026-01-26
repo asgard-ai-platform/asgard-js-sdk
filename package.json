@@ -8,6 +8,7 @@
     "format:check": "prettier --check .",
     "serve:react-demo": "nx run react-demo:serve",
     "serve:next-demo": "nx run next-demo:serve",
+    "serve:embed-demo": "nx run embed-demo:dev",
     "lint:core": "nx run @asgard-js/core:lint",
     "test:core": "nx run @asgard-js/core:test",
     "test:core:watch": "cd packages/core && npm run test:watch",
