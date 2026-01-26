@@ -67,11 +67,26 @@ export function References(props: ReferencesProps): ReactNode {
             <span className={styles.references_divider} style={dividerStyle} />
           </div>
           <div className={styles.references_list}>
-            {references.map((reference, index) => (
-              <button key={index} className={styles.reference_item} onClick={() => handleClick(reference.uri)}>
-                <span className={styles.reference_link}>{reference.title}</span>
-              </button>
-            ))}
+            {references.map((reference, index) => {
+              const hasUri = reference.uri && reference.uri.trim() !== '';
+              if (hasUri) {
+                return (
+                  <button
+                    key={index}
+                    className={styles.reference_item}
+                    onClick={() => handleClick(reference.uri as string)}
+                  >
+                    <span className={styles.reference_link}>{reference.title}</span>
+                  </button>
+                );
+              }
+
+              return (
+                <span key={index} className={styles.reference_item_text}>
+                  {reference.title}
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>
