@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useMemo, CSSProperties } from 'react';
+import { ReactNode, CSSProperties, MouseEvent } from 'react';
 import styles from './references.module.scss';
 import { Reference } from '@asgard-js/core';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
@@ -18,36 +18,27 @@ export function References(props: ReferencesProps): ReactNode {
   const { template, botMessage, chatbot } = useAsgardThemeContext();
   const { defaultLinkTarget } = useAsgardTemplateContext();
 
-  const handleClick = useCallback(
-    (uri: string) => {
+  const handleClick = (e: MouseEvent<HTMLButtonElement>): void => {
+    const uri = e.currentTarget.dataset.uri;
+    if (uri) {
       safeWindowOpen(uri, defaultLinkTarget || '_blank');
-    },
-    [defaultLinkTarget],
-  );
+    }
+  };
 
-  const referenceBoxStyle = useMemo<CSSProperties>(
-    () => ({
-      color: botMessage?.color,
-      backgroundColor: botMessage?.backgroundColor,
-      ...template?.references?.style,
-    }),
-    [botMessage, template],
-  );
+  const referenceBoxStyle: CSSProperties = {
+    color: botMessage?.color,
+    backgroundColor: botMessage?.backgroundColor,
+    ...template?.references?.style,
+  };
 
-  const titleStyle = useMemo<CSSProperties>(
-    () => ({
-      color: chatbot?.inactiveColor,
-      ...template?.references?.title?.style,
-    }),
-    [chatbot, template],
-  );
+  const titleStyle: CSSProperties = {
+    color: chatbot?.inactiveColor,
+    ...template?.references?.title?.style,
+  };
 
-  const dividerStyle = useMemo<CSSProperties>(
-    () => ({
-      backgroundColor: chatbot?.borderColor,
-    }),
-    [chatbot],
-  );
+  const dividerStyle: CSSProperties = {
+    backgroundColor: chatbot?.borderColor,
+  };
 
   if (!references?.length) {
     return null;
@@ -71,11 +62,7 @@ export function References(props: ReferencesProps): ReactNode {
               const hasUri = reference.uri && reference.uri.trim() !== '';
               if (hasUri) {
                 return (
-                  <button
-                    key={index}
-                    className={styles.reference_item}
-                    onClick={() => handleClick(reference.uri as string)}
-                  >
+                  <button key={index} className={styles.reference_item} data-uri={reference.uri} onClick={handleClick}>
                     <span className={styles.reference_link}>{reference.title}</span>
                   </button>
                 );
