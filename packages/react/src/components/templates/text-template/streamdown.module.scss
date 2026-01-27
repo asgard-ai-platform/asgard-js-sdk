@@ -170,17 +170,10 @@
   border-radius: 4px;
 }
 
-// Table wrapper for horizontal scrolling
-.table_wrapper {
-  width: 100%;
-  margin: 0.75rem 0;
-  overflow-x: auto;
-}
-
 // Table
 .table {
   width: 100%;
-  min-width: max-content;
+  margin: 0.75rem 0;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
