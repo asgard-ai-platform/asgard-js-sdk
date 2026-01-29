@@ -321,64 +321,6 @@ function handleAuthState(state: AuthState) {
 }
 ```
 
-<a id="testing"></a>
-<br/>
-
-## Testing
-
-The core package includes comprehensive tests using Vitest.
-
-### Running Tests
-
-```sh
-# Run tests once
-npm run test:core
-
-# Run tests in watch mode
-npm run test:core:watch
-
-# Run tests with UI
-npm run test:core:ui
-
-# Run tests with coverage
-npm run test:core:coverage
-```
-
-### Test Structure
-
-Tests are located alongside source files with `.spec.ts` extensions:
-
-- `src/lib/client.spec.ts` - Tests for AsgardServiceClient including deprecation scenarios
-- Test environment: jsdom with Vitest
-- Coverage reports available in `test-output/vitest/coverage/`
-
-### Writing Tests
-
-The package uses Vitest for testing with the following setup:
-
-- TypeScript support
-- jsdom environment for DOM APIs
-- ESLint integration
-- Coverage reporting with v8 provider
-
-Example test structure:
-
-```javascript
-import { describe, it, expect } from 'vitest';
-import { AsgardServiceClient } from './client';
-
-describe('AsgardServiceClient', () => {
-  it('should create client with botProviderEndpoint', () => {
-    const client = new AsgardServiceClient({
-      botProviderEndpoint: 'https://api.example.com/bot-provider/bp-123',
-      apiKey: 'test-key',
-    });
-
-    expect(client).toBeDefined();
-  });
-});
-```
-
 <a id="development"></a>
 <br/>
 
@@ -402,9 +344,6 @@ You can use the following commands to work with the core package:
 # Lint the core package
 npm run lint:core
 
-# Run tests
-npm run test:core
-
 # Build the package
 npm run build:core
 
@@ -425,9 +364,6 @@ For working with both core and React packages:
 ```sh
 # Lint both packages
 npm run lint:packages
-
-# Test both packages
-npm test
 
 # Build core package (required for React package)
 npm run build:core

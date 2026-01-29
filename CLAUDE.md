@@ -14,12 +14,6 @@ Asgard JS SDK is a TypeScript monorepo that provides React components and core s
 ### Development
 
 ```bash
-# Run tests
-npm test                  # All tests
-npm run test:core         # Core package tests only
-npm run test:react        # React package tests only
-npm run test:coverage     # With coverage report
-
 # Build packages
 npm run build:core        # Build core package (required before building React)
 npm run build:react       # Build React package
@@ -90,13 +84,6 @@ config: {
 - No `any` types allowed - use proper type definitions
 - Module boundaries must have explicit type exports
 
-### Testing Requirements
-
-- Core package: All configuration scenarios must be tested
-- React package: Component behavior and interaction tests required
-- Run tests before committing changes
-- Maintain existing test coverage levels
-
 ## Build System
 
 The project uses Nx for monorepo management with these key configurations:
@@ -104,7 +91,6 @@ The project uses Nx for monorepo management with these key configurations:
 - **Vite**: Primary bundler for both packages
 - **TypeScript**: Strict mode with explicit type requirements
 - **ESLint**: Custom configuration with React and TypeScript rules
-- **Vitest**: Test runner with jsdom environment
 - **Dependencies**: Core package dependencies are bundled, React package externalizes React/ReactDOM
 
 ## Common Development Tasks
@@ -116,15 +102,13 @@ The project uses Nx for monorepo management with these key configurations:
 3. Implement component in `packages/react/src/components/templates/`
 4. Export from `packages/react/src/components/templates/index.ts`
 5. Add theme configuration support
-6. Write tests for both rendering and interaction
 
 ### Updating API Client
 
 1. Modify `packages/core/src/lib/client.ts`
 2. Update TypeScript definitions
 3. Ensure backward compatibility (use deprecation warnings if needed)
-4. Test all configuration scenarios
-5. Update React package if interface changes
+4. Update React package if interface changes
 
 ### Theme Customization
 
