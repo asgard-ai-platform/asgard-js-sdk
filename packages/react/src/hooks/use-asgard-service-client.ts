@@ -8,11 +8,14 @@ interface UseAsgardServiceClientProps {
 export function useAsgardServiceClient(props: UseAsgardServiceClientProps): AsgardServiceClient | null {
   const { config } = props;
 
+  // Preview mode: skip client creation when botProviderEndpoint is 'skip'
+  const isPreviewMode = 'botProviderEndpoint' in config && config.botProviderEndpoint === 'skip';
+
   const { onRunInit, onProcess, onMessage, onToolCall, onRunDone, onRunError } = config;
 
   const clientRef = useRef<AsgardServiceClient | null>(null);
 
-  if (!clientRef.current) {
+  if (!clientRef.current && !isPreviewMode) {
     clientRef.current = new AsgardServiceClient(config);
   }
 

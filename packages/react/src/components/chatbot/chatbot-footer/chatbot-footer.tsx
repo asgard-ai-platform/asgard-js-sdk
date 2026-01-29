@@ -107,13 +107,25 @@ export function ChatbotFooter(): ReactNode {
     [uploadableDocuments],
   );
 
+  // Preview mode: sendMessage is undefined
+  const isPreviewMode = !sendMessage;
+
   const disabled = useMemo(
     () =>
+      isPreviewMode ||
       isConnecting ||
       isImageUploading ||
       isDocumentUploading ||
       (!value.trim() && uploadableImages.length === 0 && uploadableDocuments.length === 0),
-    [isConnecting, isImageUploading, isDocumentUploading, value, uploadableImages.length, uploadableDocuments.length],
+    [
+      isPreviewMode,
+      isConnecting,
+      isImageUploading,
+      isDocumentUploading,
+      value,
+      uploadableImages.length,
+      uploadableDocuments.length,
+    ],
   );
 
   const contentStyles = useMemo(
@@ -759,7 +771,8 @@ export function ChatbotFooter(): ReactNode {
           style={chatbot.footer?.textArea?.style}
           cols={40}
           value={value}
-          placeholder={inputPlaceholder || 'Enter message'}
+          disabled={isPreviewMode}
+          placeholder={isPreviewMode ? 'Preview mode - input disabled' : inputPlaceholder || 'Enter message'}
           onChange={onChange}
           onKeyDown={onKeyDown}
           onFocus={onFocus}
