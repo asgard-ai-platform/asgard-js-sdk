@@ -66,7 +66,6 @@ This is an [Nx](https://nx.dev) monorepo. To run demos locally:
 ```bash
 npm install
 npm run serve:react-demo  # React demo
-npm run serve:next-demo   # Next.js demo
 ```
 
 ## Links
