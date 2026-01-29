@@ -753,7 +753,7 @@ Platform 使用專門的 callback，但 SDK 目前只有通用的 `onSseMessage`
    - SDK 目前沒有處理 Process 事件
 
 4. [ ] 測試真實 API 的 Tool Call 事件流
-   - 使用 `apps/next-demo/src/app/demo/thinking-process/page.tsx` 測試
+   - 使用 `apps/react-demo` 測試
 
 ### 實作優先順序
 
