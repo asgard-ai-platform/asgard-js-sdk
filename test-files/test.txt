@@ -1,6 +1,0 @@
-This is a test text file for document upload testing.
-這是一個測試用的文字檔案。
-
-Line 1: Hello World
-Line 2: 你好世界
-Line 3: Testing document upload feature

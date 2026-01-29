@@ -89,9 +89,7 @@
     ]
   },
   "workspaces": [
-    "libs/**",
-    "packages/**",
-    "apps/**"
+    "packages/**"
   ],
   "nx": {
     "includedScripts": [],
