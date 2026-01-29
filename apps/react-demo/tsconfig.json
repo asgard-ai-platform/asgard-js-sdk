@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../../packages/react"
+    },
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "./tsconfig.app.json"
+    }
+  ],
+  "extends": "../../tsconfig.base.json"
+}

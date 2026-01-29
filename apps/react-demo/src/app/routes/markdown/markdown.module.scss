@@ -1,0 +1,96 @@
+.markdown {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 16px 0;
+  }
+
+  p {
+    font-size: 16px;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+.content {
+  display: flex;
+  justify-content: center;
+}
+
+.info {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  max-width: 400px;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 16px 0;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #666;
+    line-height: 1.8;
+  }
+}
+
+.chatbotContainer {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  z-index: 1000;
+}
+
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #4a9eff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(74, 158, 255, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1001;
+
+  &:hover {
+    background: #3a8eef;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(74, 158, 255, 0.5);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &.fabOpen {
+    background: #666;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: #555;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+  }
+}

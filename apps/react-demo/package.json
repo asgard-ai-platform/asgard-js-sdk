@@ -1,0 +1,11 @@
+{
+  "name": "@asgard-js/react-demo",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "name": "react-demo"
+  },
+  "dependencies": {
+    "lucide-react": "^0.542.0"
+  }
+}

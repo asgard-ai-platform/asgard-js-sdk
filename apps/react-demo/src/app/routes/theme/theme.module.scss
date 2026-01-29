@@ -1,0 +1,73 @@
+.controls {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 320px;
+  flex-shrink: 0;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 16px 0;
+
+    &:not(:first-child) {
+      margin-top: 24px;
+    }
+  }
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presetButton {
+  padding: 10px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4a9eff;
+    background: #f8faff;
+  }
+
+  &.active {
+    border-color: #4a9eff;
+    background: #4a9eff;
+    color: white;
+  }
+}
+
+.themeCode {
+  background: #1a1a2e;
+  color: #a0e0a0;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.chatbotContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  > div {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+  }
+}

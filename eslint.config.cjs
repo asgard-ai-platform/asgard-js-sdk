@@ -6,19 +6,14 @@ module.exports = [
   ...nx.configs['flat/javascript'],
   {
     ignores: [
-      // Build outputs
       '**/dist/**',
       '**/build/**',
       '**/out/**',
       '**/.next/**',
       '**/coverage/**',
-
-      // Dependencies & cache
       '**/node_modules/**',
       '**/.nx/**',
       '**/.cache/**',
-
-      // Config files
       '**/eslint.config.cjs',
       '**/eslint.config.mjs',
       '**/vite.config.ts',
@@ -32,10 +27,11 @@ module.exports = [
       '**/tailwind.config.ts',
       '**/postcss.config.js',
       '**/postcss.config.mjs',
-
-      // Generated files
       '**/*.generated.*',
       '**/*.d.ts',
+      '**/vite.config.*.timestamp*',
+      '**/vitest.config.*.timestamp*',
+      '**/test-output',
     ],
   },
   {

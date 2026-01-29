@@ -26,6 +26,9 @@ npm run format:check      # Check code formatting
 # Watch mode for development
 npm run watch:core        # Watch core package changes
 npm run watch:react       # Watch React package changes
+
+# Run demo application
+npm run serve:react-demo  # Start react-demo dev server at http://localhost:4200
 ```
 
 ### Release
@@ -34,6 +37,23 @@ npm run watch:react       # Watch React package changes
 npm run release:core      # Publish core package to npm
 npm run release:react     # Publish React package to npm
 ```
+
+## Demo Application
+
+The `apps/react-demo` application provides interactive demonstrations of the SDK:
+
+- **Templates**: Preview all message template types (Text, Button, Carousel, Image, Chart, Table, Math)
+- **Features**: Toggle SDK features (file upload, export, document upload)
+- **Theme**: Customize chatbot appearance with color presets and custom colors
+- **Auth**: Test different authentication states (authenticated, needApiKey, error, etc.)
+- **Events**: Handle EMIT actions from button clicks
+- **Fullscreen**: View chatbot in fullscreen mode
+
+To run the demo:
+
+1. Copy `apps/react-demo/.env.example` to `apps/react-demo/.env`
+2. Set your `VITE_BOT_PROVIDER_ENDPOINT` and `VITE_API_KEY`
+3. Run `npm run serve:react-demo`
 
 ## Architecture
 
