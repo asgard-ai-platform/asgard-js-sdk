@@ -51,13 +51,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     onAuthError,
   } = props;
 
-  if (!client) {
-    throw new Error('Client instance is required');
-  }
-
-  if (!customChannelId) {
-    throw new Error('Custom channel id is required');
-  }
+  // Preview mode: client is null (when botProviderEndpoint is 'skip')
+  const isPreviewMode = !client;
 
   const [channel, setChannel] = useState<Channel | null>(null);
   const [isOpen, setIsOpen] = useState(defaultIsOpen ?? true);
@@ -65,8 +60,16 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   const [isConnecting, setIsConnecting] = useState(false);
   const [conversation, setConversation] = useState<Conversation | null>(null);
 
+  // Preview mode: static conversation from initMessages
+  const previewConversation = useMemo(
+    () => (isPreviewMode ? new Conversation({ messages: new Map(initMessages?.map(m => [m.messageId, m])) }) : null),
+    [isPreviewMode, initMessages],
+  );
+
   const resetChannel = useCallback(
     async (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => {
+      if (isPreviewMode || !client) return;
+
       const conversation = new Conversation({
         messages: new Map(initMessages?.map(message => [message.messageId, message])),
       });
@@ -115,7 +118,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       setIsOpen(true);
       setChannel(channel);
     },
-    [client, customChannelId, customMessageId, initMessages, onSseMessage, onAuthError],
+    [isPreviewMode, client, customChannelId, customMessageId, initMessages, onSseMessage, onAuthError],
   );
 
   const closeChannel = useCallback(() => {
@@ -142,15 +145,36 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   );
 
   useEffect(() => {
+    if (isPreviewMode) return;
+
     if (!channel && isOpen) resetChannel(resetPayload);
-  }, [channel, isOpen, resetChannel, resetPayload]);
+  }, [isPreviewMode, channel, isOpen, resetChannel, resetPayload]);
 
   useEffect(() => {
     return (): void => closeChannel();
   }, [closeChannel]);
 
   return useMemo(
-    () => ({
+    () =>
+      isPreviewMode
+        ? {
+            isOpen: true,
+            isResetting: false,
+            isConnecting: false,
+            conversation: previewConversation,
+          }
+        : {
+            isOpen,
+            isResetting,
+            isConnecting,
+            conversation,
+            sendMessage,
+            resetChannel,
+            closeChannel,
+          },
+    [
+      isPreviewMode,
+      previewConversation,
       isOpen,
       isResetting,
       isConnecting,
@@ -158,7 +182,6 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       sendMessage,
       resetChannel,
       closeChannel,
-    }),
-    [isOpen, isResetting, isConnecting, conversation, sendMessage, resetChannel, closeChannel],
+    ],
   );
 }
