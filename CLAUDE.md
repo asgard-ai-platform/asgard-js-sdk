@@ -14,9 +14,6 @@ Asgard JS SDK is a TypeScript monorepo that provides React components and core s
 ### Development
 
 ```bash
-# Start demo application
-npm run serve:react-demo         # React demo
-
 # Run tests
 npm test                  # All tests
 npm run test:core         # Core package tests only

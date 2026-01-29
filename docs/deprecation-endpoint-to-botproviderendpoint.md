@@ -97,7 +97,7 @@ No changes needed to the React package as it already uses `botProviderEndpoint` 
 #### Update React Demo Configuration
 
 ```typescript
-// apps/react-demo/src/pages/root.tsx
+// Example usage
 <Chatbot
   config={{
     // Remove endpoint, only use botProviderEndpoint

@@ -361,7 +361,7 @@ it('should maintain performance with math expressions', async () => {
 ### Math Template Examples
 
 ```typescript
-// In apps/react-demo/src/pages/const.ts
+// Example usage
 import { nanoid } from 'nanoid';
 
 export function createMathTemplateExample(): ConversationMessage {

@@ -921,9 +921,6 @@ npm run build:react
 
 # Watch mode for development
 npm run watch:react
-
-# Run the demo application
-npm run serve:react-demo
 ```
 
 Setup your npm registry token for npm publishing:

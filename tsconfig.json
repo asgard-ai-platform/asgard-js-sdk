@@ -8,9 +8,6 @@
     },
     {
       "path": "./packages/core"
-    },
-    {
-      "path": "./apps/react-demo"
     }
   ]
 }
