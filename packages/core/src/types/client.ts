@@ -71,7 +71,7 @@ export interface FetchSsePayload {
   customChannelId: string;
   customMessageId?: string;
   text: string;
-  payload?: Record<string, unknown>;
+  payload?: Record<string, unknown> | (() => Record<string, unknown>);
   action: FetchSseAction;
   blobIds?: string[];
 }

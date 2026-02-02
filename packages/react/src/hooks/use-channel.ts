@@ -34,7 +34,7 @@ export interface UseChannelReturn {
   sendMessage?: (
     payload: Pick<FetchSsePayload, 'text' | 'blobIds'> &
       Partial<Pick<FetchSsePayload, 'payload'>> & { filePreviewUrls?: string[]; documentNames?: string[] },
-  ) => void;
+  ) => Promise<void>;
   resetChannel?: (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
   closeChannel?: () => void;
 }

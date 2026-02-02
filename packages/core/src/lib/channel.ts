@@ -152,12 +152,15 @@ export default class Channel {
       }),
     );
 
+    // 如果 payload 是函式，則執行它獲取實際的 payload 物件
+    const resolvedPayload = typeof payload?.payload === 'function' ? payload.payload() : payload?.payload;
+
     return this.fetchSse(
       {
         action: FetchSseAction.NONE,
         customChannelId: this.customChannelId,
         customMessageId: messageId,
-        payload: payload?.payload,
+        payload: resolvedPayload,
         text,
         blobIds: payload?.blobIds,
       },
