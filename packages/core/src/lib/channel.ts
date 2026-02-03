@@ -73,6 +73,25 @@ export default class Channel {
       .subscribe(this.statesObserver);
   }
 
+  /**
+   * Resolves payload by executing it if it's a function, otherwise returns as-is.
+   */
+  private resolvePayload(
+    payload: Record<string, unknown> | (() => Record<string, unknown>) | undefined,
+  ): Record<string, unknown> | undefined {
+    if (typeof payload === 'function') {
+      try {
+        return payload();
+      } catch (error) {
+        throw new Error(
+          `Failed to resolve payload function: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    return payload;
+  }
+
   private fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): Promise<void> {
     return new Promise((resolve, reject) => {
       this.isConnecting$.next(true);
@@ -122,7 +141,7 @@ export default class Channel {
         customChannelId: this.customChannelId,
         customMessageId: this.customMessageId,
         text: payload?.text || '',
-        payload: payload?.payload,
+        payload: this.resolvePayload(payload?.payload),
       },
       options,
     );
@@ -152,15 +171,12 @@ export default class Channel {
       }),
     );
 
-    // 如果 payload 是函式，則執行它獲取實際的 payload 物件
-    const resolvedPayload = typeof payload?.payload === 'function' ? payload.payload() : payload?.payload;
-
     return this.fetchSse(
       {
         action: FetchSseAction.NONE,
         customChannelId: this.customChannelId,
         customMessageId: messageId,
-        payload: resolvedPayload,
+        payload: this.resolvePayload(payload?.payload),
         text,
         blobIds: payload?.blobIds,
       },
