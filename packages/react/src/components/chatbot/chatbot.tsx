@@ -81,6 +81,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     errorMessageRenderer,
     messageActions,
     onMessageAction,
+    renderMessageContent,
     className,
     style,
     defaultLinkTarget,
@@ -163,6 +164,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               defaultLinkTarget={defaultLinkTarget}
               messageActions={messageActions}
               onMessageAction={onMessageAction}
+              renderMessageContent={renderMessageContent}
             >
               <ChatbotBody />
             </AsgardTemplateContextProvider>
