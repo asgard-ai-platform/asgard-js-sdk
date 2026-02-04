@@ -855,6 +855,35 @@ Use `MessageContainer` to wrap your custom content and automatically get:
 - **Bot messages**: Avatar + timestamp
 - **User messages**: Proper right-aligned styling
 
+#### Understanding payload
+
+The `payload` is custom data set by the backend Bot Provider when responding to messages. The SDK passes it directly to `renderMessageContent` without modification.
+
+**Backend response example (Bot Provider):**
+
+```json
+{
+  "template": { "type": "text", "text": "Here is your order" },
+  "payload": {
+    "customType": "order_card",
+    "orderId": "#ORD-2024-001234",
+    "items": [{ "name": "iPhone 15 Pro", "price": 42900 }]
+  }
+}
+```
+
+**Frontend renders based on payload:**
+
+```typescript
+const payload = message.message.payload as { customType?: string };
+
+if (payload?.customType === 'order_card') {
+  return <OrderCard order={payload} />;
+}
+```
+
+> **Note:** `customType` is a convention, not a requirement. You can define your own payload structure - just ensure the frontend and backend use the same format.
+
 #### Basic Usage
 
 ```typescript
