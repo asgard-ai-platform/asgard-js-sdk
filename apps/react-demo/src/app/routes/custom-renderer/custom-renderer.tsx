@@ -11,23 +11,23 @@ import {
 } from '../../mocks/messages';
 import styles from './custom-renderer.module.scss';
 
-type RendererMode = 'custom-types' | 'wrapper' | 'user-highlight' | 'default';
+type RendererMode = 'with-avatar' | 'no-avatar' | 'wrapper' | 'default';
 
 const modeOptions: { value: RendererMode; label: string; description: string }[] = [
   {
-    value: 'custom-types',
-    label: 'Custom Types',
-    description: 'Render different UI based on payload.customType',
+    value: 'with-avatar',
+    label: 'With Avatar',
+    description: 'Custom cards with Avatar using MessageContainer',
+  },
+  {
+    value: 'no-avatar',
+    label: 'No Avatar',
+    description: 'Fully custom rendering without MessageContainer',
   },
   {
     value: 'wrapper',
     label: 'Wrapper',
     description: 'Add wrapper elements around default content',
-  },
-  {
-    value: 'user-highlight',
-    label: 'User Highlight',
-    description: 'Highlight user messages with custom styling',
   },
   {
     value: 'default',
@@ -174,19 +174,17 @@ function WeatherCard({ payload }: { payload: WeatherPayload }): ReactNode {
 }
 
 export function CustomRenderer(): ReactNode {
-  const [selectedMode, setSelectedMode] = useState<RendererMode>('custom-types');
+  const [selectedMode, setSelectedMode] = useState<RendererMode>('with-avatar');
   const initMessages = createMixedCustomRendererMessages();
 
-  // Custom renderer for custom-types mode
-  const customTypesRenderer = useCallback((props: MessageContentRendererProps): ReactNode => {
+  // Custom renderer with Avatar - uses MessageContainer
+  const withAvatarRenderer = useCallback((props: MessageContentRendererProps): ReactNode => {
     const { message, renderDefaultContent, MessageContainer } = props;
 
-    // Only customize bot messages with specific payload types
     if (message.type === 'bot') {
       const payload = message.message.payload as { customType?: string } | null;
 
       if (payload?.customType === 'order_card') {
-        // Use MessageContainer to wrap custom content with Avatar
         return (
           <MessageContainer>
             <OrderCard payload={payload as OrderPayload} />
@@ -219,7 +217,33 @@ export function CustomRenderer(): ReactNode {
       }
     }
 
-    // Use default rendering for all other messages
+    return renderDefaultContent();
+  }, []);
+
+  // Custom renderer without Avatar - fully custom, no MessageContainer
+  const noAvatarRenderer = useCallback((props: MessageContentRendererProps): ReactNode => {
+    const { message, renderDefaultContent } = props;
+
+    if (message.type === 'bot') {
+      const payload = message.message.payload as { customType?: string } | null;
+
+      if (payload?.customType === 'order_card') {
+        return <OrderCard payload={payload as OrderPayload} />;
+      }
+
+      if (payload?.customType === 'product_card') {
+        return <ProductCard payload={payload as ProductPayload} />;
+      }
+
+      if (payload?.customType === 'alert') {
+        return <AlertBox payload={payload as AlertPayload} />;
+      }
+
+      if (payload?.customType === 'weather_card') {
+        return <WeatherCard payload={payload as WeatherPayload} />;
+      }
+    }
+
     return renderDefaultContent();
   }, []);
 
@@ -238,34 +262,15 @@ export function CustomRenderer(): ReactNode {
     );
   }, []);
 
-  // Custom renderer for user-highlight mode - highlights user messages
-  const userHighlightRenderer = useCallback((props: MessageContentRendererProps): ReactNode => {
-    const { message, renderDefaultContent, MessageContainer } = props;
-
-    if (message.type === 'user') {
-      // Use MessageContainer to maintain proper layout
-      return (
-        <MessageContainer>
-          <div className={styles.userHighlight}>
-            <div className={styles.userBadge}>YOU</div>
-            <div className={styles.userContent}>{message.text}</div>
-          </div>
-        </MessageContainer>
-      );
-    }
-
-    return renderDefaultContent();
-  }, []);
-
   // Get the appropriate renderer based on selected mode
   const getRenderer = (): ((props: MessageContentRendererProps) => ReactNode) | undefined => {
     switch (selectedMode) {
-      case 'custom-types':
-        return customTypesRenderer;
+      case 'with-avatar':
+        return withAvatarRenderer;
+      case 'no-avatar':
+        return noAvatarRenderer;
       case 'wrapper':
         return wrapperRenderer;
-      case 'user-highlight':
-        return userHighlightRenderer;
       case 'default':
         return undefined;
     }
@@ -294,7 +299,7 @@ export function CustomRenderer(): ReactNode {
         <div className={styles.codePreview}>
           <h4>Code Example</h4>
           <pre className={styles.code}>
-            {selectedMode === 'custom-types'
+            {selectedMode === 'with-avatar'
               ? `renderMessageContent={(props) => {
   const { message, renderDefaultContent, MessageContainer } = props;
 
@@ -312,6 +317,20 @@ export function CustomRenderer(): ReactNode {
 
   return renderDefaultContent();
 }}`
+              : selectedMode === 'no-avatar'
+              ? `renderMessageContent={(props) => {
+  const { message, renderDefaultContent } = props;
+
+  if (message.type === 'bot') {
+    const payload = message.message.payload;
+    if (payload?.customType === 'order_card') {
+      // Fully custom rendering without MessageContainer (no Avatar)
+      return <OrderCard payload={payload} />;
+    }
+  }
+
+  return renderDefaultContent();
+}}`
               : selectedMode === 'wrapper'
               ? `renderMessageContent={(props) => {
   const { message, renderDefaultContent } = props;
@@ -323,24 +342,6 @@ export function CustomRenderer(): ReactNode {
       <span>Type: {message.type}</span>
     </div>
   );
-}}`
-              : selectedMode === 'user-highlight'
-              ? `renderMessageContent={(props) => {
-  const { message, renderDefaultContent, MessageContainer } = props;
-
-  if (message.type === 'user') {
-    // Use MessageContainer to maintain proper layout
-    return (
-      <MessageContainer>
-        <div className="user-highlight">
-          <span>YOU</span>
-          <div>{message.text}</div>
-        </div>
-      </MessageContainer>
-    );
-  }
-
-  return renderDefaultContent();
 }}`
               : `// No custom renderer
 // Using default message rendering`}

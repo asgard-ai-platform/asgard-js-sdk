@@ -312,6 +312,7 @@ config: {
 - **onTemplateBtnClick?**: `(payload: Record<string, unknown>, eventName: string, raw: string) => void` - Callback for EMIT button actions. See [EMIT Action](#emit-action) section for details.
 - **messageActions?**: `(message: ConversationBotMessage) => MessageActionConfig[]` - Function to define which action buttons to display for each bot message. Returns an array of `{ id: string, label: string }` objects. See [Message Actions](#message-actions) section for details.
 - **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
+- **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
 - **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. ChatbotRef extends the ref of the chatbot instance and provides some additional methods like `serviceContext.sendMessage` to interact with the chatbot instance.
 
@@ -822,6 +823,150 @@ messageActions={(message) => {
   }
 
   return actions;
+}}
+```
+
+<a id="custom-message-renderer"></a>
+<br/>
+
+### Custom Message Renderer
+
+The `renderMessageContent` prop allows you to customize how messages are rendered based on message type, payload, or other conditions. This is useful for implementing custom message cards, special UI treatments, or integrating with your application's design system.
+
+#### MessageContentRendererProps Interface
+
+```typescript
+interface MessageContentRendererProps {
+  /** The original message object */
+  message: ConversationMessage;
+  /** Function to render the default message content */
+  renderDefaultContent: () => ReactNode;
+  /** Container component that wraps custom content with Avatar for bot messages */
+  MessageContainer: React.FC<{ children: ReactNode }>;
+}
+```
+
+#### Why MessageContainer?
+
+When you use `renderMessageContent` to customize rendering, it completely replaces the default Template. This means **Avatar will not display automatically**, because Avatar is part of the default Template.
+
+Use `MessageContainer` to wrap your custom content and automatically get:
+
+- **Bot messages**: Avatar + timestamp
+- **User messages**: Proper right-aligned styling
+
+#### Basic Usage
+
+```typescript
+import { Chatbot, MessageContentRendererProps } from '@asgard-js/react';
+
+<Chatbot
+  config={config}
+  customChannelId="your-channel-id"
+  renderMessageContent={props => {
+    const { message, renderDefaultContent, MessageContainer } = props;
+
+    // Customize bot messages with specific payload types
+    if (message.type === 'bot') {
+      const payload = message.message.payload as { customType?: string };
+
+      if (payload?.customType === 'order_card') {
+        // Use MessageContainer to wrap custom content with Avatar
+        return (
+          <MessageContainer>
+            <OrderCard order={payload} />
+          </MessageContainer>
+        );
+      }
+    }
+
+    // Use default rendering for all other messages
+    return renderDefaultContent();
+  }}
+/>;
+```
+
+#### Using MessageContainer
+
+The `MessageContainer` component is essential for maintaining consistent styling with the default messages:
+
+- **For bot messages**: Wraps your content with the bot's Avatar and proper message styling (including timestamp and quick replies)
+- **For user messages**: Applies proper right-aligned styling
+- **For other message types**: Returns children directly
+
+**With MessageContainer** (recommended for custom bot messages):
+
+```typescript
+renderMessageContent={(props) => {
+  const { message, MessageContainer } = props;
+
+  if (message.type === 'bot' && isCustomMessage(message)) {
+    return (
+      <MessageContainer>
+        <MyCustomComponent data={message.message.payload} />
+      </MessageContainer>
+    );
+  }
+
+  return props.renderDefaultContent();
+}}
+```
+
+**Without MessageContainer** (when you need full control):
+
+```typescript
+renderMessageContent={(props) => {
+  const { message } = props;
+
+  if (message.type === 'bot' && isSpecialMessage(message)) {
+    // Render completely custom layout without Avatar
+    return <FullWidthBanner data={message.message.payload} />;
+  }
+
+  return props.renderDefaultContent();
+}}
+```
+
+#### Wrapper Pattern
+
+You can also wrap the default content to add additional elements:
+
+```typescript
+renderMessageContent={(props) => {
+  const { message, renderDefaultContent } = props;
+
+  return (
+    <div className="message-wrapper" data-type={message.type}>
+      <div className="timestamp">{new Date().toLocaleTimeString()}</div>
+      {renderDefaultContent()}
+      <div className="message-footer">
+        <span>Type: {message.type}</span>
+      </div>
+    </div>
+  );
+}}
+```
+
+#### Custom User Messages
+
+You can also customize user messages:
+
+```typescript
+renderMessageContent={(props) => {
+  const { message, renderDefaultContent, MessageContainer } = props;
+
+  if (message.type === 'user') {
+    return (
+      <MessageContainer>
+        <div className="custom-user-message">
+          <span className="user-badge">YOU</span>
+          <div className="user-content">{message.text}</div>
+        </div>
+      </MessageContainer>
+    );
+  }
+
+  return renderDefaultContent();
 }}
 ```
 
