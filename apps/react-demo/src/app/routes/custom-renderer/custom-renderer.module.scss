@@ -1,0 +1,449 @@
+.controls {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 400px;
+  flex-shrink: 0;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 16px 0;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 12px 0;
+  }
+}
+
+.modeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.modeButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4a9eff;
+    background: #f8faff;
+  }
+
+  &.active {
+    border-color: #4a9eff;
+    background: #4a9eff;
+
+    .modeLabel {
+      color: white;
+    }
+
+    .modeDescription {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
+
+.modeLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.modeDescription {
+  font-size: 12px;
+  color: #666;
+}
+
+.codePreview {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.code {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #333;
+}
+
+.chatbotContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  > div {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+  }
+}
+
+// Order Card Styles
+.orderCard {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.orderId {
+  font-weight: 600;
+  color: #333;
+}
+
+.orderStatus {
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.orderItems {
+  padding: 12px 16px;
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.itemName {
+  color: #333;
+}
+
+.itemPrice {
+  color: #666;
+  font-weight: 500;
+}
+
+.orderFooter {
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-top: 1px solid #e0e0e0;
+}
+
+.orderTotal {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.totalPrice {
+  font-weight: 700;
+  color: #e74c3c;
+  font-size: 16px;
+}
+
+.orderDelivery {
+  font-size: 12px;
+  color: #666;
+}
+
+// Product Card Styles
+.productCard {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+
+.productImage {
+  position: relative;
+  height: 160px;
+  background: #f0f0f0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.discountBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #e74c3c;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.productInfo {
+  padding: 16px;
+}
+
+.productName {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.productRating {
+  margin-bottom: 8px;
+  color: #f59e0b;
+  font-size: 12px;
+}
+
+.ratingText {
+  color: #666;
+  margin-left: 8px;
+}
+
+.productPricing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.currentPrice {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e74c3c;
+}
+
+.originalPrice {
+  font-size: 14px;
+  color: #999;
+  text-decoration: line-through;
+}
+
+.stockStatus {
+  font-size: 12px;
+  font-weight: 500;
+
+  &[data-in-stock='true'] {
+    color: #10b981;
+  }
+
+  &[data-in-stock='false'] {
+    color: #ef4444;
+  }
+}
+
+// Alert Box Styles
+.alertBox {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+
+  &[data-severity='info'] {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+  }
+
+  &[data-severity='warning'] {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+  }
+
+  &[data-severity='error'] {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+
+  &[data-severity='success'] {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+  }
+}
+
+.alertIcon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.alertContent {
+  flex: 1;
+}
+
+.alertTitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.alertMessage {
+  color: #666;
+  line-height: 1.5;
+}
+
+// Weather Card Styles
+.weatherCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
+}
+
+.weatherMain {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.weatherLocation {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 12px;
+}
+
+.weatherCurrent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.weatherIcon {
+  font-size: 48px;
+}
+
+.weatherTemp {
+  font-size: 42px;
+  font-weight: 300;
+}
+
+.weatherDetails {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.weatherForecast {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.forecastDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.forecastDayName {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.forecastIcon {
+  font-size: 20px;
+}
+
+.forecastTemp {
+  font-size: 11px;
+}
+
+// Wrapper Mode Styles
+.messageWrapper {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 4px 0;
+
+  &[data-type='user'] {
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.05);
+  }
+
+  &[data-type='bot'] {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+  }
+}
+
+.messageTimestamp {
+  font-size: 10px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.messageFooter {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #eee;
+}
+
+.messageType {
+  font-size: 10px;
+  color: #999;
+  font-family: monospace;
+}
+
+// User Highlight Styles
+.userHighlight {
+  background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+  border-radius: 16px;
+  padding: 12px 16px;
+  color: white;
+  position: relative;
+}
+
+.userBadge {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  background: #ff6b6b;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.userContent {
+  font-size: 14px;
+  line-height: 1.5;
+}

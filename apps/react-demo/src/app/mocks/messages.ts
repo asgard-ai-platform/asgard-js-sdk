@@ -493,3 +493,193 @@ export function createTableTemplateExample(): ConversationMessage {
     template,
   });
 }
+
+// Custom renderer demo messages
+export interface OrderPayload {
+  customType: 'order_card';
+  orderId: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered';
+  items: { name: string; quantity: number; price: number }[];
+  total: number;
+  estimatedDelivery: string;
+}
+
+export interface ProductPayload {
+  customType: 'product_card';
+  productId: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  imageUrl: string;
+  rating: number;
+  reviewCount: number;
+  inStock: boolean;
+}
+
+export interface AlertPayload {
+  customType: 'alert';
+  severity: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  dismissible?: boolean;
+}
+
+export interface WeatherPayload {
+  customType: 'weather_card';
+  location: string;
+  temperature: number;
+  condition: 'sunny' | 'cloudy' | 'rainy' | 'snowy';
+  humidity: number;
+  windSpeed: number;
+  forecast: { day: string; high: number; low: number; condition: string }[];
+}
+
+export function createOrderCardExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  const payload: OrderPayload = {
+    customType: 'order_card',
+    orderId: 'ORD-2024-001234',
+    status: 'shipped',
+    items: [
+      { name: 'iPhone 15 Pro Max', quantity: 1, price: 42900 },
+      { name: 'AirPods Pro 2', quantity: 1, price: 7490 },
+      { name: 'MagSafe 充電器', quantity: 2, price: 1190 },
+    ],
+    total: 52770,
+    estimatedDelivery: '2024-12-20',
+  };
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '這是您的訂單資訊',
+    payload,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.TEXT,
+      text: '',
+      quickReplies: [{ text: '追蹤包裹' }, { text: '聯繫客服' }],
+    },
+  });
+}
+
+export function createProductCardExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  const payload: ProductPayload = {
+    customType: 'product_card',
+    productId: 'PROD-001',
+    name: 'Sony WH-1000XM5 無線降噪耳機',
+    price: 10900,
+    originalPrice: 12900,
+    imageUrl: 'https://dummyimage.com/300x300/333/fff&text=WH-1000XM5',
+    rating: 4.8,
+    reviewCount: 2456,
+    inStock: true,
+  };
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '為您推薦這款商品',
+    payload,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.TEXT,
+      text: '',
+      quickReplies: [{ text: '加入購物車' }, { text: '查看更多' }],
+    },
+  });
+}
+
+export function createAlertExample(severity: AlertPayload['severity']): ConversationMessage {
+  const messageId = nanoid();
+
+  const messages: Record<AlertPayload['severity'], { title: string; message: string }> = {
+    info: { title: '系統通知', message: '系統將於今晚 23:00 進行例行維護，預計持續 2 小時。' },
+    warning: { title: '庫存警告', message: '您購物車中的商品庫存即將售罄，建議盡快結帳。' },
+    error: { title: '付款失敗', message: '信用卡授權失敗，請確認卡片資訊或嘗試其他付款方式。' },
+    success: { title: '訂單成功', message: '您的訂單已成功建立！我們將盡快為您安排出貨。' },
+  };
+
+  const payload: AlertPayload = {
+    customType: 'alert',
+    severity,
+    ...messages[severity],
+    dismissible: severity !== 'error',
+  };
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: messages[severity].message,
+    payload,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.TEXT,
+      text: '',
+      quickReplies: [],
+    },
+  });
+}
+
+export function createWeatherCardExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  const payload: WeatherPayload = {
+    customType: 'weather_card',
+    location: '台北市',
+    temperature: 22,
+    condition: 'cloudy',
+    humidity: 75,
+    windSpeed: 12,
+    forecast: [
+      { day: '週一', high: 12, low: 18, condition: 'cloudy' },
+      { day: '週二', high: 24, low: 18, condition: 'sunny' },
+      { day: '週三', high: 22, low: 17, condition: 'rainy' },
+      { day: '週四', high: 20, low: 15, condition: 'cloudy' },
+      { day: '週五', high: 20, low: 15, condition: 'cloudy' },
+    ],
+  };
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '這是今天的天氣預報',
+    payload,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.TEXT,
+      text: '',
+      quickReplies: [{ text: '查看一週天氣' }, { text: '切換地區' }],
+    },
+  });
+}
+
+export function createUserMessageExample(text: string): ConversationMessage {
+  return {
+    type: 'user',
+    messageId: nanoid(),
+    text,
+    time: new Date(),
+  };
+}
+
+export function createMixedCustomRendererMessages(): ConversationMessage[] {
+  return [
+    createUserMessageExample('請幫我查詢訂單狀態'),
+    createOrderCardExample(),
+    createUserMessageExample('有推薦的耳機嗎？'),
+    createProductCardExample(),
+    createAlertExample('success'),
+    createTextTemplateExample(),
+    createAlertExample('warning'),
+    createWeatherCardExample(),
+    createAlertExample('info'),
+  ];
+}

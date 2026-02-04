@@ -15,6 +15,7 @@ const navItems = [
   { to: '/events', label: 'Events' },
   { to: '/fullscreen', label: 'Fullscreen' },
   { to: '/markdown', label: 'Markdown' },
+  { to: '/custom-renderer', label: 'Custom Renderer' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

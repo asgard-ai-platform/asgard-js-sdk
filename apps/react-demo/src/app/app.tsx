@@ -9,6 +9,7 @@ import { Events } from './routes/events';
 import { Fullscreen } from './routes/fullscreen';
 import { Markdown } from './routes/markdown';
 import { Private } from './routes/private';
+import { CustomRenderer } from './routes/custom-renderer';
 
 export function App(): React.ReactElement {
   return (
@@ -23,6 +24,7 @@ export function App(): React.ReactElement {
         <Route path="/fullscreen" element={<Fullscreen />} />
         <Route path="/markdown" element={<Markdown />} />
         <Route path="/private" element={<Private />} />
+        <Route path="/custom-renderer" element={<CustomRenderer />} />
       </Routes>
     </Layout>
   );
