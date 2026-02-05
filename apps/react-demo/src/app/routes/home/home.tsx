@@ -46,6 +46,11 @@ const demoCards = [
     description: 'Test chatbot with a private bot provider requiring authentication.',
     to: '/private',
   },
+  {
+    title: 'Dynamic Payload',
+    description: 'Send messages with dynamic payload using lambda functions.',
+    to: '/dynamic-payload',
+  },
 ];
 
 export function Home(): ReactNode {

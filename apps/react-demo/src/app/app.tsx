@@ -10,6 +10,7 @@ import { Fullscreen } from './routes/fullscreen';
 import { Markdown } from './routes/markdown';
 import { Private } from './routes/private';
 import { CustomRenderer } from './routes/custom-renderer';
+import { DynamicPayload } from './routes/dynamic-payload';
 
 export function App(): React.ReactElement {
   return (
@@ -25,6 +26,7 @@ export function App(): React.ReactElement {
         <Route path="/markdown" element={<Markdown />} />
         <Route path="/private" element={<Private />} />
         <Route path="/custom-renderer" element={<CustomRenderer />} />
+        <Route path="/dynamic-payload" element={<DynamicPayload />} />
       </Routes>
     </Layout>
   );
