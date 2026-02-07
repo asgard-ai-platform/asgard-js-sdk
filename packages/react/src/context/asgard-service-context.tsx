@@ -13,6 +13,15 @@ import {
 } from 'react';
 import { useAsgardServiceClient, useChannel, UseChannelProps, UseChannelReturn } from '../hooks';
 
+/** Parameters for sending a message */
+export interface SendMessageParams {
+  text: string;
+  blobIds?: string[];
+  filePreviewUrls?: string[];
+  documentNames?: string[];
+  payload?: Record<string, unknown> | (() => Record<string, unknown>);
+}
+
 export interface AsgardServiceContextValue {
   avatar?: string;
   title?: string;
@@ -31,6 +40,8 @@ export interface AsgardServiceContextValue {
   enableUpload?: boolean;
   enableExport?: boolean;
   enableDocumentUpload?: boolean;
+  /** Callback to modify message params before sending */
+  onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
   /** 用戶是否正在跟隨最新內容（用於自動滾動判斷） */
   isFollowingLatest: boolean;
   /** 設定跟隨狀態 */
@@ -62,6 +73,7 @@ export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
   enableUpload: undefined,
   enableExport: undefined,
   enableDocumentUpload: undefined,
+  onBeforeSendMessage: undefined,
   isFollowingLatest: true,
   setFollowingLatest: noop,
   scrollToBottom: noop,
@@ -86,6 +98,8 @@ export interface AsgardServiceContextProviderProps {
   initMessages?: ConversationMessage[];
   onSseMessage?: UseChannelProps['onSseMessage'];
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
+  /** Callback to modify message params before sending */
+  onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
 }
 
 export function AsgardServiceContextProvider(props: AsgardServiceContextProviderProps): ReactNode {
@@ -104,6 +118,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     initMessages,
     onSseMessage,
     onAuthError,
+    onBeforeSendMessage,
   } = props;
 
   const messageBoxBottomRef = useRef<HTMLDivElement>(null);
@@ -162,6 +177,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       enableUpload,
       enableExport,
       enableDocumentUpload,
+      onBeforeSendMessage,
       messageBoxBottomRef,
       scrollContainerRef,
       isFollowingLatest,
@@ -186,6 +202,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       enableUpload,
       enableExport,
       enableDocumentUpload,
+      onBeforeSendMessage,
       isFollowingLatest,
       setFollowingLatest,
       scrollToBottom,

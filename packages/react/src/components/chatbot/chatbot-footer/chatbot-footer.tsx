@@ -45,6 +45,7 @@ export function ChatbotFooter(): ReactNode {
     messages,
     title,
     programmaticScrollToBottom,
+    onBeforeSendMessage,
   } = useAsgardContext();
   const { data } = useAsgardAppInitializationContext();
 
@@ -246,28 +247,34 @@ export function ChatbotFooter(): ReactNode {
       const filePreviewUrls = successfulImages.map(img => img.previewUrl);
 
       if (messageText || allBlobIds.length > 0 || filePreviewUrls.length > 0 || successfulDocuments.length > 0) {
-        const payload: {
+        let params: {
           text: string;
           blobIds?: string[];
           filePreviewUrls?: string[];
           documentNames?: string[];
+          payload?: Record<string, unknown> | (() => Record<string, unknown>);
         } = {
           text: messageText || '',
         };
 
         if (allBlobIds.length > 0) {
-          payload.blobIds = allBlobIds;
+          params.blobIds = allBlobIds;
         }
 
         if (filePreviewUrls.length > 0) {
-          payload.filePreviewUrls = filePreviewUrls;
+          params.filePreviewUrls = filePreviewUrls;
         }
 
         if (successfulDocuments.length > 0) {
-          payload.documentNames = successfulDocuments.map(doc => doc.file.name);
+          params.documentNames = successfulDocuments.map(doc => doc.file.name);
         }
 
-        sendMessage?.(payload);
+        // Apply onBeforeSendMessage hook if provided
+        if (onBeforeSendMessage) {
+          params = onBeforeSendMessage(params);
+        }
+
+        sendMessage?.(params);
       }
 
       setValue('');
@@ -278,7 +285,7 @@ export function ChatbotFooter(): ReactNode {
         textareaRef.current.style.height = '36px';
       }
     }
-  }, [isComposing, isConnecting, sendMessage, value, uploadableImages, uploadableDocuments]);
+  }, [isComposing, isConnecting, sendMessage, onBeforeSendMessage, value, uploadableImages, uploadableDocuments]);
 
   const onKeyDown = useCallback<KeyboardEventHandler<HTMLTextAreaElement>>(
     event => {

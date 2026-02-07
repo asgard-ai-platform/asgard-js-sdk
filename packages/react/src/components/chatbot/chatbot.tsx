@@ -8,6 +8,7 @@ import {
   AsgardTemplateContextValue,
   AsgardAppInitializationContextProvider,
   AsgardServiceContextProviderProps,
+  SendMessageParams,
 } from '../../context';
 import { AuthState } from '@asgard-js/core';
 import clsx from 'clsx';
@@ -48,6 +49,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   authState?: AuthState;
   onApiKeySubmit?: (apiKey: string) => Promise<void>;
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
+
+  /** Callback to modify message params before sending */
+  onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
 }
 
 export interface ChatbotRef {
@@ -88,6 +92,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     authState = 'authenticated',
     onApiKeySubmit,
     onAuthError,
+    onBeforeSendMessage,
   } = props;
 
   // Render different content based on authState
@@ -199,6 +204,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             initMessages={initMessages}
             onSseMessage={onSseMessage}
             onAuthError={onAuthError}
+            onBeforeSendMessage={onBeforeSendMessage}
             botTypingPlaceholder={botTypingPlaceholder}
             inputPlaceholder={inputPlaceholder}
             enableUpload={enableUpload}
