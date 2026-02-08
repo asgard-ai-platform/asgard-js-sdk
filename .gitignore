@@ -52,3 +52,4 @@ tasks/
 
 # claude code
 .mcp.json
+.playwright-mcp
