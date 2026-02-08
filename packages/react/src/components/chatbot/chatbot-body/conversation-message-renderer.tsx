@@ -53,7 +53,7 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
       }
 
       // Other types: return children directly
-      return <>{children}</>;
+      return children;
     };
   }, [message, avatar]);
 

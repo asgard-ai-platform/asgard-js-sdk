@@ -31,7 +31,7 @@ export interface AsgardServiceContextValue {
   isResetting: boolean;
   isConnecting: boolean;
   messages: Map<string, ConversationMessage> | null;
-  messageBoxBottomRef: RefObject<HTMLDivElement>;
+  messageBoxBottomRef: RefObject<HTMLDivElement | null>;
   sendMessage?: UseChannelReturn['sendMessage'];
   resetChannel?: UseChannelReturn['resetChannel'];
   closeChannel?: UseChannelReturn['closeChannel'];
@@ -51,7 +51,7 @@ export interface AsgardServiceContextValue {
   /** 程式滾動到底部（不會改變跟隨狀態） */
   programmaticScrollToBottom: (behavior?: ScrollBehavior) => void;
   /** 滾動容器的 ref */
-  scrollContainerRef: RefObject<HTMLDivElement>;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
 }
 
 function noop(): void {

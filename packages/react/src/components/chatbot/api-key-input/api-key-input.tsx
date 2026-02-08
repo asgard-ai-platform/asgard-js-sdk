@@ -1,4 +1,4 @@
-import { useState, FormEvent, ChangeEvent } from 'react';
+import { useState, FormEvent, ChangeEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardContext } from '../../../context/asgard-service-context';
@@ -25,7 +25,7 @@ export function ApiKeyInput({
   title = 'Preview',
   showToggle = true,
   className,
-}: ApiKeyInputProps): JSX.Element {
+}: ApiKeyInputProps): ReactNode {
   const [apiKey, setApiKey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { chatbot } = useAsgardThemeContext();

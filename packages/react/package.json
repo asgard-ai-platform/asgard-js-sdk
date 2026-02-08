@@ -37,8 +37,8 @@
   },
   "devDependencies": {
     "@types/dom-speech-recognition": "^0.0.4",
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "vite-plugin-svgr": "^4.3.0"
   },
   "peerDependencies": {

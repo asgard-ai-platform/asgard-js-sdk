@@ -7,8 +7,8 @@ import { isEqual } from '../utils/is';
  * @param deps - dependency array (deep compared)
  */
 export function useDeepCompareMemo<T>(factory: () => T, deps: unknown[]): T {
-  const valueRef = useRef<T>();
-  const depsRef = useRef<unknown[]>();
+  const valueRef = useRef<T>(undefined as T);
+  const depsRef = useRef<unknown[] | undefined>(undefined);
 
   if (!depsRef.current || !isEqual(depsRef.current, deps)) {
     depsRef.current = deps;
