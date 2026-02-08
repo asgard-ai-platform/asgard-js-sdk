@@ -1,0 +1,13 @@
+{
+  "home": {
+    "title": "Asgard JS SDK Demo",
+    "description": "使用 Next.js 整合 @asgard-js/react 的互動式範例。",
+    "language": "語言",
+    "theme": "主題",
+    "themeLight": "淺色",
+    "themeDark": "深色",
+    "themeSystem": "系統",
+    "openChatbot": "開啟聊天機器人",
+    "closeChatbot": "關閉聊天機器人"
+  }
+}

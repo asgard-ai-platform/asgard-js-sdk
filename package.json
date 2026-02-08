@@ -15,7 +15,8 @@
     "lint:packages": "nx run-many --target=lint --projects=@asgard-js/core,@asgard-js/react",
     "release:core": "nx run @asgard-js/core:nx-release-publish",
     "release:react": "nx run @asgard-js/react:nx-release-publish",
-    "serve:react-demo": "nx serve react-demo"
+    "serve:react-demo": "nx serve react-demo",
+    "serve:demo": "nx dev demo"
   },
   "private": true,
   "dependencies": {
@@ -36,6 +37,7 @@
     "@nx/react": "22.4.5",
     "@nx/vite": "22.4.5",
     "@nx/vitest": "22.4.5",
+    "@nx/next": "22.4.5",
     "@nx/web": "22.4.5",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "^1.13.3",

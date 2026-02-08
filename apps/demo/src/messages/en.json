@@ -1,0 +1,13 @@
+{
+  "home": {
+    "title": "Asgard JS SDK Demo",
+    "description": "Interactive demo of @asgard-js/react integration with Next.js.",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "openChatbot": "Open Chatbot",
+    "closeChatbot": "Close Chatbot"
+  }
+}
