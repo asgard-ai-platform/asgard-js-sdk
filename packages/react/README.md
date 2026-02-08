@@ -313,6 +313,7 @@ config: {
 - **messageActions?**: `(message: ConversationBotMessage) => MessageActionConfig[]` - Function to define which action buttons to display for each bot message. Returns an array of `{ id: string, label: string }` objects. See [Message Actions](#message-actions) section for details.
 - **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
+- **onBeforeSendMessage?**: `(params: SendMessageParams) => SendMessageParams` - Callback to modify message params before sending. Allows injecting contextual data (payload, metadata) from parent components. See [Before Send Message Hook](#before-send-message-hook) section for details.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
 - **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. ChatbotRef extends the ref of the chatbot instance and provides some additional methods like `serviceContext.sendMessage` to interact with the chatbot instance.
 
@@ -997,6 +998,87 @@ renderMessageContent={(props) => {
 
   return renderDefaultContent();
 }}
+```
+
+<a id="before-send-message-hook"></a>
+<br/>
+
+### Before Send Message Hook
+
+The `onBeforeSendMessage` prop allows you to modify message parameters before they are sent. This is useful for injecting contextual data from parent components into every message.
+
+#### SendMessageParams Interface
+
+```typescript
+interface SendMessageParams {
+  text: string;
+  blobIds?: string[];
+  filePreviewUrls?: string[];
+  documentNames?: string[];
+  payload?: Record<string, unknown> | (() => Record<string, unknown>);
+}
+```
+
+#### Use Case
+
+When the Chatbot component is embedded in a page that has contextual information (e.g., selected category, current step, user preferences), you can inject this context into every message so the backend can provide more relevant responses.
+
+#### Usage Example
+
+```typescript
+import { useState, useCallback } from 'react';
+import { Chatbot, SendMessageParams } from '@asgard-js/react';
+
+const TopicCreatePage = () => {
+  const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
+
+  const handleBeforeSendMessage = useCallback(
+    (params: SendMessageParams): SendMessageParams => {
+      if (selectedCategory) {
+        return {
+          ...params,
+          payload: {
+            categoryId: selectedCategory.id,
+            categoryName: selectedCategory.name,
+            currentPage: 'topics/create',
+          },
+        };
+      }
+      return params;
+    },
+    [selectedCategory],
+  );
+
+  return (
+    <div>
+      {/* Category selector */}
+      <select
+        onChange={e => setSelectedCategory({ id: e.target.value, name: e.target.options[e.target.selectedIndex].text })}
+      >
+        <option value="tech">Technology</option>
+        <option value="lifestyle">Lifestyle</option>
+      </select>
+
+      {/* Chatbot with context injection */}
+      <Chatbot config={config} customChannelId="topic-create-chat" onBeforeSendMessage={handleBeforeSendMessage} />
+    </div>
+  );
+};
+```
+
+#### Backend Integration
+
+The injected payload will be included in the SSE request body, allowing your backend to access contextual information:
+
+```json
+{
+  "text": "Help me write about AI",
+  "payload": {
+    "categoryId": "tech",
+    "categoryName": "Technology",
+    "currentPage": "topics/create"
+  }
+}
 ```
 
 <a id="development"></a>
