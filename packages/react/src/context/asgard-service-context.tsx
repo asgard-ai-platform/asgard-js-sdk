@@ -157,6 +157,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     initMessages,
     onSseMessage,
     onAuthError,
+    onBeforeSendMessage,
   });
 
   const contextValue = useMemo(

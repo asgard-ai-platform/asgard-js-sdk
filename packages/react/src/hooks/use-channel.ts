@@ -24,6 +24,10 @@ export interface UseChannelProps {
     },
   ) => void;
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
+  onBeforeSendMessage?: (params: {
+    text: string;
+    payload?: Record<string, unknown> | (() => Record<string, unknown>);
+  }) => { text: string; payload?: Record<string, unknown> | (() => Record<string, unknown>) };
 }
 
 export interface UseChannelReturn {
@@ -49,6 +53,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     initMessages,
     onSseMessage,
     onAuthError,
+    onBeforeSendMessage,
   } = props;
 
   // Preview mode: client is null (when botProviderEndpoint is 'skip')
@@ -78,6 +83,10 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       setIsConnecting(true);
       setConversation(conversation);
 
+      const resolvedPayload = onBeforeSendMessage
+        ? onBeforeSendMessage({ text: payload?.text ?? '', payload: payload?.payload })
+        : payload;
+
       const channel = await Channel.reset(
         {
           client,
@@ -89,7 +98,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             setConversation(states.conversation);
           },
         },
-        payload,
+        resolvedPayload,
         {
           onSseCompleted() {
             setIsResetting(false);
@@ -118,7 +127,16 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       setIsOpen(true);
       setChannel(channel);
     },
-    [isPreviewMode, client, customChannelId, customMessageId, initMessages, onSseMessage, onAuthError],
+    [
+      isPreviewMode,
+      client,
+      customChannelId,
+      customMessageId,
+      initMessages,
+      onSseMessage,
+      onAuthError,
+      onBeforeSendMessage,
+    ],
   );
 
   const closeChannel = useCallback(() => {
