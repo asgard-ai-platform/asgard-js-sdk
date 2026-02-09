@@ -26,7 +26,7 @@ interface CardProps {
 export function Card(props: CardProps): ReactNode {
   const { template, raw, customStyle } = props;
 
-  const { sendMessage } = useAsgardContext();
+  const { sendMessage, onBeforeSendMessage } = useAsgardContext();
   const { onTemplateBtnClick, defaultLinkTarget } = useAsgardTemplateContext();
 
   const [imageError, setImageError] = useState(false);
@@ -52,10 +52,19 @@ export function Card(props: CardProps): ReactNode {
       return function clickHandler() {
         switch (action.type) {
           case 'message':
-          case 'MESSAGE':
-            sendMessage?.({ text: action.text });
+          case 'MESSAGE': {
+            let params: { text: string; payload?: Record<string, unknown> | (() => Record<string, unknown>) } = {
+              text: action.text,
+            };
+            if (onBeforeSendMessage) {
+              params = onBeforeSendMessage(params);
+            }
+
+            sendMessage?.(params);
 
             return;
+          }
+
           case 'uri':
           case 'URI':
             safeWindowOpen(action.uri, action.target || defaultLinkTarget || '_blank');
@@ -71,7 +80,7 @@ export function Card(props: CardProps): ReactNode {
         }
       };
     },
-    [sendMessage, onTemplateBtnClick, defaultLinkTarget, raw],
+    [sendMessage, onBeforeSendMessage, onTemplateBtnClick, defaultLinkTarget, raw],
   );
 
   return (
