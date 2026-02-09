@@ -1,4 +1,4 @@
-import { AsgardServiceClient, ClientConfig, ConversationMessage, FetchSsePayload } from '@asgard-js/core';
+import { AsgardServiceClient, ClientConfig, ConversationMessage } from '@asgard-js/core';
 import {
   createContext,
   ForwardedRef,
@@ -159,23 +159,6 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onAuthError,
   });
 
-  const wrappedResetChannel: typeof resetChannel = useMemo(() => {
-    if (!resetChannel) return undefined;
-
-    return (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => {
-      if (onBeforeSendMessage) {
-        const modified = onBeforeSendMessage({
-          text: payload?.text ?? '',
-          payload: payload?.payload,
-        });
-
-        return resetChannel({ text: modified.text, payload: modified.payload });
-      }
-
-      return resetChannel(payload);
-    };
-  }, [resetChannel, onBeforeSendMessage]);
-
   const contextValue = useMemo(
     () => ({
       avatar,
@@ -187,7 +170,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isConnecting,
       messages: conversation?.messages ?? null,
       sendMessage,
-      resetChannel: wrappedResetChannel,
+      resetChannel,
       closeChannel,
       botTypingPlaceholder,
       inputPlaceholder,
@@ -212,7 +195,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isConnecting,
       conversation?.messages,
       sendMessage,
-      wrappedResetChannel,
+      resetChannel,
       closeChannel,
       botTypingPlaceholder,
       inputPlaceholder,
