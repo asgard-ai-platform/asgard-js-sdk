@@ -144,6 +144,7 @@ export function BeforeSendMessage(): ReactNode {
 
       <div className={styles.chatbotContainer}>
         <Chatbot
+          key={selectedCategory?.id ?? 'none'}
           title="Context Injection Demo"
           config={{
             botProviderEndpoint: import.meta.env.VITE_SIMPLE_BOT_PROVIDER_ENDPOINT,
