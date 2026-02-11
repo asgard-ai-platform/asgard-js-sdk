@@ -12,17 +12,18 @@ interface ChatbotHeaderProps {
   maintainConnectionWhenClosed?: boolean;
   onClose?: () => void;
   onReset?: () => void;
+  sessionCounter?: { label?: string };
 }
 
 export function ChatbotHeader(props: ChatbotHeaderProps): ReactNode {
-  const { title, onReset, onClose, customActions, maintainConnectionWhenClosed } = props;
+  const { title, onReset, onClose, customActions, maintainConnectionWhenClosed, sessionCounter } = props;
 
   const { chatbot } = useAsgardThemeContext();
   const {
     data: { annotations },
   } = useAsgardAppInitializationContext();
 
-  const { avatar, isResetting, resetChannel, closeChannel } = useAsgardContext();
+  const { avatar, isResetting, resetChannel, closeChannel, sessionMessageCount } = useAsgardContext();
 
   const contentStyles = useMemo(
     () => ({
@@ -71,6 +72,12 @@ export function ChatbotHeader(props: ChatbotHeaderProps): ReactNode {
           <ProfileIcon avatar={avatar} />
           <h4 style={chatbot?.header?.title?.style}>{annotations?.embedConfig?.title || title || 'Bot'}</h4>
         </div>
+        {sessionCounter && (
+          <div className={styles.chatbot_header__session_counter}>
+            <span className={styles.session_counter__label}>{sessionCounter.label ?? '使用次數'}</span>
+            <span className={styles.session_counter__badge}>{sessionMessageCount}</span>
+          </div>
+        )}
         <div className={styles.chatbot_header__extra} style={chatbot?.header?.actionButton?.style}>
           {customActions}
           <div onClick={_onReset}>

@@ -52,6 +52,8 @@ export interface AsgardServiceContextValue {
   programmaticScrollToBottom: (behavior?: ScrollBehavior) => void;
   /** 滾動容器的 ref */
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  /** session 中使用者發送訊息的計數 */
+  sessionMessageCount: number;
 }
 
 function noop(): void {
@@ -79,6 +81,7 @@ export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
   scrollToBottom: noop,
   programmaticScrollToBottom: noop,
   scrollContainerRef: { current: null },
+  sessionMessageCount: 0,
 });
 
 export interface AsgardServiceContextProviderProps {
@@ -160,6 +163,28 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onBeforeSendMessage,
   });
 
+  const [sessionMessageCount, setSessionMessageCount] = useState(0);
+
+  const wrappedSendMessage: UseChannelReturn['sendMessage'] = useMemo(() => {
+    if (!sendMessage) return undefined;
+
+    return async (...args) => {
+      setSessionMessageCount(prev => prev + 1);
+
+      return sendMessage(...args);
+    };
+  }, [sendMessage]);
+
+  const wrappedResetChannel: UseChannelReturn['resetChannel'] = useMemo(() => {
+    if (!resetChannel) return undefined;
+
+    return (...args) => {
+      setSessionMessageCount(0);
+
+      return resetChannel(...args);
+    };
+  }, [resetChannel]);
+
   const contextValue = useMemo(
     () => ({
       avatar,
@@ -170,8 +195,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isResetting,
       isConnecting,
       messages: conversation?.messages ?? null,
-      sendMessage,
-      resetChannel,
+      sendMessage: wrappedSendMessage,
+      resetChannel: wrappedResetChannel,
       closeChannel,
       botTypingPlaceholder,
       inputPlaceholder,
@@ -185,6 +210,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       setFollowingLatest,
       scrollToBottom,
       programmaticScrollToBottom,
+      sessionMessageCount,
     }),
     [
       avatar,
@@ -195,8 +221,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isResetting,
       isConnecting,
       conversation?.messages,
-      sendMessage,
-      resetChannel,
+      wrappedSendMessage,
+      wrappedResetChannel,
       closeChannel,
       botTypingPlaceholder,
       inputPlaceholder,
@@ -208,6 +234,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       setFollowingLatest,
       scrollToBottom,
       programmaticScrollToBottom,
+      sessionMessageCount,
     ],
   );
 

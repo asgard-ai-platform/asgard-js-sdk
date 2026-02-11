@@ -52,6 +52,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
 
   /** Callback to modify message params before sending */
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
+
+  /** 啟用 session 計數器顯示 */
+  sessionCounter?: { label?: string };
 }
 
 export interface ChatbotRef {
@@ -93,6 +96,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onApiKeySubmit,
     onAuthError,
     onBeforeSendMessage,
+    sessionCounter,
   } = props;
 
   // Render different content based on authState
@@ -218,6 +222,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                 onClose={onClose}
                 customActions={customActions}
                 maintainConnectionWhenClosed={maintainConnectionWhenClosed}
+                sessionCounter={sessionCounter}
               />
               {renderContent()}
             </ChatbotContainer>
