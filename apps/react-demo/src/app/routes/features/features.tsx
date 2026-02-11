@@ -9,6 +9,7 @@ interface FeatureConfig {
   enableUpload: boolean;
   enableExport: boolean;
   enableDocumentUpload: boolean;
+  enableSessionCounter: boolean;
 }
 
 export function Features(): ReactNode {
@@ -16,6 +17,7 @@ export function Features(): ReactNode {
     enableUpload: true,
     enableExport: true,
     enableDocumentUpload: true,
+    enableSessionCounter: true,
   });
 
   const toggleFeature = (feature: keyof FeatureConfig): void => {
@@ -48,6 +50,14 @@ export function Features(): ReactNode {
             />
             <span>Enable Document Upload</span>
           </label>
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              checked={config.enableSessionCounter}
+              onChange={() => toggleFeature('enableSessionCounter')}
+            />
+            <span>Enable Session Counter</span>
+          </label>
         </div>
 
         <div className={styles.info}>
@@ -65,6 +75,7 @@ export function Features(): ReactNode {
           enableUpload={config.enableUpload}
           enableExport={config.enableExport}
           enableDocumentUpload={config.enableDocumentUpload}
+          sessionCounter={config.enableSessionCounter ? { label: '使用次數' } : undefined}
         />
       </div>
     </DemoWrapper>
