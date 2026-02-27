@@ -18,6 +18,7 @@ const navItems = [
   { to: '/custom-renderer', label: 'Custom Renderer' },
   { to: '/dynamic-payload', label: 'Dynamic Payload' },
   { to: '/before-send-message', label: 'Before Send Message' },
+  { to: '/custom-header', label: 'Custom Header' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

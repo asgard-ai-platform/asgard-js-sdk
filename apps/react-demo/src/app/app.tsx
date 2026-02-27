@@ -12,6 +12,7 @@ import { Private } from './routes/private';
 import { CustomRenderer } from './routes/custom-renderer';
 import { DynamicPayload } from './routes/dynamic-payload';
 import { BeforeSendMessage } from './routes/before-send-message';
+import { CustomHeaderDemo } from './routes/custom-header';
 
 export function App(): React.ReactElement {
   return (
@@ -29,6 +30,7 @@ export function App(): React.ReactElement {
         <Route path="/custom-renderer" element={<CustomRenderer />} />
         <Route path="/dynamic-payload" element={<DynamicPayload />} />
         <Route path="/before-send-message" element={<BeforeSendMessage />} />
+        <Route path="/custom-header" element={<CustomHeaderDemo />} />
       </Routes>
     </Layout>
   );
