@@ -19,6 +19,7 @@ const navItems = [
   { to: '/dynamic-payload', label: 'Dynamic Payload' },
   { to: '/before-send-message', label: 'Before Send Message' },
   { to: '/custom-header', label: 'Custom Header' },
+  { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {
