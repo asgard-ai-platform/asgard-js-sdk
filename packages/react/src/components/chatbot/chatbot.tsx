@@ -52,6 +52,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
 
   /** Callback to modify message params before sending */
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
+
+  /** Callback fired after a message has been sent */
+  onMessageSent?: () => void;
 }
 
 export interface ChatbotRef {
@@ -93,6 +96,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onApiKeySubmit,
     onAuthError,
     onBeforeSendMessage,
+    onMessageSent,
   } = props;
 
   // Render different content based on authState
@@ -205,6 +209,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             onSseMessage={onSseMessage}
             onAuthError={onAuthError}
             onBeforeSendMessage={onBeforeSendMessage}
+            onMessageSent={onMessageSent}
             botTypingPlaceholder={botTypingPlaceholder}
             inputPlaceholder={inputPlaceholder}
             enableUpload={enableUpload}

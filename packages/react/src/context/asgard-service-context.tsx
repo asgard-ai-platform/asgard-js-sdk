@@ -100,6 +100,8 @@ export interface AsgardServiceContextProviderProps {
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
   /** Callback to modify message params before sending */
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
+  /** Callback fired after a message has been sent */
+  onMessageSent?: () => void;
 }
 
 export function AsgardServiceContextProvider(props: AsgardServiceContextProviderProps): ReactNode {
@@ -119,6 +121,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onSseMessage,
     onAuthError,
     onBeforeSendMessage,
+    onMessageSent,
   } = props;
 
   const messageBoxBottomRef = useRef<HTMLDivElement>(null);
@@ -160,6 +163,17 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onBeforeSendMessage,
   });
 
+  const wrappedSendMessage: UseChannelReturn['sendMessage'] = useMemo(() => {
+    if (!sendMessage) return undefined;
+
+    return async (...args) => {
+      const result = await sendMessage(...args);
+      onMessageSent?.();
+
+      return result;
+    };
+  }, [sendMessage, onMessageSent]);
+
   const contextValue = useMemo(
     () => ({
       avatar,
@@ -170,7 +184,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isResetting,
       isConnecting,
       messages: conversation?.messages ?? null,
-      sendMessage,
+      sendMessage: wrappedSendMessage,
       resetChannel,
       closeChannel,
       botTypingPlaceholder,
@@ -195,7 +209,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isResetting,
       isConnecting,
       conversation?.messages,
-      sendMessage,
+      wrappedSendMessage,
       resetChannel,
       closeChannel,
       botTypingPlaceholder,
