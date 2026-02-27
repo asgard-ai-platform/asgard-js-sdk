@@ -305,6 +305,7 @@ config: {
 - **inputPlaceholder**: `string` - Custom placeholder text for the message input field
 - **defaultLinkTarget?**: `'_blank' | '_self' | '_parent' | '_top'` - Default target for opening URIs when not specified by the API. Defaults to `'_blank'` (opens in new tab).
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
+- **autoResetChannel?**: `boolean` - Whether to automatically reset channel on mount. Defaults to `true`. When set to `false`, the channel is created without sending `RESET_CHANNEL`, preserving history messages loaded via `initMessages`. See [Auto Reset Channel](#auto-reset-channel) section for details.
 - **onMessageSent?**: `() => void` - Callback fired after a message is successfully sent. Useful for tracking message count or triggering side effects.
 - **onReset**: `() => void` - Callback function when chat is reset
 - **onClose**: `() => void` - Callback function when chat is closed
@@ -1134,6 +1135,51 @@ const App = () => {
       onMessageSent={() => setCount(c => c + 1)}
       onReset={() => setCount(0)}
       renderHeader={() => <CustomHeader count={count} onClose={() => console.log('closed')} />}
+    />
+  );
+};
+```
+
+<a id="auto-reset-channel"></a>
+<br/>
+
+### Auto Reset Channel
+
+By default, the Chatbot sends a `RESET_CHANNEL` action on mount, which resets the server-side channel state and clears previous conversation history. Set `autoResetChannel={false}` to skip this reset, allowing you to load history messages via `initMessages` and continue the conversation.
+
+#### Behavior Comparison
+
+|                      | `autoResetChannel={true}` (default)            | `autoResetChannel={false}`          |
+| -------------------- | ---------------------------------------------- | ----------------------------------- |
+| On mount             | Sends `RESET_CHANNEL` via SSE                  | Creates channel without SSE request |
+| Server state         | Channel is reset, server sends welcome message | Channel state is preserved          |
+| Display              | `initMessages` + server welcome message        | Only `initMessages` (history)       |
+| First SSE connection | Immediately on mount                           | When user sends the first message   |
+| Header reset button  | Works (calls `resetChannel()`)                 | Still works (manual reset)          |
+
+#### Usage Example
+
+```typescript
+import { Chatbot } from '@asgard-js/react';
+import { ConversationMessage } from '@asgard-js/core';
+
+const AgentHub = () => {
+  // Load history messages from your backend
+  const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
+
+  useEffect(() => {
+    fetchChatHistory().then(setHistoryMessages);
+  }, []);
+
+  return (
+    <Chatbot
+      config={{
+        apiKey: 'your-api-key',
+        botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+      }}
+      customChannelId="agent-hub-channel"
+      autoResetChannel={false}
+      initMessages={historyMessages}
     />
   );
 };
