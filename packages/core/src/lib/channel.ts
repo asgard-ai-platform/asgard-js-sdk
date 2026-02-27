@@ -42,6 +42,13 @@ export default class Channel {
     this.statesObserver = config.statesObserver;
   }
 
+  public static create(config: ChannelConfig): Channel {
+    const channel = new Channel(config);
+    channel.subscribe();
+
+    return channel;
+  }
+
   public static async reset(
     config: ChannelConfig,
     payload?: Pick<FetchSsePayload, 'text' | 'payload'>,

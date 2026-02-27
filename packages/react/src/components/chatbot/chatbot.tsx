@@ -58,6 +58,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
 
   /** Custom header renderer. When provided, replaces the default header entirely. */
   renderHeader?: () => ReactNode;
+
+  /** Whether to automatically reset channel on mount. Defaults to true. When false, the channel is created without sending RESET_CHANNEL, allowing history messages to be preserved via initMessages. */
+  autoResetChannel?: boolean;
 }
 
 export interface ChatbotRef {
@@ -101,6 +104,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onBeforeSendMessage,
     onMessageSent,
     renderHeader,
+    autoResetChannel,
   } = props;
 
   // Render different content based on authState
@@ -219,6 +223,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             enableUpload={enableUpload}
             enableExport={enableExport}
             enableDocumentUpload={enableDocumentUpload}
+            autoResetChannel={autoResetChannel}
           >
             <ChatbotContainer fullScreen={fullScreen} className={className} style={style}>
               {renderHeader ? (

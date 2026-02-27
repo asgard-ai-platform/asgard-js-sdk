@@ -102,6 +102,8 @@ export interface AsgardServiceContextProviderProps {
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
   /** Callback fired after a message has been sent */
   onMessageSent?: () => void;
+  /** Whether to automatically reset channel on mount. Defaults to true. */
+  autoResetChannel?: boolean;
 }
 
 export function AsgardServiceContextProvider(props: AsgardServiceContextProviderProps): ReactNode {
@@ -122,6 +124,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onAuthError,
     onBeforeSendMessage,
     onMessageSent,
+    autoResetChannel,
   } = props;
 
   const messageBoxBottomRef = useRef<HTMLDivElement>(null);
@@ -158,6 +161,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     client,
     customChannelId,
     initMessages,
+    autoResetChannel,
     onSseMessage,
     onAuthError,
     onBeforeSendMessage,

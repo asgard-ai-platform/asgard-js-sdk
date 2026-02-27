@@ -17,6 +17,7 @@ export interface UseChannelProps {
   customChannelId: string;
   customMessageId?: string;
   initMessages?: ConversationMessage[];
+  autoResetChannel?: boolean;
   onSseMessage?: (
     response: SseResponse<EventType>,
     context: {
@@ -51,6 +52,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     customChannelId,
     customMessageId,
     initMessages,
+    autoResetChannel,
     onSseMessage,
     onAuthError,
     onBeforeSendMessage,
@@ -139,6 +141,30 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     ],
   );
 
+  const initChannel = useCallback(() => {
+    if (isPreviewMode || !client) return;
+
+    const conversation = new Conversation({
+      messages: new Map(initMessages?.map(message => [message.messageId, message])),
+    });
+
+    setConversation(conversation);
+
+    const channel = Channel.create({
+      client,
+      customChannelId,
+      customMessageId,
+      conversation,
+      statesObserver: (states: ChannelStates): void => {
+        setIsConnecting(states.isConnecting);
+        setConversation(states.conversation);
+      },
+    });
+
+    setIsOpen(true);
+    setChannel(channel);
+  }, [isPreviewMode, client, customChannelId, customMessageId, initMessages]);
+
   const closeChannel = useCallback(() => {
     setChannel((prevChannel: Channel | null) => {
       prevChannel?.close();
@@ -167,8 +193,14 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   useEffect(() => {
     if (isPreviewMode) return;
 
-    if (!channel && isOpen) resetChannel(resetPayload);
-  }, [isPreviewMode, channel, isOpen, resetChannel, resetPayload]);
+    if (!channel && isOpen) {
+      if (autoResetChannel !== false) {
+        resetChannel(resetPayload);
+      } else {
+        initChannel();
+      }
+    }
+  }, [isPreviewMode, channel, isOpen, autoResetChannel, resetChannel, initChannel, resetPayload]);
 
   useEffect(() => {
     return (): void => closeChannel();
