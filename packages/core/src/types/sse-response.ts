@@ -128,7 +128,7 @@ export interface Message<Payload = unknown> {
   text: string;
   payload: Payload | null;
   isDebug: boolean;
-  idx: number;
+  idx: number | null;
   template:
     | TextMessageTemplate
     | HintMessageTemplate
