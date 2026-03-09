@@ -178,6 +178,34 @@ export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
   toolCallResult: Record<string, unknown>;
 }
 
+export interface DomTableSchema {
+  columns: Array<{
+    name: string;
+    display_name: string;
+  }>;
+}
+
+export interface VegaSchema {
+  spec: Record<string, unknown>;
+}
+
+export interface VisualSchemaChoice {
+  title: string;
+  type: 'DOM_TABLE' | 'VEGA';
+  dom_table_schema?: DomTableSchema;
+  vega_schema?: VegaSchema;
+}
+
+export interface ViewUpdateEventData {
+  channelViewId: string;
+  sqlStatement: string;
+  sqlExplanation?: string | null;
+  previewData: Array<Record<string, unknown>>;
+  fullData?: Array<Record<string, unknown>>;
+  visualSchemaChoices: VisualSchemaChoice[];
+  viewTitle: string;
+}
+
 export interface Fact<Type extends EventType> {
   runInit: null;
   runDone: null;
@@ -187,6 +215,7 @@ export interface Fact<Type extends EventType> {
   messageComplete: IsEqual<Type, EventType.MESSAGE_COMPLETE, MessageEventData>;
   toolCallStart: IsEqual<Type, EventType.TOOL_CALL_START, ToolCallBaseEventData>;
   toolCallComplete: IsEqual<Type, EventType.TOOL_CALL_COMPLETE, ToolCallCompleteEventData>;
+  viewUpdate: IsEqual<Type, EventType.VIEW_UPDATE, ViewUpdateEventData>;
 }
 
 export interface SseResponse<Type extends EventType> {

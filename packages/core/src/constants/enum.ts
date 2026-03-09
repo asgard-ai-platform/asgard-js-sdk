@@ -17,6 +17,7 @@ export enum EventType {
   TOOL_CALL_COMPLETE = 'asgard.tool_call.complete',
   DONE = 'asgard.run.done',
   ERROR = 'asgard.run.error',
+  VIEW_UPDATE = 'asgard.data_insight.view_update',
 }
 
 export enum MessageTemplateType {

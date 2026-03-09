@@ -88,6 +88,10 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
         this.sseEmitter.emit(EventType.ERROR, response as SseResponse<EventType.ERROR>);
 
         break;
+      case EventType.VIEW_UPDATE:
+        this.sseEmitter.emit(EventType.VIEW_UPDATE, response as SseResponse<EventType.VIEW_UPDATE>);
+
+        break;
       default:
         break;
     }
