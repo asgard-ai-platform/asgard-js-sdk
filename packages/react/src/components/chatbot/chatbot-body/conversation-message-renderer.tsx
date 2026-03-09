@@ -31,12 +31,12 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
   // Create MessageContainer component that wraps custom content with Avatar
   const MessageContainer = useMemo(() => {
     return function Container({ children }: MessageContainerProps): ReactNode {
-      // Bot message: show Avatar + content
-      if (message.type === 'bot') {
+      // Bot/View message: show Avatar + content
+      if (message.type === 'bot' || message.type === 'view') {
         return (
           <TemplateBox type="bot" direction="horizontal">
             <Avatar avatar={avatar} />
-            <TemplateBoxContent message={message} time={message.time}>
+            <TemplateBoxContent message={message.type === 'bot' ? message : undefined} time={message.time}>
               {children}
             </TemplateBoxContent>
           </TemplateBox>
@@ -72,6 +72,11 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
 
     // tool-call messages are not rendered in the message flow for now
     if (message.type === 'tool-call') {
+      return null;
+    }
+
+    // view messages have no default rendering; use renderMessageContent to customize
+    if (message.type === 'view') {
       return null;
     }
 
