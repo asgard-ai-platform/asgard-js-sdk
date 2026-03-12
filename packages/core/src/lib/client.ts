@@ -133,7 +133,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
 
   /**
    * 上傳檔案到 Blob API
-   * 根據 API 文件：/generic/ns/{namespace}/bot-provider/{bot_provider_name}/blob
+   * 根據 API 文件：/ns/{namespace}/bot-provider/{bot_provider_name}/blob
    */
   async uploadFile(file: File, customChannelId: string): Promise<BlobUploadResponse> {
     const blobEndpoint = this.deriveBlobEndpoint();
@@ -200,18 +200,6 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
 
     // 移除尾部斜線
     baseEndpoint = baseEndpoint.replace(/\/+$/, '');
-
-    // 根據 API 文件，需要加上 /generic 前綴（如果還沒有的話）
-    // API 格式：/generic/ns/{namespace}/bot-provider/{bot_provider_name}/blob
-    if (!baseEndpoint.includes('/generic/')) {
-      // 假設 baseEndpoint 格式為：https://api.example.com/ns/{namespace}/bot-provider/{name}
-      // 需要插入 /generic
-      const match = baseEndpoint.match(/^(https?:\/\/[^/]+)(\/.*)/);
-      if (match) {
-        const [, domain, path] = match;
-        baseEndpoint = `${domain}/generic${path}`;
-      }
-    }
 
     return `${baseEndpoint}/blob`;
   }
