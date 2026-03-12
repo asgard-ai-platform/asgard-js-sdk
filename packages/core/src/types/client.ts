@@ -16,7 +16,6 @@ export type ProcessEventHandler = EventHandler<SseResponse<EventType.PROCESS_STA
 export type DoneEventHandler = EventHandler<SseResponse<EventType.DONE>>;
 export type ErrorEventHandler = EventHandler<SseResponse<EventType.ERROR>>;
 export type ToolCallEventHandler = EventHandler<SseResponse<EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE>>;
-export type ViewUpdateEventHandler = EventHandler<SseResponse<EventType.VIEW_UPDATE>>;
 
 export interface SseHandlers {
   onRunInit?: InitEventHandler;
@@ -25,7 +24,6 @@ export interface SseHandlers {
   onProcess?: ProcessEventHandler;
   onRunDone?: DoneEventHandler;
   onRunError?: ErrorEventHandler;
-  onViewUpdate?: ViewUpdateEventHandler;
 }
 
 export type ClientConfig = SseHandlers & {
@@ -93,5 +91,4 @@ export type SseEvents = {
   [EventType.TOOL_CALL]: ToolCallEventHandler;
   [EventType.DONE]: DoneEventHandler;
   [EventType.ERROR]: ErrorEventHandler;
-  [EventType.VIEW_UPDATE]: ViewUpdateEventHandler;
 };

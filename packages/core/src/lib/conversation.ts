@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { EventType } from '../constants/enum';
-import { ConversationMessage, ConversationToolCallMessage, ConversationViewMessage, SseResponse } from '../types';
+import { ConversationMessage, ConversationToolCallMessage, SseResponse } from '../types';
 
 interface IConversation {
   messages: Map<string, ConversationMessage> | null;
@@ -34,8 +34,6 @@ export default class Conversation implements IConversation {
         return this.onToolCallComplete(response as SseResponse<EventType.TOOL_CALL_COMPLETE>);
       case EventType.ERROR:
         return this.onMessageError(response as SseResponse<EventType.ERROR>);
-      case EventType.VIEW_UPDATE:
-        return this.onViewUpdate(response as SseResponse<EventType.VIEW_UPDATE>);
       default:
         return this;
     }
@@ -146,33 +144,6 @@ export default class Conversation implements IConversation {
     };
 
     messages.set(toolCallKey, toolCallMessage);
-
-    return new Conversation({ messages });
-  }
-
-  onViewUpdate(response: SseResponse<EventType.VIEW_UPDATE>): Conversation {
-    const viewUpdate = response.fact.viewUpdate;
-    const messages = new Map(this.messages);
-
-    const existingMessage = messages.get(viewUpdate.channelViewId);
-
-    const viewMessage: ConversationViewMessage = {
-      type: 'view',
-      eventType: EventType.VIEW_UPDATE,
-      messageId: viewUpdate.channelViewId,
-      requestId: response.requestId,
-      viewData: viewUpdate,
-      sqlStatement: viewUpdate.sqlStatement,
-      sqlExplanation: viewUpdate.sqlExplanation,
-      previewData: viewUpdate.previewData,
-      fullData: viewUpdate.fullData,
-      visualSchemaChoices: viewUpdate.visualSchemaChoices,
-      viewTitle: viewUpdate.viewTitle,
-      time: existingMessage?.time ?? new Date(),
-      traceId: response.traceId,
-    };
-
-    messages.set(viewUpdate.channelViewId, viewMessage);
 
     return new Conversation({ messages });
   }

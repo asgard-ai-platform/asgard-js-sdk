@@ -20,7 +20,6 @@ const navItems = [
   { to: '/before-send-message', label: 'Before Send Message' },
   { to: '/custom-header', label: 'Custom Header' },
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
-  { to: '/view-update', label: 'View Update' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

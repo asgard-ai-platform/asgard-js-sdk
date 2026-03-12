@@ -2,7 +2,7 @@ import { Observer } from 'rxjs';
 import { EventType } from '../constants/enum';
 import Conversation from '../lib/conversation';
 import { IAsgardServiceClient } from './client';
-import { ErrorMessage, Message, ViewUpdateEventData, VisualSchemaChoice } from './sse-response';
+import { ErrorMessage, Message } from './sse-response';
 
 export type ObserverOrNext<T> = Partial<Observer<T>> | ((value: T) => void);
 
@@ -66,25 +66,8 @@ export type ConversationToolCallMessage = {
   traceId?: string;
 };
 
-export type ConversationViewMessage = {
-  type: 'view';
-  messageId: string;
-  eventType: EventType.VIEW_UPDATE;
-  requestId: string;
-  viewData: ViewUpdateEventData;
-  sqlStatement: string;
-  sqlExplanation?: string | null;
-  previewData: Array<Record<string, unknown>>;
-  fullData?: Array<Record<string, unknown>>;
-  visualSchemaChoices: VisualSchemaChoice[];
-  viewTitle: string;
-  time: Date;
-  traceId?: string;
-};
-
 export type ConversationMessage =
   | ConversationUserMessage
   | ConversationBotMessage
   | ConversationErrorMessage
-  | ConversationToolCallMessage
-  | ConversationViewMessage;
+  | ConversationToolCallMessage;
