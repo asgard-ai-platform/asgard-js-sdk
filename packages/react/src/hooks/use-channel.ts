@@ -185,9 +185,18 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           documentNames?: string[];
         },
     ): Promise<void> => {
-      await channel?.sendMessage({ ...payload, customMessageId });
+      await channel?.sendMessage(
+        { ...payload, customMessageId },
+        {
+          onSseMessage(response: SseResponse<EventType>) {
+            onSseMessage?.(response, {
+              conversation,
+            });
+          },
+        },
+      );
     },
-    [channel, customMessageId],
+    [channel, customMessageId, onSseMessage, conversation],
   );
 
   useEffect(() => {

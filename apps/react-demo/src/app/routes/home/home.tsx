@@ -1,8 +1,9 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Chatbot } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { X, MessageSquare } from 'lucide-react';
+import { EventType, SseResponse } from '@asgard-js/core';
 import styles from './home.module.scss';
 
 const demoCards = [
@@ -56,6 +57,10 @@ const demoCards = [
 export function Home(): ReactNode {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleSseMessage = useCallback((response: SseResponse<EventType>) => {
+    console.log('[onSseMessage]', response);
+  }, []);
+
   return (
     <div className={styles.home}>
       <header className={styles.header}>
@@ -107,6 +112,7 @@ import '@asgard-js/react/style';
                 borderRadius: '16px',
               },
             }}
+            onSseMessage={handleSseMessage}
             onClose={() => setIsOpen(false)}
           />
         </div>
