@@ -318,8 +318,8 @@ export function ChatbotFooter(): ReactNode {
       try {
         const response = await client.uploadFile(file, customChannelId);
 
-        if (response.isSuccess && response.data?.[0]) {
-          const blobData = response.data[0];
+        const blobData = response.data?.[0];
+        if (blobData?.blobId) {
           setUploadableImages(prev =>
             prev.map(img =>
               img.id === imageId ? { ...img, uploadStatus: 'success' as const, blobId: blobData.blobId } : img,
@@ -422,8 +422,8 @@ export function ChatbotFooter(): ReactNode {
       try {
         const response = await client.uploadFile(file, customChannelId);
 
-        if (response.isSuccess && response.data?.[0]) {
-          const blobData = response.data[0];
+        const blobData = response.data?.[0];
+        if (blobData?.blobId) {
           setUploadableDocuments(prev =>
             prev.map(doc =>
               doc.id === docId ? { ...doc, uploadStatus: 'success' as const, blobId: blobData.blobId } : doc,
