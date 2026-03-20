@@ -1,0 +1,241 @@
+{
+  "common": {
+    "title": "Asgard JS SDK Demo",
+    "description": "Interactive demonstration of the @asgard-js/react SDK",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "clear": "Clear",
+    "currentConfig": "Current Configuration",
+    "codeExample": "Code Example",
+    "showCode": "Show Code",
+    "hideCode": "Hide Code",
+    "copied": "Copied!",
+    "copy": "Copy"
+  },
+  "nav": {
+    "gettingStarted": "Getting Started",
+    "home": "Home",
+    "fullscreen": "Fullscreen",
+    "templates": "Templates",
+    "configuration": "Configuration",
+    "features": "Features",
+    "themeCustomization": "Theme",
+    "auth": "Auth",
+    "advanced": "Advanced",
+    "events": "Events",
+    "customRenderer": "Custom Renderer",
+    "dynamicPayload": "Dynamic Payload",
+    "beforeSend": "Before Send",
+    "customHeader": "Custom Header",
+    "autoReset": "Auto Reset",
+    "markdown": "Markdown",
+    "private": "Private"
+  },
+  "home": {
+    "title": "Asgard JS SDK Demo",
+    "description": "Interactive demonstration of the @asgard-js/react components. Explore the features and templates available in the SDK.",
+    "quickStart": "Quick Start",
+    "cards": {
+      "templates": {
+        "title": "Templates",
+        "description": "Explore all message template types: Text, Button, Carousel, Image, Chart, Table, and more."
+      },
+      "features": {
+        "title": "Features",
+        "description": "Test SDK features: file upload, conversation export, and voice input."
+      },
+      "theme": {
+        "title": "Theme",
+        "description": "Customize the chatbot appearance with theme configuration."
+      },
+      "auth": {
+        "title": "Auth",
+        "description": "Demonstrate different authentication states and API key flow."
+      },
+      "events": {
+        "title": "Events",
+        "description": "Handle EMIT actions and tool call events from the chatbot."
+      },
+      "fullscreen": {
+        "title": "Fullscreen",
+        "description": "View the chatbot in fullscreen mode."
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "Test chatbot with markdown-enabled bot for rich text responses."
+      },
+      "private": {
+        "title": "Private",
+        "description": "Test chatbot with a private bot provider requiring authentication."
+      },
+      "dynamicPayload": {
+        "title": "Dynamic Payload",
+        "description": "Send messages with dynamic payload using lambda functions."
+      }
+    }
+  },
+  "fullscreen": {
+    "title": "Fullscreen Demo"
+  },
+  "templates": {
+    "title": "Message Templates",
+    "description": "Preview different message template types. Select a template to see how it renders.",
+    "selectTemplate": "Select Template"
+  },
+  "features": {
+    "title": "SDK Features",
+    "description": "Toggle features to see how they affect the chatbot interface.",
+    "featureToggles": "Feature Toggles",
+    "enableUpload": "Enable Upload",
+    "enableExport": "Enable Export",
+    "enableDocumentUpload": "Enable Document Upload"
+  },
+  "theme": {
+    "title": "Theme Customization",
+    "description": "Customize the chatbot appearance with theme configuration. Try the 'Crazy' preset to see all theme options in action.",
+    "presets": "Presets",
+    "currentTheme": "Current Theme Config"
+  },
+  "auth": {
+    "title": "Authentication States",
+    "description": "Test different authentication states and the API key flow.",
+    "authState": "Auth State",
+    "lastSubmittedKey": "Last Submitted Key",
+    "hint": "Tip: Enter \"valid-key\" to simulate successful authentication.",
+    "states": {
+      "authenticated": {
+        "label": "Authenticated",
+        "description": "User is authenticated and can use the chatbot."
+      },
+      "needApiKey": {
+        "label": "Need API Key",
+        "description": "User needs to enter an API key to access the chatbot."
+      },
+      "invalidApiKey": {
+        "label": "Invalid API Key",
+        "description": "The provided API key is invalid."
+      },
+      "loading": {
+        "label": "Loading",
+        "description": "The authentication state is being determined."
+      },
+      "error": {
+        "label": "Error",
+        "description": "An error occurred during authentication."
+      },
+      "subscriptionExpired": {
+        "label": "Subscription Expired",
+        "description": "The subscription has expired."
+      },
+      "botNotFound": {
+        "label": "Bot Not Found",
+        "description": "The requested bot could not be found."
+      }
+    }
+  },
+  "events": {
+    "title": "Event Handling",
+    "description": "Handle EMIT actions from button clicks. Click the 'Book Ticket' button to trigger an event.",
+    "eventLogs": "Event Logs",
+    "noEvents": "No events captured yet.",
+    "hint": "Click the \"Book Ticket\" button in the chatbot to trigger an EMIT event."
+  },
+  "customRenderer": {
+    "title": "Custom Message Renderer",
+    "description": "Customize how messages are rendered based on message type, payload, or other conditions.",
+    "rendererMode": "Renderer Mode",
+    "modes": {
+      "withAvatar": {
+        "label": "With Avatar",
+        "description": "Custom cards with Avatar using MessageContainer"
+      },
+      "noAvatar": {
+        "label": "No Avatar",
+        "description": "Fully custom rendering without MessageContainer"
+      },
+      "wrapper": {
+        "label": "Wrapper",
+        "description": "Add wrapper elements around default content"
+      },
+      "default": {
+        "label": "Default",
+        "description": "Use default rendering (no custom renderer)"
+      }
+    }
+  },
+  "dynamicPayload": {
+    "title": "Dynamic Payload",
+    "description": "Compare static vs dynamic payload in sendMessage. Dynamic payload uses a lambda function that executes at send time.",
+    "sendMessage": "Send Message",
+    "sendDescription": "Click buttons to simulate sending messages with different payload types. Watch the payload logs to see the difference.",
+    "staticPayload": "Static Payload",
+    "dynamicPayloadBtn": "Dynamic Payload",
+    "payloadLogs": "Payload Logs",
+    "noPayloads": "No payloads sent yet.",
+    "payloadHint": "Click the buttons above to send messages with payload.",
+    "whyDynamic": "Why Dynamic Payload?",
+    "comparison": {
+      "timing": "Timing",
+      "staticTiming": "Value fixed at definition time",
+      "dynamicTiming": "Value generated at send time",
+      "useCase": "Use Case",
+      "staticUseCase": "Fixed data",
+      "dynamicUseCase": "Dynamic data (timestamp, random ID)",
+      "multipleSends": "Multiple Sends",
+      "staticMultipleSends": "Same payload",
+      "dynamicMultipleSends": "Different payload each time"
+    }
+  },
+  "beforeSend": {
+    "title": "onBeforeSendMessage Hook",
+    "description": "Inject contextual data into messages before sending. Select a category and send a message to see the payload injection.",
+    "selectContext": "Select Context",
+    "contextDescription": "Choose a category to inject into every message. This simulates a parent component providing context to the chatbot.",
+    "clearSelection": "Clear Selection",
+    "payloadLogs": "Payload Logs",
+    "noMessages": "No messages sent yet.",
+    "sendHint": "Send a message in the chatbot to see the injected payload.",
+    "categories": {
+      "tech": { "name": "Technology", "description": "Tech news and updates" },
+      "lifestyle": { "name": "Lifestyle", "description": "Daily life tips" },
+      "business": { "name": "Business", "description": "Business insights" },
+      "entertainment": { "name": "Entertainment", "description": "Fun and games" }
+    }
+  },
+  "customHeader": {
+    "title": "Custom Header",
+    "description": "Demonstrates onMessageSent callback and renderHeader prop to build a custom header with message counter."
+  },
+  "autoReset": {
+    "title": "Auto Reset Channel",
+    "description": "Control whether the channel is automatically reset on mount. When disabled, history messages from initMessages are preserved without sending RESET_CHANNEL.",
+    "channelSettings": "Channel Settings",
+    "remount": "Remount Chatbot",
+    "behavior": "Behavior",
+    "enabledBehavior": "Channel will be reset on mount (sends RESET_CHANNEL action). This is the default behavior.",
+    "disabledBehavior": "Channel is created without sending RESET_CHANNEL. History messages from initMessages are preserved, and new messages can still be sent."
+  },
+  "markdown": {
+    "title": "Markdown Bot Demo",
+    "description": "Test the chatbot with markdown-enabled bot provider for rich text responses.",
+    "featuresTitle": "Features",
+    "features": {
+      "richText": "Rich text formatting with Markdown",
+      "codeBlocks": "Code blocks with syntax highlighting",
+      "listsAndTables": "Lists, tables, and more"
+    }
+  },
+  "private": {
+    "title": "Private Bot Demo",
+    "description": "Test the chatbot with a private bot provider that requires authentication.",
+    "authFlow": "Authentication Flow",
+    "features": {
+      "apiKey": "API Key required for access",
+      "stateManagement": "Auth state management",
+      "errorHandling": "Error handling for unauthorized access"
+    }
+  }
+}

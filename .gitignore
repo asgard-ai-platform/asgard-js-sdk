@@ -5,6 +5,7 @@ secrets
 
 # compiled output
 dist
+.next
 tmp
 out-tsc
 

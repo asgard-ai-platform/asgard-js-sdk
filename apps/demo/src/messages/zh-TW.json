@@ -1,0 +1,241 @@
+{
+  "common": {
+    "title": "Asgard JS SDK 展示",
+    "description": "@asgard-js/react SDK 互動式展示",
+    "language": "語言",
+    "theme": "主題",
+    "light": "淺色",
+    "dark": "深色",
+    "system": "系統",
+    "clear": "清除",
+    "currentConfig": "目前配置",
+    "codeExample": "程式碼範例",
+    "showCode": "顯示程式碼",
+    "hideCode": "隱藏程式碼",
+    "copied": "已複製！",
+    "copy": "複製"
+  },
+  "nav": {
+    "gettingStarted": "開始使用",
+    "home": "首頁",
+    "fullscreen": "全螢幕",
+    "templates": "訊息模板",
+    "configuration": "配置",
+    "features": "功能開關",
+    "themeCustomization": "主題",
+    "auth": "認證",
+    "advanced": "進階",
+    "events": "事件",
+    "customRenderer": "自訂渲染",
+    "dynamicPayload": "動態 Payload",
+    "beforeSend": "發送前 Hook",
+    "customHeader": "自訂標題列",
+    "autoReset": "自動重設",
+    "markdown": "Markdown",
+    "private": "私有 Bot"
+  },
+  "home": {
+    "title": "Asgard JS SDK 展示",
+    "description": "@asgard-js/react 元件的互動式展示。探索 SDK 中可用的功能與訊息模板。",
+    "quickStart": "快速開始",
+    "cards": {
+      "templates": {
+        "title": "訊息模板",
+        "description": "瀏覽所有訊息模板類型：文字、按鈕、輪播、圖片、圖表、表格等。"
+      },
+      "features": {
+        "title": "功能開關",
+        "description": "測試 SDK 功能：檔案上傳、對話匯出及語音輸入。"
+      },
+      "theme": {
+        "title": "主題",
+        "description": "使用主題配置自訂聊天機器人外觀。"
+      },
+      "auth": {
+        "title": "認證",
+        "description": "展示不同的認證狀態與 API Key 流程。"
+      },
+      "events": {
+        "title": "事件",
+        "description": "處理聊天機器人的 EMIT 動作與工具呼叫事件。"
+      },
+      "fullscreen": {
+        "title": "全螢幕",
+        "description": "以全螢幕模式查看聊天機器人。"
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "使用支援 Markdown 的 Bot 測試富文本回應。"
+      },
+      "private": {
+        "title": "私有 Bot",
+        "description": "使用需要認證的私有 Bot Provider 進行測試。"
+      },
+      "dynamicPayload": {
+        "title": "動態 Payload",
+        "description": "使用 Lambda 函式發送帶有動態 Payload 的訊息。"
+      }
+    }
+  },
+  "fullscreen": {
+    "title": "全螢幕展示"
+  },
+  "templates": {
+    "title": "訊息模板",
+    "description": "預覽不同的訊息模板類型。選擇模板查看其渲染效果。",
+    "selectTemplate": "選擇模板"
+  },
+  "features": {
+    "title": "SDK 功能",
+    "description": "切換功能開關以查看它們如何影響聊天介面。",
+    "featureToggles": "功能開關",
+    "enableUpload": "啟用上傳",
+    "enableExport": "啟用匯出",
+    "enableDocumentUpload": "啟用文件上傳"
+  },
+  "theme": {
+    "title": "主題客製化",
+    "description": "使用主題配置自訂聊天機器人外觀。試試 'Crazy' 預設以查看所有主題選項。",
+    "presets": "預設",
+    "currentTheme": "目前主題配置"
+  },
+  "auth": {
+    "title": "認證狀態",
+    "description": "測試不同的認證狀態與 API Key 流程。",
+    "authState": "認證狀態",
+    "lastSubmittedKey": "上次提交的 Key",
+    "hint": "提示：輸入 \"valid-key\" 模擬成功認證。",
+    "states": {
+      "authenticated": {
+        "label": "已認證",
+        "description": "使用者已認證，可以使用聊天機器人。"
+      },
+      "needApiKey": {
+        "label": "需要 API Key",
+        "description": "使用者需要輸入 API Key 才能使用。"
+      },
+      "invalidApiKey": {
+        "label": "無效的 API Key",
+        "description": "提供的 API Key 無效。"
+      },
+      "loading": {
+        "label": "載入中",
+        "description": "正在判斷認證狀態。"
+      },
+      "error": {
+        "label": "錯誤",
+        "description": "認證過程中發生錯誤。"
+      },
+      "subscriptionExpired": {
+        "label": "訂閱已過期",
+        "description": "訂閱已過期。"
+      },
+      "botNotFound": {
+        "label": "找不到 Bot",
+        "description": "找不到請求的 Bot。"
+      }
+    }
+  },
+  "events": {
+    "title": "事件處理",
+    "description": "處理按鈕點擊的 EMIT 動作。點擊「立刻訂票」按鈕觸發事件。",
+    "eventLogs": "事件日誌",
+    "noEvents": "尚未捕獲任何事件。",
+    "hint": "點擊聊天機器人中的「立刻訂票」按鈕來觸發 EMIT 事件。"
+  },
+  "customRenderer": {
+    "title": "自訂訊息渲染",
+    "description": "根據訊息類型、payload 或其他條件自訂訊息渲染方式。",
+    "rendererMode": "渲染器模式",
+    "modes": {
+      "withAvatar": {
+        "label": "含頭像",
+        "description": "使用 MessageContainer 包裝自訂卡片（保留頭像）"
+      },
+      "noAvatar": {
+        "label": "無頭像",
+        "description": "完全自訂渲染，不使用 MessageContainer"
+      },
+      "wrapper": {
+        "label": "包裝器",
+        "description": "在預設內容周圍添加包裝元素"
+      },
+      "default": {
+        "label": "預設",
+        "description": "使用預設渲染（無自訂渲染器）"
+      }
+    }
+  },
+  "dynamicPayload": {
+    "title": "動態 Payload",
+    "description": "比較 sendMessage 中的靜態與動態 payload。動態 payload 使用 Lambda 函式在發送時執行。",
+    "sendMessage": "發送訊息",
+    "sendDescription": "點擊按鈕模擬使用不同 payload 類型發送訊息。觀察 payload 日誌以了解差異。",
+    "staticPayload": "靜態 Payload",
+    "dynamicPayloadBtn": "動態 Payload",
+    "payloadLogs": "Payload 日誌",
+    "noPayloads": "尚未發送任何 payload。",
+    "payloadHint": "點擊上方按鈕以發送帶有 payload 的訊息。",
+    "whyDynamic": "為什麼要用動態 Payload？",
+    "comparison": {
+      "timing": "計算時機",
+      "staticTiming": "值在定義時就固定",
+      "dynamicTiming": "值在發送時才產生",
+      "useCase": "適合場景",
+      "staticUseCase": "固定資料",
+      "dynamicUseCase": "動態資料（時間戳、隨機 ID）",
+      "multipleSends": "多次發送",
+      "staticMultipleSends": "payload 相同",
+      "dynamicMultipleSends": "payload 都不同"
+    }
+  },
+  "beforeSend": {
+    "title": "onBeforeSendMessage Hook",
+    "description": "在發送前注入上下文資料。選擇一個類別並發送訊息以查看 payload 注入。",
+    "selectContext": "選擇上下文",
+    "contextDescription": "選擇一個類別注入到每條訊息中。這模擬了父元件向聊天機器人提供上下文。",
+    "clearSelection": "清除選擇",
+    "payloadLogs": "Payload 日誌",
+    "noMessages": "尚未發送任何訊息。",
+    "sendHint": "在聊天機器人中發送訊息以查看注入的 payload。",
+    "categories": {
+      "tech": { "name": "科技", "description": "科技新聞與更新" },
+      "lifestyle": { "name": "生活", "description": "日常生活小撇步" },
+      "business": { "name": "商業", "description": "商業洞察" },
+      "entertainment": { "name": "娛樂", "description": "趣味與遊戲" }
+    }
+  },
+  "customHeader": {
+    "title": "自訂標題列",
+    "description": "展示 onMessageSent 回呼與 renderHeader 屬性，建構帶有訊息計數器的自訂標題列。"
+  },
+  "autoReset": {
+    "title": "自動重設通道",
+    "description": "控制掛載時是否自動重設通道。停用後，initMessages 的歷史訊息將被保留，不會發送 RESET_CHANNEL。",
+    "channelSettings": "通道設定",
+    "remount": "重新掛載 Chatbot",
+    "behavior": "行為",
+    "enabledBehavior": "掛載時將重設通道（發送 RESET_CHANNEL 動作）。這是預設行為。",
+    "disabledBehavior": "建立通道時不發送 RESET_CHANNEL。initMessages 的歷史訊息將被保留，仍可發送新訊息。"
+  },
+  "markdown": {
+    "title": "Markdown Bot 展示",
+    "description": "使用支援 Markdown 的 Bot Provider 測試富文本回應。",
+    "featuresTitle": "功能",
+    "features": {
+      "richText": "使用 Markdown 的富文本格式",
+      "codeBlocks": "帶有語法高亮的程式碼區塊",
+      "listsAndTables": "列表、表格等"
+    }
+  },
+  "private": {
+    "title": "私有 Bot 展示",
+    "description": "使用需要認證的私有 Bot Provider 進行測試。",
+    "authFlow": "認證流程",
+    "features": {
+      "apiKey": "需要 API Key 才能存取",
+      "stateManagement": "認證狀態管理",
+      "errorHandling": "未授權存取的錯誤處理"
+    }
+  }
+}
