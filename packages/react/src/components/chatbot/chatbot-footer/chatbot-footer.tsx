@@ -580,7 +580,11 @@ export function ChatbotFooter(): ReactNode {
   return (
     <div className={clsx('asgard-chatbot-footer', styles.chatbot_footer)} style={footerStyles}>
       {enableUpload && uploadableImages.length > 0 && (
-        <div className={styles.file_preview_container} style={{ maxWidth: contentStyles.maxWidth }}>
+        <div
+          className={styles.file_preview_container}
+          style={{ maxWidth: contentStyles.maxWidth }}
+          data-scrollable="true"
+        >
           <div className={styles.file_preview_grid}>
             {uploadableImages.map(image => (
               <div
@@ -642,7 +646,11 @@ export function ChatbotFooter(): ReactNode {
       )}
 
       {enableDocumentUpload && uploadableDocuments.length > 0 && (
-        <div className={styles.file_preview_container} style={{ maxWidth: contentStyles.maxWidth }}>
+        <div
+          className={styles.file_preview_container}
+          style={{ maxWidth: contentStyles.maxWidth }}
+          data-scrollable="true"
+        >
           <div className={styles.document_preview_grid}>
             {uploadableDocuments.map(doc => (
               <div
