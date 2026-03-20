@@ -112,6 +112,8 @@ import '@asgard-js/react/style';
                 borderRadius: '16px',
               },
             }}
+            enableUpload
+            enableDocumentUpload
             onSseMessage={handleSseMessage}
             onClose={() => setIsOpen(false)}
           />
