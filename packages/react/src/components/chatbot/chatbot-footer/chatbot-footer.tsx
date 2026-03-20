@@ -20,6 +20,7 @@ import { SpeechInputButton } from './speech-input-button';
 import { DocumentUploadButton } from './document-upload-button';
 import clsx from 'clsx';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
+import { useFileDropContext } from '../../../context/file-drop-context';
 import {
   validateImageFiles,
   validateDocumentFiles,
@@ -339,57 +340,64 @@ export function ChatbotFooter(): ReactNode {
     [client, customChannelId],
   );
 
+  const processImageFiles = useCallback(
+    (files: File[]) => {
+      const { validFiles, errors } = validateImageFiles(files);
+
+      if (errors.length > 0) {
+        alert('檔案驗證錯誤:\n' + errors.join('\n'));
+      }
+
+      if (validFiles.length > 0) {
+        const remainingSlots = MAX_IMAGE_COUNT - uploadableImages.length;
+        const filesToAdd = validFiles.slice(0, remainingSlots);
+
+        if (validFiles.length > remainingSlots) {
+          alert(`最多只能上傳 ${MAX_IMAGE_COUNT} 張圖片，已選擇前 ${remainingSlots} 張`);
+        }
+
+        if (filesToAdd.length > 0) {
+          // 清除已選的文件（圖片和文件只能擇一）
+          setUploadableDocuments([]);
+
+          // 為每個檔案建立 UploadableImage 並讀取預覽 URL，然後立即上傳
+          for (const file of filesToAdd) {
+            const id = crypto.randomUUID();
+            const reader = new FileReader();
+
+            reader.onload = (e): void => {
+              if (e.target?.result && typeof e.target.result === 'string') {
+                const newImage: UploadableImage = {
+                  id,
+                  file,
+                  previewUrl: e.target.result,
+                  uploadStatus: 'uploading',
+                };
+                setUploadableImages(prev => [...prev, newImage]);
+
+                // 立即開始上傳
+                uploadImage(id, file);
+              }
+            };
+
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+    },
+    [uploadableImages.length, uploadImage],
+  );
+
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
       if (files && files.length > 0) {
-        const { validFiles, errors } = validateImageFiles(files);
-
-        if (errors.length > 0) {
-          alert('檔案驗證錯誤:\n' + errors.join('\n'));
-        }
-
-        if (validFiles.length > 0) {
-          const remainingSlots = MAX_IMAGE_COUNT - uploadableImages.length;
-          const filesToAdd = validFiles.slice(0, remainingSlots);
-
-          if (validFiles.length > remainingSlots) {
-            alert(`最多只能上傳 ${MAX_IMAGE_COUNT} 張圖片，已選擇前 ${remainingSlots} 張`);
-          }
-
-          if (filesToAdd.length > 0) {
-            // 清除已選的文件（圖片和文件只能擇一）
-            setUploadableDocuments([]);
-
-            // 為每個檔案建立 UploadableImage 並讀取預覽 URL，然後立即上傳
-            for (const file of filesToAdd) {
-              const id = crypto.randomUUID();
-              const reader = new FileReader();
-
-              reader.onload = (e): void => {
-                if (e.target?.result && typeof e.target.result === 'string') {
-                  const newImage: UploadableImage = {
-                    id,
-                    file,
-                    previewUrl: e.target.result,
-                    uploadStatus: 'uploading',
-                  };
-                  setUploadableImages(prev => [...prev, newImage]);
-
-                  // 立即開始上傳
-                  uploadImage(id, file);
-                }
-              };
-
-              reader.readAsDataURL(file);
-            }
-          }
-        }
+        processImageFiles(Array.from(files));
       }
 
       event.target.value = '';
     },
-    [uploadableImages.length, uploadImage],
+    [processImageFiles],
   );
 
   const handleGalleryClick = useCallback(() => {
@@ -481,6 +489,60 @@ export function ChatbotFooter(): ReactNode {
       }
     },
     [uploadableDocuments.length, uploadDocument],
+  );
+
+  // Handle dropped files from drag & drop
+  const { droppedFiles, clearDroppedFiles } = useFileDropContext();
+
+  useEffect(() => {
+    if (droppedFiles.length === 0) return;
+
+    const imageFiles: File[] = [];
+    const documentFiles: File[] = [];
+
+    for (const file of droppedFiles) {
+      if (file.type.startsWith('image/')) {
+        imageFiles.push(file);
+      } else {
+        documentFiles.push(file);
+      }
+    }
+
+    if (imageFiles.length > 0 && enableUpload) {
+      processImageFiles(imageFiles);
+    } else if (documentFiles.length > 0 && enableDocumentUpload) {
+      handleDocumentSelect(documentFiles);
+    } else if (imageFiles.length > 0 && !enableUpload && enableDocumentUpload) {
+      // If image upload is disabled but document upload is enabled, treat as documents
+      handleDocumentSelect(imageFiles);
+    }
+
+    clearDroppedFiles();
+  }, [droppedFiles, clearDroppedFiles, enableUpload, enableDocumentUpload, processImageFiles, handleDocumentSelect]);
+
+  // Handle paste from clipboard
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>): void => {
+      if (!enableUpload) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        processImageFiles(imageFiles);
+      }
+      // 沒有圖片時不干預，讓文字正常貼上
+    },
+    [enableUpload, processImageFiles],
   );
 
   const handleDownloadClick = useCallback(async () => {
@@ -782,6 +844,7 @@ export function ChatbotFooter(): ReactNode {
           placeholder={isPreviewMode ? 'Preview mode - input disabled' : inputPlaceholder || 'Enter message'}
           onChange={onChange}
           onKeyDown={onKeyDown}
+          onPaste={handlePaste}
           onFocus={onFocus}
           onAnimationEnd={onAnimationEnd}
           onCompositionStart={() => setIsComposing(true)}

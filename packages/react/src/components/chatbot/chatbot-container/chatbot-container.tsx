@@ -1,4 +1,4 @@
-import { PropsWithChildren, ReactNode, CSSProperties, useRef, useEffect } from 'react';
+import { DragEventHandler, PropsWithChildren, ReactNode, CSSProperties, useRef, useEffect } from 'react';
 import { ChatbotFullScreenContainer } from './chatbot-full-screen-container';
 import classes from './chatbot-container.module.scss';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
@@ -8,10 +8,14 @@ interface ChatbotContainerProps extends PropsWithChildren {
   className?: string;
   style?: CSSProperties;
   fullScreen?: boolean;
+  onDragEnter?: DragEventHandler<HTMLDivElement>;
+  onDragOver?: DragEventHandler<HTMLDivElement>;
+  onDragLeave?: DragEventHandler<HTMLDivElement>;
+  onDrop?: DragEventHandler<HTMLDivElement>;
 }
 
 export function ChatbotContainer(props: ChatbotContainerProps): ReactNode {
-  const { fullScreen, children, className, style = {} } = props;
+  const { fullScreen, children, className, style = {}, onDragEnter, onDragOver, onDragLeave, onDrop } = props;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { chatbot } = useAsgardThemeContext();
@@ -81,9 +85,24 @@ export function ChatbotContainer(props: ChatbotContainerProps): ReactNode {
   return (
     <div className={clsx(classes.chatbot_root, className)} style={Object.assign({}, rootStyle, style)}>
       {fullScreen ? (
-        <ChatbotFullScreenContainer>{children}</ChatbotFullScreenContainer>
+        <ChatbotFullScreenContainer
+          onDragEnter={onDragEnter}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
+          {children}
+        </ChatbotFullScreenContainer>
       ) : (
-        <div ref={containerRef} className={classes.chatbot_container} style={chatbotInnerContainerStyle}>
+        <div
+          ref={containerRef}
+          className={classes.chatbot_container}
+          style={chatbotInnerContainerStyle}
+          onDragEnter={onDragEnter}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
           {children}
         </div>
       )}

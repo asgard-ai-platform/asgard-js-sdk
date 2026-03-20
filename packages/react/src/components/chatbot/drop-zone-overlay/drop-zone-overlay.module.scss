@@ -1,0 +1,31 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.overlay__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 48px;
+  border: 2px dashed var(--asg-color-primary, #6366f1);
+  border-radius: 16px;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.overlay__icon {
+  color: var(--asg-color-primary, #6366f1);
+}
+
+.overlay__text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--asg-color-primary, #6366f1);
+}

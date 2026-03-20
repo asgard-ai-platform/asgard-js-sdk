@@ -1,10 +1,17 @@
-import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef } from 'react';
+import { DragEventHandler, PropsWithChildren, ReactNode, useEffect, useMemo, useRef } from 'react';
 import classes from './chatbot-container.module.scss';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useVisualViewport } from '../../../hooks';
 
-export function ChatbotFullScreenContainer(props: PropsWithChildren): ReactNode {
-  const { children } = props;
+interface ChatbotFullScreenContainerProps extends PropsWithChildren {
+  onDragEnter?: DragEventHandler<HTMLDivElement>;
+  onDragOver?: DragEventHandler<HTMLDivElement>;
+  onDragLeave?: DragEventHandler<HTMLDivElement>;
+  onDrop?: DragEventHandler<HTMLDivElement>;
+}
+
+export function ChatbotFullScreenContainer(props: ChatbotFullScreenContainerProps): ReactNode {
+  const { children, onDragEnter, onDragOver, onDragLeave, onDrop } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const chatbotContainerRef = useRef<HTMLDivElement>(null);
@@ -77,7 +84,15 @@ export function ChatbotFullScreenContainer(props: PropsWithChildren): ReactNode 
 
   return (
     <div ref={containerRef} className={classes.full_screen}>
-      <div ref={chatbotContainerRef} className={classes.chatbot_container} style={styles}>
+      <div
+        ref={chatbotContainerRef}
+        className={classes.chatbot_container}
+        style={styles}
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
         {children}
       </div>
     </div>

@@ -1,4 +1,13 @@
-import { forwardRef, ForwardedRef, ReactNode, CSSProperties } from 'react';
+import {
+  forwardRef,
+  ForwardedRef,
+  MutableRefObject,
+  ReactNode,
+  CSSProperties,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { ClientConfig, ConversationMessage } from '@asgard-js/core';
 import { AsgardThemeContextProvider, AsgardThemeContextValue } from '../../context/asgard-theme-context';
 import {
@@ -8,6 +17,8 @@ import {
   AsgardTemplateContextValue,
   AsgardAppInitializationContextProvider,
   AsgardServiceContextProviderProps,
+  FileDropContextProvider,
+  useFileDropContext,
   SendMessageParams,
 } from '../../context';
 import { AuthState } from '@asgard-js/core';
@@ -18,6 +29,7 @@ import { ChatbotBody } from './chatbot-body';
 import { ChatbotFooter } from './chatbot-footer';
 import { ChatbotContainer } from './chatbot-container/chatbot-container';
 import { ServiceErrorState } from './service-error-state';
+import { DropZoneOverlay } from './drop-zone-overlay/drop-zone-overlay';
 import styles from './chatbot.module.scss';
 
 interface ChatbotProps extends AsgardTemplateContextValue {
@@ -106,6 +118,60 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     renderHeader,
     autoResetChannel,
   } = props;
+
+  const dragCounterRef = useRef(0);
+  const fileDropRef = useRef<{
+    setDroppedFiles: (files: File[]) => void;
+    setIsDraggingOver: (value: boolean) => void;
+  } | null>(null);
+
+  const isDropEnabled = enableUpload || enableDocumentUpload;
+
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isDropEnabled || !e.dataTransfer.types.includes('Files')) return;
+
+      dragCounterRef.current++;
+      if (dragCounterRef.current === 1) {
+        fileDropRef.current?.setIsDraggingOver(true);
+      }
+    },
+    [isDropEnabled],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      fileDropRef.current?.setIsDraggingOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      fileDropRef.current?.setIsDraggingOver(false);
+
+      if (!isDropEnabled) return;
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        fileDropRef.current?.setDroppedFiles(files);
+      }
+    },
+    [isDropEnabled],
+  );
 
   // Render different content based on authState
   const renderContent = (): React.ReactElement => {
@@ -225,20 +291,32 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             enableDocumentUpload={enableDocumentUpload}
             autoResetChannel={autoResetChannel}
           >
-            <ChatbotContainer fullScreen={fullScreen} className={className} style={style}>
-              {renderHeader ? (
-                renderHeader()
-              ) : (
-                <ChatbotHeader
-                  title={title}
-                  onReset={onReset}
-                  onClose={onClose}
-                  customActions={customActions}
-                  maintainConnectionWhenClosed={maintainConnectionWhenClosed}
-                />
-              )}
-              {renderContent()}
-            </ChatbotContainer>
+            <FileDropContextProvider>
+              <FileDropRefConnector fileDropRef={fileDropRef} />
+              <ChatbotContainer
+                fullScreen={fullScreen}
+                className={className}
+                style={style}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {renderHeader ? (
+                  renderHeader()
+                ) : (
+                  <ChatbotHeader
+                    title={title}
+                    onReset={onReset}
+                    onClose={onClose}
+                    customActions={customActions}
+                    maintainConnectionWhenClosed={maintainConnectionWhenClosed}
+                  />
+                )}
+                {renderContent()}
+                <DropZoneOverlay />
+              </ChatbotContainer>
+            </FileDropContextProvider>
           </AsgardServiceContextProvider>
         </AsgardThemeContextProvider>
       </AsgardAppInitializationContextProvider>
@@ -265,3 +343,25 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     </AsgardThemeContextProvider>
   );
 });
+
+/** Connects FileDropContext to the parent's ref so drag handlers can access context setters */
+function FileDropRefConnector({
+  fileDropRef,
+}: {
+  fileDropRef: MutableRefObject<{
+    setDroppedFiles: (files: File[]) => void;
+    setIsDraggingOver: (value: boolean) => void;
+  } | null>;
+}): ReactNode {
+  const { setDroppedFiles, setIsDraggingOver } = useFileDropContext();
+
+  useEffect(() => {
+    fileDropRef.current = { setDroppedFiles, setIsDraggingOver };
+
+    return (): void => {
+      fileDropRef.current = null;
+    };
+  }, [fileDropRef, setDroppedFiles, setIsDraggingOver]);
+
+  return null;
+}
