@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
 
 export default function FullscreenLayout({ children }: { children: ReactNode }): ReactNode {
-  return <div className="h-[calc(100vh-56px)]">{children}</div>;
+  return <div className="fixed inset-0 z-50 bg-background">{children}</div>;
 }
