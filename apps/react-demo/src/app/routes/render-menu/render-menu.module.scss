@@ -1,0 +1,99 @@
+.chatbotContainer {
+  width: 400px;
+}
+
+.menu {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1a1a2e;
+  padding: 12px 16px;
+}
+
+.menuToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.expandIcon {
+  font-size: 10px;
+}
+
+.menuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.menuTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a78bfa;
+}
+
+.menuAction {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+.menuItems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  text-align: left;
+  padding: 8px 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.chevron {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 16px;
+}
+
+.questionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}

@@ -14,6 +14,7 @@ import { DynamicPayload } from './routes/dynamic-payload';
 import { BeforeSendMessage } from './routes/before-send-message';
 import { CustomHeaderDemo } from './routes/custom-header';
 import { AutoResetChannel } from './routes/auto-reset-channel';
+import { RenderMenu } from './routes/render-menu';
 
 export function App(): React.ReactElement {
   return (
@@ -33,6 +34,7 @@ export function App(): React.ReactElement {
         <Route path="/before-send-message" element={<BeforeSendMessage />} />
         <Route path="/custom-header" element={<CustomHeaderDemo />} />
         <Route path="/auto-reset-channel" element={<AutoResetChannel />} />
+        <Route path="/render-menu" element={<RenderMenu />} />
       </Routes>
     </Layout>
   );
