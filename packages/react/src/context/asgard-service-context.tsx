@@ -52,6 +52,10 @@ export interface AsgardServiceContextValue {
   programmaticScrollToBottom: (behavior?: ScrollBehavior) => void;
   /** 滾動容器的 ref */
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  /** 外部設定 textarea 文字的值（透過 ref 呼叫） */
+  pendingInputValue: string | null;
+  /** 設定待填入 textarea 的文字 */
+  setPendingInputValue: (value: string | null) => void;
 }
 
 function noop(): void {
@@ -79,6 +83,8 @@ export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
   scrollToBottom: noop,
   programmaticScrollToBottom: noop,
   scrollContainerRef: { current: null },
+  pendingInputValue: null,
+  setPendingInputValue: noop,
 });
 
 export interface AsgardServiceContextProviderProps {
@@ -129,6 +135,9 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
   const messageBoxBottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 外部設定 textarea 文字
+  const [pendingInputValue, setPendingInputValue] = useState<string | null>(null);
 
   // 滾動跟隨狀態管理
   const [isFollowingLatest, setIsFollowingLatest] = useState(true);
@@ -203,6 +212,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       setFollowingLatest,
       scrollToBottom,
       programmaticScrollToBottom,
+      pendingInputValue,
+      setPendingInputValue,
     }),
     [
       avatar,
@@ -226,12 +237,14 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       setFollowingLatest,
       scrollToBottom,
       programmaticScrollToBottom,
+      pendingInputValue,
     ],
   );
 
   useImperativeHandle(parentRef, () => {
     return {
       serviceContext: contextValue,
+      setInputValue: (value: string): void => setPendingInputValue(value),
     };
   });
 

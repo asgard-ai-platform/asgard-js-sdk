@@ -80,6 +80,7 @@ interface ChatbotProps extends AsgardTemplateContextValue {
 
 export interface ChatbotRef {
   serviceContext?: AsgardServiceContextValue;
+  setInputValue?: (value: string) => void;
 }
 
 export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: ForwardedRef<ChatbotRef>): ReactNode {

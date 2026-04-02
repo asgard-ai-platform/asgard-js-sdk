@@ -47,6 +47,8 @@ export function ChatbotFooter(): ReactNode {
     title,
     programmaticScrollToBottom,
     onBeforeSendMessage,
+    pendingInputValue,
+    setPendingInputValue,
   } = useAsgardContext();
   const { data } = useAsgardAppInitializationContext();
 
@@ -544,6 +546,20 @@ export function ChatbotFooter(): ReactNode {
     },
     [enableUpload, processImageFiles],
   );
+
+  // Handle pending input value from external ref (e.g. menu click)
+  useEffect(() => {
+    if (pendingInputValue === null) return;
+
+    setValue(pendingInputValue);
+    setPendingInputValue(null);
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '36px';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.focus();
+    }
+  }, [pendingInputValue, setPendingInputValue]);
 
   const handleDownloadClick = useCallback(async () => {
     if (!messages) {
