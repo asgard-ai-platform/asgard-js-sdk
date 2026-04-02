@@ -25,6 +25,7 @@ export interface UseChannelProps {
     },
   ) => void;
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
+  onSseError?: (error: unknown) => void;
   onBeforeSendMessage?: (params: {
     text: string;
     payload?: Record<string, unknown> | (() => Record<string, unknown>);
@@ -55,6 +56,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     autoResetChannel,
     onSseMessage,
     onAuthError,
+    onSseError,
     onBeforeSendMessage,
   } = props;
 
@@ -117,6 +119,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
                 },
               );
             }
+
+            onSseError?.(error);
           },
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, {
@@ -137,6 +141,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       initMessages,
       onSseMessage,
       onAuthError,
+      onSseError,
       onBeforeSendMessage,
     ],
   );

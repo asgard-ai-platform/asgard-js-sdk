@@ -62,6 +62,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   onApiKeySubmit?: (apiKey: string) => Promise<void>;
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
 
+  /** Callback fired when SSE connection encounters an error */
+  onSseError?: (error: unknown) => void;
+
   /** Callback to modify message params before sending */
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
 
@@ -117,6 +120,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     authState = 'authenticated',
     onApiKeySubmit,
     onAuthError,
+    onSseError,
     onBeforeSendMessage,
     onMessageSent,
     renderHeader,
@@ -288,6 +292,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             initMessages={initMessages}
             onSseMessage={onSseMessage}
             onAuthError={onAuthError}
+            onSseError={onSseError}
             onBeforeSendMessage={onBeforeSendMessage}
             onMessageSent={onMessageSent}
             botTypingPlaceholder={botTypingPlaceholder}

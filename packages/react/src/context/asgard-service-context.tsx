@@ -104,6 +104,8 @@ export interface AsgardServiceContextProviderProps {
   initMessages?: ConversationMessage[];
   onSseMessage?: UseChannelProps['onSseMessage'];
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
+  /** Callback fired when SSE connection encounters an error */
+  onSseError?: (error: unknown) => void;
   /** Callback to modify message params before sending */
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
   /** Callback fired after a message has been sent */
@@ -128,6 +130,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     initMessages,
     onSseMessage,
     onAuthError,
+    onSseError,
     onBeforeSendMessage,
     onMessageSent,
     autoResetChannel,
@@ -173,6 +176,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     autoResetChannel,
     onSseMessage,
     onAuthError,
+    onSseError,
     onBeforeSendMessage,
   });
 
