@@ -315,10 +315,11 @@ config: {
 - **messageActions?**: `(message: ConversationBotMessage) => MessageActionConfig[]` - Function to define which action buttons to display for each bot message. Returns an array of `{ id: string, label: string }` objects. See [Message Actions](#message-actions) section for details.
 - **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
 - **renderHeader?**: `() => ReactNode` - Custom header renderer. When provided, completely replaces the default header. Use `useAsgardContext()` inside the render function to access `resetChannel`, `isResetting`, and other internal state.
+- **renderMenu?**: `() => ReactNode` - Custom menu renderer. When provided, renders content between the chat body and footer. Useful for quick menus, suggested questions, or navigation panels. See [Custom Menu](#custom-menu) section for details.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
 - **onBeforeSendMessage?**: `(params: SendMessageParams) => SendMessageParams` - Callback to modify message params before sending. Allows injecting contextual data (payload, metadata) from parent components. See [Before Send Message Hook](#before-send-message-hook) section for details.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
-- **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. ChatbotRef extends the ref of the chatbot instance and provides some additional methods like `serviceContext.sendMessage` to interact with the chatbot instance.
+- **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. `ChatbotRef` provides `serviceContext` for interacting with the chatbot, and `setInputValue(value: string)` for programmatically setting the textarea text from outside the component.
 
 <a id="theme-configuration"></a>
 <br/>
@@ -1135,6 +1136,59 @@ const App = () => {
       onMessageSent={() => setCount(c => c + 1)}
       onReset={() => setCount(0)}
       renderHeader={() => <CustomHeader count={count} onClose={() => console.log('closed')} />}
+    />
+  );
+};
+```
+
+<a id="custom-menu"></a>
+<br/>
+
+### Custom Menu
+
+The `renderMenu` prop renders custom content between the chat body and footer. Combined with `ref.setInputValue`, you can build interactive menus that fill the input on click.
+
+#### Usage Example
+
+```typescript
+import { useRef } from 'react';
+import { Chatbot, ChatbotRef } from '@asgard-js/react';
+
+const App = () => {
+  const chatbotRef = useRef<ChatbotRef>(null);
+
+  const questions = ['What services do you offer?', 'How do I get started?'];
+
+  return (
+    <Chatbot
+      ref={chatbotRef}
+      config={{
+        apiKey: 'your-api-key',
+        botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+      }}
+      customChannelId="your-channel-id"
+      renderMenu={() => (
+        <div style={{ padding: '8px 12px', borderTop: '1px solid #eee' }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#888' }}>Suggested questions</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {questions.map(q => (
+              <button
+                key={q}
+                onClick={() => chatbotRef.current?.setInputValue?.(q)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 16,
+                  border: '1px solid #ddd',
+                  background: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     />
   );
 };
