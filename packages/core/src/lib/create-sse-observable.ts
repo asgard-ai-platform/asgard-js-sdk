@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { EventSourceMessage, fetchEventSource } from '@microsoft/fetch-event-source';
 import { FetchSsePayload, SseResponse } from '../types';
+import { HttpError } from '../types/http-error';
 import { EventType } from '../constants/enum';
 
 interface CreateSseObservableOptions {
@@ -51,7 +52,18 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
       openWhenHidden: true,
       onopen: async response => {
         if (!response.ok) {
-          subscriber.error(response);
+          let body: unknown;
+          try {
+            body = await response.json();
+          } catch {
+            try {
+              body = await response.text();
+            } catch {
+              body = null;
+            }
+          }
+
+          subscriber.error(new HttpError(response.status, response.statusText, body));
           controller.abort();
         } else {
           currentTraceId = response.headers.get('X-Trace-Id') ?? undefined;

@@ -8,9 +8,10 @@ import {
   BlobUploadResponse,
 } from '../types';
 import { createSseObservable } from './create-sse-observable';
-import { concatMap, delay, of, retry, Subject, takeUntil } from 'rxjs';
+import { concatMap, delay, of, retry, Subject, takeUntil, throwError, timer } from 'rxjs';
 import { EventType } from '../constants/enum';
 import { EventEmitter } from './event-emitter';
+import { HttpError } from '../types/http-error';
 
 export default class AsgardServiceClient implements IAsgardServiceClient {
   private apiKey?: string;
@@ -106,7 +107,17 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       .pipe(
         concatMap(event => of(event).pipe(delay(options?.delayTime ?? 50))),
         takeUntil(this.destroy$),
-        retry(3),
+        retry({
+          count: 3,
+          delay: error => {
+            // Do not retry client errors (4xx) — they won't resolve by retrying
+            if (error instanceof HttpError && error.status >= 400 && error.status < 500) {
+              return throwError(() => error);
+            }
+
+            return timer(1000);
+          },
+        }),
       )
       .subscribe({
         next: response => {
