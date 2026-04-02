@@ -1,5 +1,5 @@
-import { ReactNode, useState, useCallback } from 'react';
-import { Chatbot, SendMessageParams } from '@asgard-js/react';
+import { ReactNode, useState, useCallback, useRef } from 'react';
+import { Chatbot, ChatbotRef, SendMessageParams } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
 import styles from './before-send-message.module.scss';
@@ -25,6 +25,7 @@ interface PayloadLog {
 }
 
 export function BeforeSendMessage(): ReactNode {
+  const chatbotRef = useRef<ChatbotRef>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [payloadLogs, setPayloadLogs] = useState<PayloadLog[]>([]);
 
@@ -59,6 +60,10 @@ export function BeforeSendMessage(): ReactNode {
     [selectedCategory],
   );
 
+  const handleSendViaRef = useCallback((): void => {
+    chatbotRef.current?.serviceContext?.sendMessage?.({ text: 'Hello from ref!' });
+  }, []);
+
   const clearLogs = (): void => {
     setPayloadLogs([]);
   };
@@ -92,6 +97,17 @@ export function BeforeSendMessage(): ReactNode {
               Clear Selection
             </button>
           )}
+        </div>
+
+        <div className={styles.section}>
+          <h3>Send via Ref</h3>
+          <p className={styles.sectionDesc}>
+            Simulates calling <code>chatbotRef.current.serviceContext.sendMessage()</code> from outside the chatbot. The
+            onBeforeSendMessage hook should still fire.
+          </p>
+          <button className={styles.refSendButton} onClick={handleSendViaRef}>
+            Send &quot;Hello from ref!&quot;
+          </button>
         </div>
 
         <div className={styles.section}>
@@ -144,6 +160,7 @@ export function BeforeSendMessage(): ReactNode {
 
       <div className={styles.chatbotContainer}>
         <Chatbot
+          ref={chatbotRef}
           key={selectedCategory?.id ?? 'none'}
           title="Context Injection Demo"
           config={{
