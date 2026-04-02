@@ -21,6 +21,7 @@ const navItems = [
   { to: '/custom-header', label: 'Custom Header' },
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
   { to: '/render-menu', label: 'Render Menu' },
+  { to: '/http-error', label: 'HTTP Error' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

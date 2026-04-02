@@ -15,6 +15,7 @@ import { BeforeSendMessage } from './routes/before-send-message';
 import { CustomHeaderDemo } from './routes/custom-header';
 import { AutoResetChannel } from './routes/auto-reset-channel';
 import { RenderMenu } from './routes/render-menu';
+import { HttpErrorDemo } from './routes/http-error';
 
 export function App(): React.ReactElement {
   return (
@@ -35,6 +36,7 @@ export function App(): React.ReactElement {
         <Route path="/custom-header" element={<CustomHeaderDemo />} />
         <Route path="/auto-reset-channel" element={<AutoResetChannel />} />
         <Route path="/render-menu" element={<RenderMenu />} />
+        <Route path="/http-error" element={<HttpErrorDemo />} />
       </Routes>
     </Layout>
   );
