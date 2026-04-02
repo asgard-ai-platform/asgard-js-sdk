@@ -12,18 +12,13 @@ export function QuickReplies(props: QuickRepliesProps): ReactNode {
   const { quickReplies } = props;
 
   const { template, botMessage } = useAsgardThemeContext();
-  const { sendMessage, isConnecting, onBeforeSendMessage } = useAsgardContext();
+  const { sendMessage, isConnecting } = useAsgardContext();
 
   const onClick = useCallback(
     (text: string) => {
-      let params: { text: string; payload?: Record<string, unknown> | (() => Record<string, unknown>) } = { text };
-      if (onBeforeSendMessage) {
-        params = onBeforeSendMessage(params);
-      }
-
-      sendMessage?.(params);
+      sendMessage?.({ text });
     },
-    [sendMessage, onBeforeSendMessage],
+    [sendMessage],
   );
 
   if (!quickReplies?.length) {

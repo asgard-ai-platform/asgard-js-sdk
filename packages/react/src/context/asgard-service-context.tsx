@@ -40,8 +40,6 @@ export interface AsgardServiceContextValue {
   enableUpload?: boolean;
   enableExport?: boolean;
   enableDocumentUpload?: boolean;
-  /** Callback to modify message params before sending */
-  onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
   /** 用戶是否正在跟隨最新內容（用於自動滾動判斷） */
   isFollowingLatest: boolean;
   /** 設定跟隨狀態 */
@@ -77,7 +75,6 @@ export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
   enableUpload: undefined,
   enableExport: undefined,
   enableDocumentUpload: undefined,
-  onBeforeSendMessage: undefined,
   isFollowingLatest: true,
   setFollowingLatest: noop,
   scrollToBottom: noop,
@@ -183,13 +180,14 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
   const wrappedSendMessage: UseChannelReturn['sendMessage'] = useMemo(() => {
     if (!sendMessage) return undefined;
 
-    return async (...args) => {
-      const result = await sendMessage(...args);
+    return async params => {
+      const resolvedParams = onBeforeSendMessage ? onBeforeSendMessage(params) : params;
+      const result = await sendMessage(resolvedParams);
       onMessageSent?.();
 
       return result;
     };
-  }, [sendMessage, onMessageSent]);
+  }, [sendMessage, onBeforeSendMessage, onMessageSent]);
 
   const contextValue = useMemo(
     () => ({
@@ -209,7 +207,6 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       enableUpload,
       enableExport,
       enableDocumentUpload,
-      onBeforeSendMessage,
       messageBoxBottomRef,
       scrollContainerRef,
       isFollowingLatest,
@@ -236,7 +233,6 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       enableUpload,
       enableExport,
       enableDocumentUpload,
-      onBeforeSendMessage,
       isFollowingLatest,
       setFollowingLatest,
       scrollToBottom,

@@ -46,7 +46,6 @@ export function ChatbotFooter(): ReactNode {
     messages,
     title,
     programmaticScrollToBottom,
-    onBeforeSendMessage,
     pendingInputValue,
     setPendingInputValue,
   } = useAsgardContext();
@@ -250,7 +249,7 @@ export function ChatbotFooter(): ReactNode {
       const filePreviewUrls = successfulImages.map(img => img.previewUrl);
 
       if (messageText || allBlobIds.length > 0 || filePreviewUrls.length > 0 || successfulDocuments.length > 0) {
-        let params: {
+        const params: {
           text: string;
           blobIds?: string[];
           filePreviewUrls?: string[];
@@ -272,11 +271,6 @@ export function ChatbotFooter(): ReactNode {
           params.documentNames = successfulDocuments.map(doc => doc.file.name);
         }
 
-        // Apply onBeforeSendMessage hook if provided
-        if (onBeforeSendMessage) {
-          params = onBeforeSendMessage(params);
-        }
-
         sendMessage?.(params);
       }
 
@@ -288,7 +282,7 @@ export function ChatbotFooter(): ReactNode {
         textareaRef.current.style.height = '36px';
       }
     }
-  }, [isComposing, isConnecting, sendMessage, onBeforeSendMessage, value, uploadableImages, uploadableDocuments]);
+  }, [isComposing, isConnecting, sendMessage, value, uploadableImages, uploadableDocuments]);
 
   const onKeyDown = useCallback<KeyboardEventHandler<HTMLTextAreaElement>>(
     event => {
