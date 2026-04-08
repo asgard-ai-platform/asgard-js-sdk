@@ -146,23 +146,32 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     setIsFollowingLatest(value);
   }, []);
 
-  // 用戶觸發的滾動 - 會恢復跟隨狀態
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const bottomElement = messageBoxBottomRef.current;
-    if (bottomElement) {
-      bottomElement.scrollIntoView({ behavior });
-    }
+  // 直接操作 chatbot 內部的 scroll container，避免使用 scrollIntoView —
+  // scrollIntoView 會冒泡到最近的可捲動祖先，當 chatbot 被嵌入到外部文件
+  // 頁面時會連帶捲動整個 <body>，把訪客推離原本的位置。
+  const scrollContainerToBottom = useCallback((behavior: ScrollBehavior) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
-    setIsFollowingLatest(true);
+    container.scrollTo({ top: container.scrollHeight, behavior });
   }, []);
+
+  // 用戶觸發的滾動 - 會恢復跟隨狀態
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      scrollContainerToBottom(behavior);
+      setIsFollowingLatest(true);
+    },
+    [scrollContainerToBottom],
+  );
 
   // 程式觸發的滾動（串流更新）- 不改變跟隨狀態
-  const programmaticScrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const bottomElement = messageBoxBottomRef.current;
-    if (bottomElement) {
-      bottomElement.scrollIntoView({ behavior });
-    }
-  }, []);
+  const programmaticScrollToBottom = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      scrollContainerToBottom(behavior);
+    },
+    [scrollContainerToBottom],
+  );
 
   const client = useAsgardServiceClient({ config });
 
