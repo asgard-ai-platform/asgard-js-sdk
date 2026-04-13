@@ -11,11 +11,15 @@
   },
   "files": [
     "dist",
+    "style.d.ts",
     "!**/*.tsbuildinfo"
   ],
   "exports": {
     "./package.json": "./package.json",
-    "./style": "./dist/index.css",
+    "./style": {
+      "types": "./style.d.ts",
+      "default": "./dist/index.css"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
