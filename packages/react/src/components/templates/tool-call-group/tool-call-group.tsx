@@ -65,7 +65,7 @@ function ExpandIcon({ className }: { className?: string }): ReactNode {
   );
 }
 
-function CloseIcon({ className }: { className?: string }): ReactNode {
+export function CloseIcon({ className }: { className?: string }): ReactNode {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M18 6L6 18M6 6l12 12" />
@@ -168,7 +168,7 @@ function getTokenClassName(type: JsonTokenType): string {
   }
 }
 
-function SyntaxHighlightedJson({ json }: { json: string }): ReactNode {
+export function SyntaxHighlightedJson({ json }: { json: string }): ReactNode {
   const tokens = tokenizeJson(json);
 
   return (
@@ -183,14 +183,14 @@ function SyntaxHighlightedJson({ json }: { json: string }): ReactNode {
 }
 
 // Modal Component
-interface JsonModalProps {
+export interface JsonModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   data: Record<string, unknown>;
 }
 
-function JsonModal({ isOpen, onClose, title, data }: JsonModalProps): ReactNode {
+export function JsonModal({ isOpen, onClose, title, data }: JsonModalProps): ReactNode {
   const jsonString = JSON.stringify(data, null, 2);
 
   const handleCopy = useCallback((): void => {
@@ -261,12 +261,12 @@ function JsonModal({ isOpen, onClose, title, data }: JsonModalProps): ReactNode 
 }
 
 // JsonViewer Component
-interface JsonViewerProps {
+export interface JsonViewerProps {
   title: string;
   data: Record<string, unknown>;
 }
 
-function JsonViewer({ title, data }: JsonViewerProps): ReactNode {
+export function JsonViewer({ title, data }: JsonViewerProps): ReactNode {
   const [isModalOpen, setModalOpen] = useState(false);
   const jsonString = JSON.stringify(data, null, 2);
 

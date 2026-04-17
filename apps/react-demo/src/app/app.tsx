@@ -18,6 +18,7 @@ import { RenderMenu } from './routes/render-menu';
 import { HttpErrorDemo } from './routes/http-error';
 import { HttpErrorOnSendDemo } from './routes/http-error-on-send';
 import { ToolCallDemo } from './routes/tool-call';
+import { ToolCallConsentDemo } from './routes/tool-call-consent';
 
 export function App(): React.ReactElement {
   return (
@@ -41,6 +42,7 @@ export function App(): React.ReactElement {
         <Route path="/http-error" element={<HttpErrorDemo />} />
         <Route path="/http-error-on-send" element={<HttpErrorOnSendDemo />} />
         <Route path="/tool-call" element={<ToolCallDemo />} />
+        <Route path="/tool-call-consent" element={<ToolCallConsentDemo />} />
       </Routes>
     </Layout>
   );

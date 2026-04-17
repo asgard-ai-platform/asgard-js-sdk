@@ -1,23 +1,32 @@
 import { v4 as uuidv4 } from 'uuid';
 import { EventType } from '../constants/enum';
-import { ConversationMessage, ConversationToolCallMessage, SseResponse } from '../types';
+import { ConversationMessage, ConversationToolCallMessage, SseResponse, ToolCallConsentEventData } from '../types';
 
 interface IConversation {
   messages: Map<string, ConversationMessage> | null;
+  pendingConsent?: ToolCallConsentEventData | null;
 }
 
 export default class Conversation implements IConversation {
   public messages: Map<string, ConversationMessage> | null = null;
+  public pendingConsent: ToolCallConsentEventData | null = null;
 
-  constructor({ messages }: IConversation) {
+  constructor({ messages, pendingConsent = null }: IConversation) {
     this.messages = messages;
+    this.pendingConsent = pendingConsent ?? null;
   }
 
   pushMessage(message: ConversationMessage): Conversation {
     const messages = new Map(this.messages);
     messages.set(message.messageId, message);
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  clearPendingConsent(): Conversation {
+    if (!this.pendingConsent) return this;
+
+    return new Conversation({ messages: this.messages, pendingConsent: null });
   }
 
   onMessage(response: SseResponse<EventType>): Conversation {
@@ -32,6 +41,8 @@ export default class Conversation implements IConversation {
         return this.onToolCallStart(response as SseResponse<EventType.TOOL_CALL_START>);
       case EventType.TOOL_CALL_COMPLETE:
         return this.onToolCallComplete(response as SseResponse<EventType.TOOL_CALL_COMPLETE>);
+      case EventType.TOOL_CALL_CONSENT:
+        return this.onToolCallConsent(response as SseResponse<EventType.TOOL_CALL_CONSENT>);
       case EventType.ERROR:
         return this.onMessageError(response as SseResponse<EventType.ERROR>);
       default:
@@ -55,7 +66,7 @@ export default class Conversation implements IConversation {
       raw: '',
     });
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
   }
 
   onMessageDelta(response: SseResponse<EventType.MESSAGE_DELTA>): Conversation {
@@ -81,7 +92,7 @@ export default class Conversation implements IConversation {
       raw: currentMessage.raw,
     });
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
   }
 
   onMessageComplete(response: SseResponse<EventType.MESSAGE_COMPLETE>): Conversation {
@@ -103,7 +114,7 @@ export default class Conversation implements IConversation {
       raw: JSON.stringify(response),
     });
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
   }
 
   onMessageError(response: SseResponse<EventType.ERROR>): Conversation {
@@ -121,7 +132,7 @@ export default class Conversation implements IConversation {
       traceId: response.traceId,
     });
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
   }
 
   onToolCallStart(response: SseResponse<EventType.TOOL_CALL_START>): Conversation {
@@ -145,7 +156,7 @@ export default class Conversation implements IConversation {
 
     messages.set(toolCallKey, toolCallMessage);
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
   }
 
   onToolCallComplete(response: SseResponse<EventType.TOOL_CALL_COMPLETE>): Conversation {
@@ -166,6 +177,12 @@ export default class Conversation implements IConversation {
       messages.set(toolCallKey, updatedMessage);
     }
 
-    return new Conversation({ messages });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  onToolCallConsent(response: SseResponse<EventType.TOOL_CALL_CONSENT>): Conversation {
+    const consent = response.fact.toolCallConsent;
+
+    return new Conversation({ messages: this.messages, pendingConsent: consent });
   }
 }

@@ -8,6 +8,7 @@ import {
   IAsgardServiceClient,
   ObserverOrNext,
   SseResponse,
+  ToolCallConsentAnswer,
 } from '../types';
 import { FetchSseAction, EventType } from '../constants/enum';
 import Conversation from './conversation';
@@ -186,6 +187,21 @@ export default class Channel {
         payload: this.resolvePayload(payload?.payload),
         text,
         blobIds: payload?.blobIds,
+      },
+      options,
+    );
+  }
+
+  public replyToolCallConsents(toolCallConsents: ToolCallConsentAnswer[], options?: FetchSseOptions): Promise<void> {
+    this.conversation$.next(this.conversation$.value.clearPendingConsent());
+
+    return this.fetchSse(
+      {
+        action: FetchSseAction.RESPONSE_TOOL_CALL_CONSENT,
+        customChannelId: this.customChannelId,
+        customMessageId: this.customMessageId,
+        text: '',
+        toolCallConsents,
       },
       options,
     );

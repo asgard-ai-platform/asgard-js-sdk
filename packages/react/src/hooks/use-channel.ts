@@ -7,6 +7,7 @@ import {
   EventType,
   FetchSsePayload,
   SseResponse,
+  ToolCallConsentAnswer,
 } from '@asgard-js/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -43,6 +44,7 @@ export interface UseChannelReturn {
   ) => Promise<void>;
   resetChannel?: (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
   closeChannel?: () => void;
+  replyToolCallConsents?: (answers: ToolCallConsentAnswer[]) => Promise<void>;
 }
 
 export function useChannel(props: UseChannelProps): UseChannelReturn {
@@ -217,6 +219,19 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     [channel, customMessageId, onSseMessage, onAuthError, onSseError, conversation],
   );
 
+  const replyToolCallConsents = useCallback(
+    async (answers: ToolCallConsentAnswer[]): Promise<void> => {
+      await channel?.replyToolCallConsents(answers, {
+        onSseMessage(response: SseResponse<EventType>) {
+          onSseMessage?.(response, {
+            conversation,
+          });
+        },
+      });
+    },
+    [channel, onSseMessage, conversation],
+  );
+
   useEffect(() => {
     if (isPreviewMode) return;
 
@@ -250,6 +265,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             sendMessage,
             resetChannel,
             closeChannel,
+            replyToolCallConsents,
           },
     [
       isPreviewMode,
@@ -261,6 +277,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       sendMessage,
       resetChannel,
       closeChannel,
+      replyToolCallConsents,
     ],
   );
 }

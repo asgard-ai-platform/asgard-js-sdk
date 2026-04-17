@@ -30,6 +30,7 @@ import { ChatbotFooter } from './chatbot-footer';
 import { ChatbotContainer } from './chatbot-container/chatbot-container';
 import { ServiceErrorState } from './service-error-state';
 import { DropZoneOverlay } from './drop-zone-overlay/drop-zone-overlay';
+import { ToolCallConsentGate } from '../tool-call-consent';
 import styles from './chatbot.module.scss';
 
 interface ChatbotProps extends AsgardTemplateContextValue {
@@ -267,6 +268,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             </AsgardTemplateContextProvider>
             {renderMenu?.()}
             <ChatbotFooter />
+            <ToolCallConsentGate />
           </>
         );
     }

@@ -1,4 +1,4 @@
-import { AsgardServiceClient, ClientConfig, ConversationMessage } from '@asgard-js/core';
+import { AsgardServiceClient, ClientConfig, ConversationMessage, ToolCallConsentEventData } from '@asgard-js/core';
 import {
   createContext,
   ForwardedRef,
@@ -35,6 +35,8 @@ export interface AsgardServiceContextValue {
   sendMessage?: UseChannelReturn['sendMessage'];
   resetChannel?: UseChannelReturn['resetChannel'];
   closeChannel?: UseChannelReturn['closeChannel'];
+  replyToolCallConsents?: UseChannelReturn['replyToolCallConsents'];
+  pendingConsent: ToolCallConsentEventData | null;
   botTypingPlaceholder?: string;
   inputPlaceholder?: string;
   enableUpload?: boolean;
@@ -82,6 +84,7 @@ export const AsgardServiceContext = createContext<AsgardServiceContextValue>({
   scrollContainerRef: { current: null },
   pendingInputValue: null,
   setPendingInputValue: noop,
+  pendingConsent: null,
 });
 
 export interface AsgardServiceContextProviderProps {
@@ -175,7 +178,16 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
   const client = useAsgardServiceClient({ config });
 
-  const { isOpen, isResetting, isConnecting, conversation, sendMessage, resetChannel, closeChannel } = useChannel({
+  const {
+    isOpen,
+    isResetting,
+    isConnecting,
+    conversation,
+    sendMessage,
+    resetChannel,
+    closeChannel,
+    replyToolCallConsents,
+  } = useChannel({
     client,
     customChannelId,
     initMessages,
@@ -220,6 +232,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       sendMessage: wrappedSendMessage,
       resetChannel,
       closeChannel,
+      replyToolCallConsents,
+      pendingConsent: conversation?.pendingConsent ?? null,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,
@@ -243,9 +257,11 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       isResetting,
       isConnecting,
       conversation?.messages,
+      conversation?.pendingConsent,
       wrappedSendMessage,
       resetChannel,
       closeChannel,
+      replyToolCallConsents,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,

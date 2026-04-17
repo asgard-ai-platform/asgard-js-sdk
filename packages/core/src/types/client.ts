@@ -1,5 +1,5 @@
 import { EventType, FetchSseAction } from '../constants/enum';
-import { SseResponse } from './sse-response';
+import { SseResponse, ToolCallConsentAnswer } from './sse-response';
 import { EventHandler } from './event-emitter';
 import { BlobUploadResponse } from './blob';
 
@@ -16,11 +16,13 @@ export type ProcessEventHandler = EventHandler<SseResponse<EventType.PROCESS_STA
 export type DoneEventHandler = EventHandler<SseResponse<EventType.DONE>>;
 export type ErrorEventHandler = EventHandler<SseResponse<EventType.ERROR>>;
 export type ToolCallEventHandler = EventHandler<SseResponse<EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE>>;
+export type ToolCallConsentEventHandler = EventHandler<SseResponse<EventType.TOOL_CALL_CONSENT>>;
 
 export interface SseHandlers {
   onRunInit?: InitEventHandler;
   onMessage?: MessageEventHandler;
   onToolCall?: ToolCallEventHandler;
+  onToolCallConsent?: ToolCallConsentEventHandler;
   onProcess?: ProcessEventHandler;
   onRunDone?: DoneEventHandler;
   onRunError?: ErrorEventHandler;
@@ -74,6 +76,7 @@ export interface FetchSsePayload {
   payload?: Record<string, unknown> | (() => Record<string, unknown>);
   action: FetchSseAction;
   blobIds?: string[];
+  toolCallConsents?: ToolCallConsentAnswer[];
 }
 
 export interface FetchSseOptions {
@@ -89,6 +92,7 @@ export type SseEvents = {
   [EventType.PROCESS]: ProcessEventHandler;
   [EventType.MESSAGE]: MessageEventHandler;
   [EventType.TOOL_CALL]: ToolCallEventHandler;
+  [EventType.TOOL_CALL_CONSENT]: ToolCallConsentEventHandler;
   [EventType.DONE]: DoneEventHandler;
   [EventType.ERROR]: ErrorEventHandler;
 };

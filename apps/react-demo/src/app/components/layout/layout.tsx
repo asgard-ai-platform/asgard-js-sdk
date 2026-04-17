@@ -24,6 +24,7 @@ const navItems = [
   { to: '/http-error', label: 'HTTP Error' },
   { to: '/http-error-on-send', label: 'HTTP Error on Send' },
   { to: '/tool-call', label: 'Tool Call' },
+  { to: '/tool-call-consent', label: 'Tool Call Consent' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

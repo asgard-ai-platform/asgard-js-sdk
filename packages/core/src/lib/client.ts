@@ -80,6 +80,13 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
         this.sseEmitter.emit(EventType.TOOL_CALL, response as Parameters<SseEvents[EventType.TOOL_CALL]>[0]);
 
         break;
+      case EventType.TOOL_CALL_CONSENT:
+        this.sseEmitter.emit(
+          EventType.TOOL_CALL_CONSENT,
+          response as Parameters<SseEvents[EventType.TOOL_CALL_CONSENT]>[0],
+        );
+
+        break;
       case EventType.DONE:
         this.sseEmitter.emit(EventType.DONE, response as SseResponse<EventType.DONE>);
 

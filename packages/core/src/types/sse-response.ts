@@ -178,6 +178,25 @@ export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
   toolCallResult: Record<string, unknown>;
 }
 
+export interface ToolCallConsentPendingCall {
+  toolCallId: string;
+  toolsetName: string;
+  toolName: string;
+  parameter: Record<string, unknown>;
+  alreadyAllowed: boolean;
+}
+
+export interface ToolCallConsentEventData {
+  processId: string;
+  pendingCalls: ToolCallConsentPendingCall[];
+}
+
+export interface ToolCallConsentAnswer {
+  toolCallId: string;
+  result: 'ALLOW_ONCE' | 'ALLOW_ALWAYS' | 'DENY_ONCE';
+  denyReason: string;
+}
+
 export interface Fact<Type extends EventType> {
   runInit: null;
   runDone: null;
@@ -187,6 +206,7 @@ export interface Fact<Type extends EventType> {
   messageComplete: IsEqual<Type, EventType.MESSAGE_COMPLETE, MessageEventData>;
   toolCallStart: IsEqual<Type, EventType.TOOL_CALL_START, ToolCallBaseEventData>;
   toolCallComplete: IsEqual<Type, EventType.TOOL_CALL_COMPLETE, ToolCallCompleteEventData>;
+  toolCallConsent: IsEqual<Type, EventType.TOOL_CALL_CONSENT, ToolCallConsentEventData>;
 }
 
 export interface SseResponse<Type extends EventType> {
