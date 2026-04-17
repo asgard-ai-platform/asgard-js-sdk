@@ -22,6 +22,7 @@ const navItems = [
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
   { to: '/render-menu', label: 'Render Menu' },
   { to: '/http-error', label: 'HTTP Error' },
+  { to: '/tool-call', label: 'Tool Call' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

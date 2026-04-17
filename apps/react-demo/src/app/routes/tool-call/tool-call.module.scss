@@ -1,0 +1,256 @@
+.controls {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 400px;
+  flex-shrink: 0;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 16px 0;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 12px 0;
+  }
+}
+
+.scenarioList {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.scenarioButton {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4a9eff;
+    color: #4a9eff;
+  }
+
+  &.active {
+    border-color: #4a9eff;
+    background: #4a9eff;
+    color: white;
+  }
+}
+
+.modeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.modeButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4a9eff;
+    background: #f8faff;
+  }
+
+  &.active {
+    border-color: #4a9eff;
+    background: #4a9eff;
+
+    .modeLabel {
+      color: white;
+    }
+
+    .modeDescription {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
+
+.modeLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.modeDescription {
+  font-size: 12px;
+  color: #666;
+}
+
+.codePreview {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.code {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #333;
+}
+
+.chatbotContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  > div {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+  }
+}
+
+// Summary renderer
+.summaryBox {
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  background: var(--asg-color-secondary, #2a2a3a);
+  font-size: 13px;
+  color: var(--asg-color-text, #e0e0e0);
+}
+
+// Step card renderer
+.customCard {
+  margin: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--asg-color-border, rgba(255, 255, 255, 0.12));
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.customCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: var(--asg-color-secondary, #2a2a3a);
+  color: var(--asg-color-text, #e0e0e0);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+.customCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customCardIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.done {
+    background: #52c41a;
+  }
+
+  &.running {
+    background: #1890ff;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  &.error {
+    background: #ff4d4f;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.customCardChevron {
+  transition: transform 0.2s;
+  font-size: 11px;
+  opacity: 0.6;
+
+  &.expanded {
+    transform: rotate(180deg);
+  }
+}
+
+.customCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--asg-color-border, rgba(255, 255, 255, 0.06));
+}
+
+.customCardStep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--asg-color-secondary, #2a2a3a);
+}
+
+.customCardStepIcon {
+  font-size: 14px;
+  font-weight: 700;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.customCardStepName {
+  flex: 1;
+  color: var(--asg-color-text, #e0e0e0);
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.customCardStepBadge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}

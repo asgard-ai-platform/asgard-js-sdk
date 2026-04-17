@@ -98,22 +98,27 @@ import '@asgard-js/react/style';
       </footer>
 
       {isOpen && (
-        <div className={styles.chatbotContainer}>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '100px',
+            right: '24px',
+            zIndex: 1000,
+          }}
+        >
           <Chatbot
-            title="Asgard Chatbot"
+            // title="Asgard Chatbot"
             config={{
               botProviderEndpoint: import.meta.env.VITE_SIMPLE_BOT_PROVIDER_ENDPOINT,
             }}
             customChannelId="home-demo"
             theme={{
               chatbot: {
-                width: '380px',
+                width: '480px',
                 height: '550px',
                 borderRadius: '16px',
               },
             }}
-            enableUpload
-            enableDocumentUpload
             onSseMessage={handleSseMessage}
             onClose={() => setIsOpen(false)}
           />

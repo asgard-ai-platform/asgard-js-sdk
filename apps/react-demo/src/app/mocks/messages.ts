@@ -1,4 +1,11 @@
-import { ConversationMessage, EventType, Message, MessageTemplateType, TableMessageTemplate } from '@asgard-js/core';
+import {
+  ConversationMessage,
+  ConversationToolCallMessage,
+  EventType,
+  Message,
+  MessageTemplateType,
+  TableMessageTemplate,
+} from '@asgard-js/core';
 import { nanoid } from 'nanoid';
 
 const quickReplies = [
@@ -668,6 +675,187 @@ export function createUserMessageExample(text: string): ConversationMessage {
     text,
     time: new Date(),
   };
+}
+
+export function createToolCallMessages(): ConversationMessage[] {
+  const processId = 'proc-001';
+  const toolCalls: ConversationToolCallMessage[] = [
+    {
+      type: 'tool-call',
+      messageId: `${processId}-0`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 0,
+      toolName: 'validate_query',
+      toolsetName: 'data-insight',
+      parameter: { query: 'SELECT COUNT(*) FROM users GROUP BY cohort' },
+      result: { valid: true, estimatedRows: 5 },
+      isComplete: true,
+      time: new Date(),
+    },
+    {
+      type: 'tool-call',
+      messageId: `${processId}-1`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 1,
+      toolName: 'execute_query',
+      toolsetName: 'data-insight',
+      parameter: { query: 'SELECT COUNT(*) FROM users GROUP BY cohort' },
+      result: { rowCount: 5, status: 'ok' },
+      isComplete: true,
+      time: new Date(),
+    },
+    {
+      type: 'tool-call',
+      messageId: `${processId}-2`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 2,
+      toolName: 'render_chart',
+      toolsetName: 'data-insight',
+      parameter: { chartType: 'bar', title: '各群組新增數量' },
+      result: { viewId: 'view-123', status: 'ok' },
+      isComplete: true,
+      time: new Date(),
+    },
+  ];
+
+  return [
+    createUserMessageExample('幫我比較各群組的新增數量'),
+    ...toolCalls,
+    createBaseTemplateExample({
+      messageId: nanoid(),
+      replyToCustomMessageId: '',
+      text: '已為您產出長條圖，可以看到各群組的新增數量比較。',
+      payload: null,
+      isDebug: false,
+      idx: 0,
+      template: {
+        type: MessageTemplateType.TEXT,
+        text: '',
+        quickReplies: [{ text: '匯出報表' }, { text: '換成圓餅圖' }],
+      },
+    }),
+  ];
+}
+
+export function createPendingToolCallMessages(): ConversationMessage[] {
+  const processId = 'proc-002';
+  const toolCalls: ConversationToolCallMessage[] = [
+    {
+      type: 'tool-call',
+      messageId: `${processId}-0`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 0,
+      toolName: 'search_weather',
+      toolsetName: 'weather-service',
+      parameter: { location: '台北', date: 'tomorrow' },
+      result: { temperature: 22, condition: 'sunny' },
+      isComplete: true,
+      time: new Date(),
+    },
+    {
+      type: 'tool-call',
+      messageId: `${processId}-1`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 1,
+      toolName: 'search_nearby_places',
+      toolsetName: 'location-service',
+      parameter: { city: '台北', category: 'outdoor' },
+      result: { places: ['陽明山', '大稻埕', '河濱公園'] },
+      isComplete: true,
+      time: new Date(),
+    },
+    {
+      type: 'tool-call',
+      messageId: `${processId}-2`,
+      eventType: EventType.TOOL_CALL_START,
+      processId,
+      callSeq: 2,
+      toolName: 'recommend_activities',
+      toolsetName: 'activity-service',
+      parameter: { weather: 'sunny', places: ['陽明山', '大稻埕', '河濱公園'] },
+      isComplete: false,
+      time: new Date(),
+    },
+  ];
+
+  return [createUserMessageExample('幫我查台北明天天氣，並推薦適合的活動'), ...toolCalls];
+}
+
+export function createErrorToolCallMessages(): ConversationMessage[] {
+  const processId = 'proc-003';
+  const toolCalls: ConversationToolCallMessage[] = [
+    {
+      type: 'tool-call',
+      messageId: `${processId}-0`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 0,
+      toolName: 'validate_query',
+      toolsetName: 'data-insight',
+      parameter: { query: 'SELECT * FROM orders WHERE date > now()' },
+      result: { valid: true },
+      isComplete: true,
+      time: new Date(),
+    },
+    {
+      type: 'tool-call',
+      messageId: `${processId}-1`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 1,
+      toolName: 'check_permissions',
+      toolsetName: 'data-insight',
+      parameter: { table: 'orders', action: 'read' },
+      result: { allowed: false, reason: 'restricted table' },
+      isComplete: true,
+      time: new Date(),
+    },
+    {
+      type: 'tool-call',
+      messageId: `${processId}-2`,
+      eventType: EventType.TOOL_CALL_COMPLETE,
+      processId,
+      callSeq: 2,
+      toolName: 'execute_query',
+      toolsetName: 'data-insight',
+      parameter: { query: 'SELECT * FROM orders WHERE date > now()' },
+      result: { error: 'Permission denied: table "orders" is restricted' },
+      isComplete: true,
+      time: new Date(),
+    },
+  ];
+
+  return [
+    createUserMessageExample('幫我查詢最近的訂單資料'),
+    ...toolCalls,
+    {
+      type: 'bot',
+      messageId: nanoid(),
+      isTyping: false,
+      typingText: '',
+      eventType: EventType.MESSAGE_COMPLETE,
+      time: new Date(),
+      message: {
+        messageId: nanoid(),
+        replyToCustomMessageId: '',
+        text: '抱歉，查詢訂單資料時發生錯誤，您可能沒有該資料表的存取權限。',
+        payload: null,
+        isDebug: false,
+        idx: 0,
+        template: {
+          type: MessageTemplateType.TEXT,
+          text: '',
+          quickReplies: [],
+        },
+      },
+      raw: '',
+    },
+  ];
 }
 
 export function createMixedCustomRendererMessages(): ConversationMessage[] {
