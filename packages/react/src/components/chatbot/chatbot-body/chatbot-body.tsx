@@ -1,10 +1,11 @@
-import { ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
 import { BotTypingPlaceholder, ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
+import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
 import { useResizeObserver } from '../../../hooks';
 
@@ -65,6 +66,7 @@ const BOTTOM_THRESHOLD = 50;
 
 export function ChatbotBody(): ReactNode {
   const { chatbot } = useAsgardThemeContext();
+  const { renderToolCallGroup } = useAsgardTemplateContext();
 
   const {
     messages,
@@ -149,14 +151,24 @@ export function ChatbotBody(): ReactNode {
             if (group.type === 'tool-call-group') {
               const items = group.toolCalls.map(toolCallToItemData);
               const firstToolCall = group.toolCalls[0];
+              const key = `tool-call-group-${firstToolCall?.processId || index}`;
 
-              return (
-                <ToolCallGroupTemplate
-                  key={`tool-call-group-${firstToolCall?.processId || index}`}
-                  items={items}
-                  time={firstToolCall?.time}
-                />
+              const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
+                <ToolCallGroupTemplate items={items} time={firstToolCall?.time} title={overrides?.title} />
               );
+
+              if (renderToolCallGroup) {
+                const custom = renderToolCallGroup({
+                  items,
+                  time: firstToolCall?.time,
+                  renderDefaultContent,
+                });
+                if (custom === null) return null;
+
+                return <Fragment key={key}>{custom}</Fragment>;
+              }
+
+              return <Fragment key={key}>{renderDefaultContent()}</Fragment>;
             }
 
             return (

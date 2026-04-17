@@ -77,6 +77,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /** Custom menu renderer. When provided, renders between chat body and footer. */
   renderMenu?: () => ReactNode;
 
+  /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
+  renderToolCallGroup?: AsgardTemplateContextValue['renderToolCallGroup'];
+
   /** Whether to automatically reset channel on mount. Defaults to true. When false, the channel is created without sending RESET_CHANNEL, allowing history messages to be preserved via initMessages. */
   autoResetChannel?: boolean;
 }
@@ -125,6 +128,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onMessageSent,
     renderHeader,
     renderMenu,
+    renderToolCallGroup,
     autoResetChannel,
   } = props;
 
@@ -257,6 +261,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               messageActions={messageActions}
               onMessageAction={onMessageAction}
               renderMessageContent={renderMessageContent}
+              renderToolCallGroup={renderToolCallGroup}
             >
               <ChatbotBody />
             </AsgardTemplateContextProvider>

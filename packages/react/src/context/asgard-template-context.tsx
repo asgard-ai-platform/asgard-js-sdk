@@ -1,5 +1,6 @@
 import { createContext, FC, PropsWithChildren, ReactNode, useContext, useMemo } from 'react';
 import { ConversationBotMessage, ConversationErrorMessage, ConversationMessage } from '@asgard-js/core';
+import { ToolCallItemData } from '../components/templates';
 
 /**
  * Configuration for a message action button
@@ -30,6 +31,18 @@ export interface MessageContentRendererProps {
   MessageContainer: FC<MessageContainerProps>;
 }
 
+/**
+ * Props passed to the custom tool call group renderer function
+ */
+export interface ToolCallGroupRendererProps {
+  /** Tool call items in the group */
+  items: ToolCallItemData[];
+  /** Timestamp of the first tool call */
+  time?: Date;
+  /** Function to render the default tool call group UI. Accepts optional overrides. */
+  renderDefaultContent: (overrides?: { title?: string }) => ReactNode;
+}
+
 export interface AsgardTemplateContextValue {
   onErrorClick?: (message: ConversationErrorMessage) => void;
   errorMessageRenderer?: (message: ConversationErrorMessage) => ReactNode;
@@ -41,6 +54,8 @@ export interface AsgardTemplateContextValue {
   onMessageAction?: (actionId: string, message: ConversationBotMessage) => void;
   /** Custom renderer for message content. Allows customizing how messages are rendered based on message properties. */
   renderMessageContent?: (props: MessageContentRendererProps) => ReactNode;
+  /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
+  renderToolCallGroup?: (props: ToolCallGroupRendererProps) => ReactNode;
 }
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
@@ -51,6 +66,7 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   messageActions: undefined,
   onMessageAction: undefined,
   renderMessageContent: undefined,
+  renderToolCallGroup: undefined,
 });
 
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
@@ -61,6 +77,7 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   messageActions?: (message: ConversationBotMessage) => MessageActionConfig[];
   onMessageAction?: (actionId: string, message: ConversationBotMessage) => void;
   renderMessageContent?: (props: MessageContentRendererProps) => ReactNode;
+  renderToolCallGroup?: (props: ToolCallGroupRendererProps) => ReactNode;
 }
 
 export function AsgardTemplateContextProvider(props: AsgardTemplateContextProviderProps): ReactNode {
@@ -73,6 +90,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
     messageActions,
     onMessageAction,
     renderMessageContent,
+    renderToolCallGroup,
   } = props;
 
   const contextValue = useMemo(
@@ -84,6 +102,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       messageActions,
       onMessageAction,
       renderMessageContent,
+      renderToolCallGroup,
     }),
     [
       errorMessageRenderer,
@@ -93,6 +112,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       messageActions,
       onMessageAction,
       renderMessageContent,
+      renderToolCallGroup,
     ],
   );
 

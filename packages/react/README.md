@@ -317,6 +317,7 @@ config: {
 - **renderHeader?**: `() => ReactNode` - Custom header renderer. When provided, completely replaces the default header. Use `useAsgardContext()` inside the render function to access `resetChannel`, `isResetting`, and other internal state.
 - **renderMenu?**: `() => ReactNode` - Custom menu renderer. When provided, renders content between the chat body and footer. Useful for quick menus, suggested questions, or navigation panels. See [Custom Menu](#custom-menu) section for details.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
+- **renderToolCallGroup?**: `(props: ToolCallGroupRendererProps) => ReactNode` - Custom renderer for tool call group. Return `null` to hide, return JSX to fully customize, or call `renderDefaultContent()` to use the default UI with optional overrides (e.g., `renderDefaultContent({ title: 'AI is thinking...' })`). See [Tool Call Group Renderer](#tool-call-group-renderer) section for details.
 - **onBeforeSendMessage?**: `(params: SendMessageParams) => SendMessageParams` - Callback to modify message params before sending. Allows injecting contextual data (payload, metadata) from parent components. See [Before Send Message Hook](#before-send-message-hook) section for details.
 - **onSseMessage**: `(response: SseResponse, ctx: AsgardServiceContextValue) => void` - Callback function when SSE message is received. It would be helpful if using with the ref to provide some context and conversation data and do some proactively actions like sending messages to the bot.
 - **ref**: `ForwardedRef<ChatbotRef>` - Forwarded ref to access the chatbot instance. It can be used to access the chatbot instance and do some actions like sending messages to the bot. `ChatbotRef` provides `serviceContext` for interacting with the chatbot, and `setInputValue(value: string)` for programmatically setting the textarea text from outside the component.
@@ -829,6 +830,75 @@ messageActions={(message) => {
 
   return actions;
 }}
+```
+
+<a id="custom-message-renderer"></a>
+<br/>
+
+<a id="tool-call-group-renderer"></a>
+<br/>
+
+### Tool Call Group Renderer
+
+The `renderToolCallGroup` prop allows you to customize or hide the "Answer preparation steps" UI that appears when the bot calls tools before responding.
+
+#### ToolCallGroupRendererProps Interface
+
+```typescript
+interface ToolCallGroupRendererProps {
+  /** Tool call items in the group */
+  items: ToolCallItemData[];
+  /** Timestamp of the first tool call */
+  time?: Date;
+  /** Function to render the default tool call group UI. Accepts optional overrides. */
+  renderDefaultContent: (overrides?: { title?: string }) => ReactNode;
+}
+
+interface ToolCallItemData {
+  id: string;
+  label: string;
+  status: 'pending' | 'completed' | 'error';
+  initial?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+}
+```
+
+#### Hide completely
+
+```typescript
+<Chatbot
+  renderToolCallGroup={() => null}
+  ...
+/>
+```
+
+#### Custom title
+
+```typescript
+<Chatbot
+  renderToolCallGroup={({ renderDefaultContent }) =>
+    renderDefaultContent({ title: 'AI is thinking...' })
+  }
+  ...
+/>
+```
+
+#### Custom UI
+
+```typescript
+<Chatbot
+  renderToolCallGroup={({ items }) => {
+    const done = items.filter(i => i.status === 'completed').length;
+    return (
+      <div>
+        {done === items.length
+          ? `✅ ${done} steps completed`
+          : `⏳ Processing...`}
+      </div>
+    );
+  }}
+  ...
+/>
 ```
 
 <a id="custom-message-renderer"></a>
