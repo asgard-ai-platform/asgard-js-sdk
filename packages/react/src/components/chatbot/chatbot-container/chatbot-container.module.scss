@@ -27,7 +27,7 @@
 
 .chatbot_container {
   display: grid;
-  grid-template-rows: max-content 1fr max-content max-content;
+  grid-template-rows: max-content auto max-content max-content;
   background-color: var(--asg-color-bg);
   overflow: hidden;
   overscroll-behavior: contain;
