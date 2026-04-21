@@ -7,6 +7,11 @@
 
   font-family: 'Space Grotesk', 'Noto Sans TC', sans-serif;
 
+  // Fill the parent when it has a definite height. Falls back to `auto`
+  // when the parent's height is indefinite, so this is a safe default for
+  // block-level usage too.
+  height: 100%;
+
   // Allow the root to shrink below its content size when used as a flex child.
   // Without this, the default `min-height: auto` pins the root to its intrinsic
   // content height and overflows the parent (e.g. in a flex-column wrapper).
