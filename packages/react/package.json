@@ -1,6 +1,6 @@
 {
   "name": "@asgard-js/react",
-  "version": "0.2.34",
+  "version": "0.2.35-canary.1",
   "publishConfig": {
     "access": "public"
   },
