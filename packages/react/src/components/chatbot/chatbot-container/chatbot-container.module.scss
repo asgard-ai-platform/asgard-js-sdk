@@ -7,6 +7,11 @@
 
   font-family: 'Space Grotesk', 'Noto Sans TC', sans-serif;
 
+  // Allow the root to shrink below its content size when used as a flex child.
+  // Without this, the default `min-height: auto` pins the root to its intrinsic
+  // content height and overflows the parent (e.g. in a flex-column wrapper).
+  min-height: 0;
+
   * {
     line-height: 1.5;
     box-sizing: border-box;
@@ -27,7 +32,7 @@
 
 .chatbot_container {
   display: grid;
-  grid-template-rows: max-content auto max-content max-content;
+  grid-template-rows: max-content 1fr max-content max-content;
   background-color: var(--asg-color-bg);
   overflow: hidden;
   overscroll-behavior: contain;
