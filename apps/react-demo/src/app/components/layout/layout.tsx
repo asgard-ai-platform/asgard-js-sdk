@@ -22,6 +22,7 @@ const navItems = [
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
   { to: '/render-menu', label: 'Render Menu' },
   { to: '/http-error', label: 'HTTP Error' },
+  { to: '/http-error-on-send', label: 'HTTP Error on Send' },
   { to: '/tool-call', label: 'Tool Call' },
 ];
 

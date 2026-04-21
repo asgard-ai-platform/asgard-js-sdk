@@ -53,7 +53,7 @@ export function Card(props: CardProps): ReactNode {
         switch (action.type) {
           case 'message':
           case 'MESSAGE': {
-            sendMessage?.({ text: action.text })?.catch(() => undefined);
+            sendMessage?.({ text: action.text });
 
             return;
           }

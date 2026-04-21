@@ -271,9 +271,7 @@ export function ChatbotFooter(): ReactNode {
           params.documentNames = successfulDocuments.map(doc => doc.file.name);
         }
 
-        // Errors are surfaced to the consumer via the `onSseError` prop;
-        // catch here to prevent unhandled promise rejection.
-        sendMessage?.(params)?.catch(() => undefined);
+        sendMessage?.(params);
       }
 
       setValue('');

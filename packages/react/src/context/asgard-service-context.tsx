@@ -191,10 +191,19 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
     return async params => {
       const resolvedParams = onBeforeSendMessage ? onBeforeSendMessage(params) : params;
-      const result = await sendMessage(resolvedParams);
-      onMessageSent?.();
 
-      return result;
+      try {
+        const result = await sendMessage(resolvedParams);
+
+        onMessageSent?.();
+
+        return result;
+      } catch {
+        // Errors are surfaced via the `onSseError` prop; swallow here so
+        // fire-and-forget callers (e.g. `ref.serviceContext.sendMessage(...)`)
+        // do not trigger unhandled promise rejections.
+        return undefined;
+      }
     };
   }, [sendMessage, onBeforeSendMessage, onMessageSent]);
 
