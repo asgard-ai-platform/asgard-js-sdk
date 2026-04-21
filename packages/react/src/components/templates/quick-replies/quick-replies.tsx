@@ -16,7 +16,7 @@ export function QuickReplies(props: QuickRepliesProps): ReactNode {
 
   const onClick = useCallback(
     (text: string) => {
-      sendMessage?.({ text });
+      sendMessage?.({ text })?.catch(() => undefined);
     },
     [sendMessage],
   );

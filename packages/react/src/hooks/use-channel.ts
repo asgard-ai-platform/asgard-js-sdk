@@ -198,10 +198,23 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
               conversation,
             });
           },
+          onSseError(error) {
+            if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
+              onAuthError?.(
+                error as {
+                  isAuthError: boolean;
+                  isBotProviderError: boolean;
+                  errorDetail?: unknown;
+                },
+              );
+            }
+
+            onSseError?.(error);
+          },
         },
       );
     },
-    [channel, customMessageId, onSseMessage, conversation],
+    [channel, customMessageId, onSseMessage, onAuthError, onSseError, conversation],
   );
 
   useEffect(() => {
