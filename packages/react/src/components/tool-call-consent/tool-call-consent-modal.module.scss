@@ -159,7 +159,8 @@
   &:focus {
     outline: none;
     border-color: var(--asgard-consent-modal-accent, var(--asg-color-primary, #4f46e5));
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--asgard-consent-modal-accent, var(--asg-color-primary, #4f46e5)) 15%, transparent);
   }
 }
 
@@ -214,7 +215,11 @@
   border-color: var(--asgard-consent-modal-danger, var(--asg-color-error, #dc2626));
 
   &:hover:not(:disabled) {
-    background-color: rgba(220, 38, 38, 0.08);
+    background-color: color-mix(
+      in srgb,
+      var(--asgard-consent-modal-danger, var(--asg-color-error, #dc2626)) 8%,
+      transparent
+    );
   }
 }
 
