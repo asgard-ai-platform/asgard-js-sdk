@@ -53,6 +53,7 @@
   border: none;
   border-radius: 6px;
   color: var(--asgard-consent-modal-muted, var(--asg-color-text-secondary, #8c8c8c));
+  font-family: inherit;
   cursor: pointer;
   transition: background-color 0.15s ease;
 
@@ -100,6 +101,7 @@
   background: transparent;
   border: none;
   color: var(--asgard-consent-modal-muted, var(--asg-color-text-secondary, #8c8c8c));
+  font-family: inherit;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -173,6 +175,7 @@
   align-items: center;
   justify-content: center;
   padding: 10px 16px;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 500;
   border-radius: 8px;
