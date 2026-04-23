@@ -51,15 +51,23 @@ export function ToolCallConsentGate(): ReactNode {
   }, [pendingConsent]);
 
   const submit = useCallback(
-    async (answers: ToolCallConsentAnswer[]) => {
+    async (answers: ToolCallConsentAnswer[], submittedProcessId: string) => {
       if (submittingRef.current) return;
 
       submittingRef.current = true;
       try {
         await replyToolCallConsents?.(answers);
       } finally {
-        setQueue(null);
-        allowAlwaysSetRef.current = new Set();
+        // A new batch may arrive mid-submit (backend can emit the next
+        // consent event in the same SSE stream). Only clear state if the
+        // queue still belongs to the batch we just submitted.
+        setQueue(prev => {
+          if (prev?.processId !== submittedProcessId) return prev;
+
+          allowAlwaysSetRef.current = new Set();
+
+          return null;
+        });
       }
     },
     [replyToolCallConsents],
@@ -70,7 +78,7 @@ export function ToolCallConsentGate(): ReactNode {
     if (!queue) return;
 
     if (queue.remaining.length === 0) {
-      void submit(queue.answers);
+      void submit(queue.answers, queue.processId);
 
       return;
     }
