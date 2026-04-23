@@ -32,13 +32,13 @@ export interface ToolCallConsentModalProps {
 
 export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNode {
   const { pendingCall, totalCount, currentIndex, onDecide, onDismiss } = props;
-  const [isInputExpanded, setIsInputExpanded] = useState(true);
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isDenyMode, setIsDenyMode] = useState(false);
   const [denyReason, setDenyReason] = useState('');
 
   // Reset local state when the active pending call changes
   useEffect(() => {
-    setIsInputExpanded(true);
+    setIsInputExpanded(false);
     setIsDenyMode(false);
     setDenyReason('');
   }, [pendingCall.toolCallId]);
