@@ -15,7 +15,7 @@
   width: 100%;
   max-width: 520px;
   max-height: 85vh;
-  background-color: var(--asgard-consent-modal-bg, #ffffff);
+  background-color: var(--asgard-consent-modal-bg, var(--asg-color-surface, #1f1f1f));
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.24);
@@ -27,19 +27,19 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--asgard-consent-modal-border, #eceef1);
+  border-bottom: 1px solid var(--asgard-consent-modal-border, var(--asg-color-border, #434343));
 }
 
 .title {
   font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--asgard-consent-modal-title, #1a1f2b);
+  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
   word-break: break-word;
 }
 
 .title_tool {
-  color: var(--asgard-consent-modal-accent, #4f46e5);
+  color: var(--asgard-consent-modal-accent, var(--asg-color-primary, #4f46e5));
 }
 
 .close_btn {
@@ -52,12 +52,12 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--asgard-consent-modal-muted, #6b7280);
+  color: var(--asgard-consent-modal-muted, var(--asg-color-text-secondary, #8c8c8c));
   cursor: pointer;
   transition: background-color 0.15s ease;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(255, 255, 255, 0.08);
   }
 
   svg {
@@ -79,11 +79,11 @@
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--asgard-consent-modal-muted, #6b7280);
+  color: var(--asgard-consent-modal-muted, var(--asg-color-text-secondary, #8c8c8c));
 }
 
 .meta_row strong {
-  color: var(--asgard-consent-modal-title, #1a1f2b);
+  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
   font-weight: 500;
 }
 
@@ -99,7 +99,7 @@
   gap: 6px;
   background: transparent;
   border: none;
-  color: var(--asgard-consent-modal-muted, #6b7280);
+  color: var(--asgard-consent-modal-muted, var(--asg-color-text-secondary, #8c8c8c));
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -107,7 +107,7 @@
   align-self: flex-start;
 
   &:hover {
-    color: var(--asgard-consent-modal-title, #1a1f2b);
+    color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
   }
 
   svg {
@@ -137,7 +137,7 @@
 .deny_reason label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--asgard-consent-modal-title, #1a1f2b);
+  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
 }
 
 .deny_reason textarea {
@@ -148,15 +148,15 @@
   font-size: 13px;
   line-height: 1.5;
   border-radius: 6px;
-  border: 1px solid var(--asgard-consent-modal-border, #d1d5db);
-  color: var(--asgard-consent-modal-title, #1a1f2b);
-  background-color: #ffffff;
+  border: 1px solid var(--asgard-consent-modal-border, var(--asg-color-border, #434343));
+  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
+  background-color: var(--asgard-consent-modal-input-bg, var(--asg-color-bg, #141414));
   resize: vertical;
   font-family: inherit;
 
   &:focus {
     outline: none;
-    border-color: var(--asgard-consent-modal-accent, #4f46e5);
+    border-color: var(--asgard-consent-modal-accent, var(--asg-color-primary, #4f46e5));
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
   }
 }
@@ -187,28 +187,28 @@
 }
 
 .action_primary {
-  background-color: var(--asgard-consent-modal-accent, #4f46e5);
+  background-color: var(--asgard-consent-modal-accent, var(--asg-color-primary, #4f46e5));
   color: #ffffff;
 
   &:hover:not(:disabled) {
-    background-color: var(--asgard-consent-modal-accent-hover, #4338ca);
+    background-color: var(--asgard-consent-modal-accent-hover, var(--asg-color-primary-dark, #4338ca));
   }
 }
 
 .action_secondary {
   background-color: transparent;
-  color: var(--asgard-consent-modal-title, #1a1f2b);
-  border-color: var(--asgard-consent-modal-border, #d1d5db);
+  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
+  border-color: var(--asgard-consent-modal-border, var(--asg-color-border, #434343));
 
   &:hover:not(:disabled) {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: rgba(255, 255, 255, 0.06);
   }
 }
 
 .action_danger {
   background-color: transparent;
-  color: var(--asgard-consent-modal-danger, #dc2626);
-  border-color: var(--asgard-consent-modal-danger, #dc2626);
+  color: var(--asgard-consent-modal-danger, var(--asg-color-error, #dc2626));
+  border-color: var(--asgard-consent-modal-danger, var(--asg-color-error, #dc2626));
 
   &:hover:not(:disabled) {
     background-color: rgba(220, 38, 38, 0.08);
@@ -217,6 +217,6 @@
 
 .pending_indicator {
   font-size: 12px;
-  color: var(--asgard-consent-modal-muted, #6b7280);
+  color: var(--asgard-consent-modal-muted, var(--asg-color-text-secondary, #8c8c8c));
   padding: 0 20px 8px;
 }
