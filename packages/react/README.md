@@ -695,6 +695,53 @@ const handleToolCall = (response: SseResponse<EventType.TOOL_CALL_START | EventT
 />;
 ```
 
+<a id="tool-call-consent"></a>
+<br/>
+
+### Tool Call Consent
+
+When a bot provider is configured with consent-required toolsets, the SDK automatically surfaces an approval modal before each tool call executes. No additional wiring is needed — `ToolCallConsentGate` is mounted inside `<Chatbot>` automatically.
+
+#### How it works
+
+When the backend emits an `asgard.tool_call.consent` event, a modal appears for each pending tool call in sequence. The user chooses one of three actions:
+
+| Action                  | Behaviour                                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| **Allow for This Chat** | Approves this call and auto-approves all future calls to the same tool in the current chat session |
+| **Allow Once**          | Approves this call only                                                                            |
+| **Deny**                | Rejects this call; the user may optionally provide a reason                                        |
+
+Two auto-skip rules reduce interruptions:
+
+- **`alreadyAllowed`**: If the backend marks a call as already allowed (e.g. from a prior "Allow for This Chat" in a previous turn), the SDK silently approves it without showing a modal.
+- **Same-session Allow for This Chat**: If the user approved a tool via "Allow for This Chat" earlier in the same consent batch, subsequent calls to that tool in the same batch are auto-approved.
+
+#### Zero-config usage
+
+```tsx
+// No consent-specific props needed — just point to a consent-enabled bot provider
+<Chatbot
+  config={{
+    apiKey: 'your-api-key',
+    botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+  }}
+  customChannelId="your-channel-id"
+/>
+```
+
+#### Theming
+
+The consent modal inherits the chatbot's design tokens (`--asg-color-*`) automatically, so it follows the active theme without extra configuration. You can also override individual modal colours via CSS variables on any ancestor element:
+
+```css
+.my-chatbot-wrapper {
+  --asgard-consent-modal-bg: #0f172a;
+  --asgard-consent-modal-accent: #6366f1;
+  --asgard-consent-modal-danger: #ef4444;
+}
+```
+
 <a id="emit-action"></a>
 <br/>
 

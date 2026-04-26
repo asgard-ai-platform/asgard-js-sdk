@@ -21,6 +21,7 @@ SDK for integrating AI chatbots with the [Asgard AI](https://asgard-ai.com) plat
     - [Theme Configuration](./packages/react/README.md#theme-configuration)
   - [Event Handlers](./packages/react/README.md#event-handlers)
     - [Tool Call Handler](./packages/react/README.md#tool-call-handler)
+    - [Tool Call Consent](./packages/react/README.md#tool-call-consent)
     - [EMIT Action](./packages/react/README.md#emit-action)
   - [Custom Header](./packages/react/README.md#custom-header)
   - [Development](./packages/react/README.md#development)
@@ -45,6 +46,7 @@ SDK for integrating AI chatbots with the [Asgard AI](https://asgard-ai.com) plat
 - **File Upload** - Drag & drop image uploads with preview
 - **Voice Input** - Browser speech recognition integration
 - **Conversation Export** - Download chat history as Markdown
+- **Tool Call Consent** - Built-in approval modal for user-controlled tool execution
 
 ## Getting Started
 
