@@ -131,6 +131,7 @@ The main client class for interacting with the Asgard AI platform.
 - **debugMode?**: `boolean` - Enable debug mode for deprecation warnings, defaults to `false`
 - **transformSsePayload?**: `(payload: FetchSsePayload) => FetchSsePayload` - SSE payload transformer
 - **customHeaders?**: `Record<string, string>` - Custom headers to include in SSE and API requests (e.g., Bearer token via `Authorization` header)
+- **userIdentityHint?**: `string` - Optional user identity hint. When provided, all requests will include the `X-ASGARD-USER-IDENTITY-HINT` header with this value
 - **onRunInit?**: `InitEventHandler` - Handler for run initialization events
 - **onMessage?**: `MessageEventHandler` - Handler for message events
 - **onToolCall?**: `ToolCallEventHandler` - Handler for tool call events

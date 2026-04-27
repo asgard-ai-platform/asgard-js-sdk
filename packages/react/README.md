@@ -283,6 +283,7 @@ config: {
   - `endpoint?`: `string` (deprecated) - Legacy API endpoint URL. Use `botProviderEndpoint` instead.
   - `transformSsePayload?`: `(payload: FetchSsePayload) => FetchSsePayload` - SSE payload transformer
   - `customHeaders?`: `Record<string, string>` - Custom headers to include in SSE and API requests (e.g., Bearer token via `Authorization` header)
+  - `userIdentityHint?`: `string` - Optional user identity hint. When provided, all requests will include the `X-ASGARD-USER-IDENTITY-HINT` header with this value
   - `debugMode?`: `boolean` - Enable debug mode, defaults to `false`
   - `onRunInit?`: `InitEventHandler` - Handler for run initialization events
   - `onMessage?`: `MessageEventHandler` - Handler for message events
@@ -306,6 +307,7 @@ config: {
 - **defaultLinkTarget?**: `'_blank' | '_self' | '_parent' | '_top'` - Default target for opening URIs when not specified by the API. Defaults to `'_blank'` (opens in new tab).
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
 - **autoResetChannel?**: `boolean` - Whether to automatically reset channel on mount. Defaults to `true`. When set to `false`, the channel is created without sending `RESET_CHANNEL`, preserving history messages loaded via `initMessages`. See [Auto Reset Channel](#auto-reset-channel) section for details.
+- **userIdentityHint?**: `string` - Optional user identity hint. When provided, all requests (SSE and file upload) will include the `X-ASGARD-USER-IDENTITY-HINT` header with this value.
 - **onMessageSent?**: `() => void` - Callback fired after a message is successfully sent. Useful for tracking message count or triggering side effects.
 - **onReset**: `() => void` - Callback function when chat is reset
 - **onClose**: `() => void` - Callback function when chat is closed
