@@ -83,6 +83,9 @@ interface ChatbotProps extends AsgardTemplateContextValue {
 
   /** Whether to automatically reset channel on mount. Defaults to true. When false, the channel is created without sending RESET_CHANNEL, allowing history messages to be preserved via initMessages. */
   autoResetChannel?: boolean;
+
+  /** Optional user identity hint. When provided, all requests will include the `X-ASGARD-USER-IDENTITY-HINT` header. */
+  userIdentityHint?: string;
 }
 
 export interface ChatbotRef {
@@ -131,7 +134,10 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     renderMenu,
     renderToolCallGroup,
     autoResetChannel,
+    userIdentityHint,
   } = props;
+
+  const effectiveConfig = userIdentityHint ? { ...config, userIdentityHint } : config;
 
   const dragCounterRef = useRef(0);
   const fileDropRef = useRef<{
@@ -285,7 +291,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     return (
       <AsgardAppInitializationContextProvider
         enabled={enableLoadConfigFromService}
-        config={config}
+        config={effectiveConfig}
         asyncInitializers={asyncInitializers}
         loadingComponent={loadingComponent}
       >
@@ -294,7 +300,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             parentRef={ref}
             avatar={avatar}
             title={title}
-            config={config}
+            config={effectiveConfig}
             customChannelId={customChannelId}
             initMessages={initMessages}
             onSseMessage={onSseMessage}

@@ -42,6 +42,11 @@ export type ClientConfig = SseHandlers & {
    * }
    */
   customHeaders?: Record<string, string>;
+  /**
+   * Optional user identity hint. When provided, all requests will include the
+   * `X-ASGARD-USER-IDENTITY-HINT` header with this value.
+   */
+  userIdentityHint?: string;
 } & (
     | {
         /**

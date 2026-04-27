@@ -32,7 +32,10 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     this.debugMode = config.debugMode;
     this.transformSsePayload = config.transformSsePayload;
     this.botProviderEndpoint = config.botProviderEndpoint;
-    this.customHeaders = config.customHeaders;
+    this.customHeaders = {
+      ...config.customHeaders,
+      ...(config.userIdentityHint ? { 'X-ASGARD-USER-IDENTITY-HINT': config.userIdentityHint } : {}),
+    };
 
     // Handle endpoint derivation and deprecation
     if (!config.endpoint && config.botProviderEndpoint) {
