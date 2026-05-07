@@ -33,7 +33,11 @@ import {
 const MAX_IMAGE_COUNT = 10;
 const MAX_DOCUMENT_COUNT = 10;
 
-export function ChatbotFooter(): ReactNode {
+interface ChatbotFooterProps {
+  customFooterActions?: ReactNode[];
+}
+
+export function ChatbotFooter({ customFooterActions }: ChatbotFooterProps = {}): ReactNode {
   const {
     sendMessage,
     isConnecting,
@@ -851,6 +855,7 @@ export function ChatbotFooter(): ReactNode {
               )}
             </>
           )}
+          {customFooterActions}
         </div>
         <textarea
           ref={textareaRef}
