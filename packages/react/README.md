@@ -292,6 +292,7 @@ config: {
   - `onRunDone?`: `DoneEventHandler` - Handler for run completion events
   - `onRunError?`: `ErrorEventHandler` - Error handler for execution errors
 - **customActions?**: `ReactNode[]` - Custom actions to display on the chatbot header
+- **customFooterActions?**: `ReactNode[]` - Custom action buttons rendered alongside the built-in footer attachment buttons (upload / export / document). Each item is a `ReactNode` and the consumer controls styling. Mirrors the pattern of `customActions`.
 - **enableLoadConfigFromService?**: `boolean` - Enable loading configuration from service
 - **enableUpload?**: `boolean` - Enable file upload functionality. When set, it takes priority over the `embedConfig.enableUpload` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Supports image files (JPEG, PNG, GIF, WebP) up to 20MB per file, maximum 10 files at once.
 - **enableExport?**: `boolean` - Enable conversation export functionality. When set, it takes priority over the `embedConfig.enableExport` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Adds a download button to the chatbot footer that exports the conversation history as a Markdown file with timestamps and trace IDs.
