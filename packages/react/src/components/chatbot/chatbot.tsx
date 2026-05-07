@@ -72,6 +72,17 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /** Callback fired after a message has been sent */
   onMessageSent?: () => void;
 
+  /**
+   * Fired once the chat channel is ready to accept messages. Triggered after
+   * the underlying Channel instance is created and the imperative ref has
+   * been updated, which guarantees calling
+   * `ref.current.serviceContext.sendMessage` from inside the callback works.
+   *
+   * Re-fires when the channel is replaced (e.g. after `resetChannel`). Use a
+   * guard ref in the consumer if the work should only happen once.
+   */
+  onChannelReady?: () => void;
+
   /** Custom header renderer. When provided, replaces the default header entirely. */
   renderHeader?: () => ReactNode;
 
@@ -130,6 +141,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onSseError,
     onBeforeSendMessage,
     onMessageSent,
+    onChannelReady,
     renderHeader,
     renderMenu,
     renderToolCallGroup,
@@ -308,6 +320,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             onSseError={onSseError}
             onBeforeSendMessage={onBeforeSendMessage}
             onMessageSent={onMessageSent}
+            onChannelReady={onChannelReady}
             botTypingPlaceholder={botTypingPlaceholder}
             inputPlaceholder={inputPlaceholder}
             enableUpload={enableUpload}

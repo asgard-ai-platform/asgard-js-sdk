@@ -112,6 +112,11 @@ export interface AsgardServiceContextProviderProps {
   onMessageSent?: () => void;
   /** Whether to automatically reset channel on mount. Defaults to true. */
   autoResetChannel?: boolean;
+  /**
+   * Fired once the chat channel is ready to accept messages. Re-fires after
+   * channel reset.
+   */
+  onChannelReady?: () => void;
 }
 
 export function AsgardServiceContextProvider(props: AsgardServiceContextProviderProps): ReactNode {
@@ -134,6 +139,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onBeforeSendMessage,
     onMessageSent,
     autoResetChannel,
+    onChannelReady,
   } = props;
 
   const messageBoxBottomRef = useRef<HTMLDivElement>(null);
@@ -196,6 +202,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onAuthError,
     onSseError,
     onBeforeSendMessage,
+    onChannelReady,
   });
 
   const wrappedSendMessage: UseChannelReturn['sendMessage'] = useMemo(() => {

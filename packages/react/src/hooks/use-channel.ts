@@ -9,7 +9,7 @@ import {
   SseResponse,
   ToolCallConsentAnswer,
 } from '@asgard-js/core';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface UseChannelProps {
   defaultIsOpen?: boolean;
@@ -31,6 +31,16 @@ export interface UseChannelProps {
     text: string;
     payload?: Record<string, unknown> | (() => Record<string, unknown>);
   }) => { text: string; payload?: Record<string, unknown> | (() => Record<string, unknown>) };
+  /**
+   * Fired once the chat channel is ready to accept messages. Triggered after
+   * the underlying Channel instance is created and the imperative ref has
+   * been updated, which guarantees calling
+   * `ref.current.serviceContext.sendMessage` from inside the callback works.
+   *
+   * Re-fires when the channel is replaced (e.g. after `resetChannel`). Use a
+   * guard ref in the consumer if the work should only happen once.
+   */
+  onChannelReady?: () => void;
 }
 
 export interface UseChannelReturn {
@@ -60,6 +70,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     onAuthError,
     onSseError,
     onBeforeSendMessage,
+    onChannelReady,
   } = props;
 
   // Preview mode: client is null (when botProviderEndpoint is 'skip')
@@ -243,6 +254,16 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       }
     }
   }, [isPreviewMode, channel, isOpen, autoResetChannel, resetChannel, initChannel, resetPayload]);
+
+  const prevChannelRef = useRef<Channel | null>(null);
+  useEffect(() => {
+    if (channel && channel !== prevChannelRef.current) {
+      prevChannelRef.current = channel;
+      onChannelReady?.();
+    } else if (!channel) {
+      prevChannelRef.current = null;
+    }
+  }, [channel, onChannelReady]);
 
   useEffect(() => {
     return (): void => closeChannel();
