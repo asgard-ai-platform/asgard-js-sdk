@@ -86,6 +86,14 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /** Custom header renderer. When provided, replaces the default header entirely. */
   renderHeader?: () => ReactNode;
 
+  /**
+   * Custom footer renderer. When provided, replaces the default footer
+   * entirely. Use `useAsgardContext()` inside the renderer to access
+   * `sendMessage`, `isConnecting`, `pendingInputValue`, `setPendingInputValue`,
+   * etc. Mirrors the pattern of `renderHeader`.
+   */
+  renderFooter?: () => ReactNode;
+
   /** Custom menu renderer. When provided, renders between chat body and footer. */
   renderMenu?: () => ReactNode;
 
@@ -143,6 +151,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onMessageSent,
     onChannelReady,
     renderHeader,
+    renderFooter,
     renderMenu,
     renderToolCallGroup,
     autoResetChannel,
@@ -285,7 +294,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               <ChatbotBody />
             </AsgardTemplateContextProvider>
             {renderMenu?.()}
-            <ChatbotFooter />
+            {renderFooter ? renderFooter() : <ChatbotFooter />}
             <ToolCallConsentGate />
           </>
         );
