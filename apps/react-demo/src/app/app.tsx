@@ -21,6 +21,7 @@ import { ToolCallDemo } from './routes/tool-call';
 import { ToolCallConsentDemo } from './routes/tool-call-consent';
 import { UserIdentityHint } from './routes/user-identity-hint';
 import { OnChannelReady } from './routes/on-channel-ready';
+import { CustomFooterActions } from './routes/custom-footer-actions';
 
 export function App(): React.ReactElement {
   return (
@@ -47,6 +48,7 @@ export function App(): React.ReactElement {
         <Route path="/tool-call-consent" element={<ToolCallConsentDemo />} />
         <Route path="/user-identity-hint" element={<UserIdentityHint />} />
         <Route path="/on-channel-ready" element={<OnChannelReady />} />
+        <Route path="/custom-footer-actions" element={<CustomFooterActions />} />
       </Routes>
     </Layout>
   );

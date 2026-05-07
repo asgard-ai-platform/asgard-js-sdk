@@ -1,0 +1,61 @@
+.chatbotContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  > div {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+  }
+}
+
+.customAction {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid #434343;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.controls {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: white;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.controls h4 {
+  margin: 0 0 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.event {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.event:last-child {
+  border-bottom: none;
+}
