@@ -292,7 +292,7 @@ config: {
   - `onRunDone?`: `DoneEventHandler` - Handler for run completion events
   - `onRunError?`: `ErrorEventHandler` - Error handler for execution errors
 - **customActions?**: `ReactNode[]` - Custom actions to display on the chatbot header
-- **customFooterActions?**: `ReactNode[]` - Custom action buttons rendered alongside the built-in footer attachment buttons (upload / export / document). Each item is a `ReactNode` and the consumer controls styling. Mirrors the pattern of `customActions`.
+- **customFooterActions?**: `ReactNode[]` - Custom action buttons rendered alongside the built-in footer attachment buttons (upload / export / document). Each item is a `ReactNode`; the consumer controls styling. Mirrors the pattern of `customActions`. See [Custom Footer Actions](#custom-footer-actions) section for details.
 - **enableLoadConfigFromService?**: `boolean` - Enable loading configuration from service
 - **enableUpload?**: `boolean` - Enable file upload functionality. When set, it takes priority over the `embedConfig.enableUpload` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Supports image files (JPEG, PNG, GIF, WebP) up to 20MB per file, maximum 10 files at once.
 - **enableExport?**: `boolean` - Enable conversation export functionality. When set, it takes priority over the `embedConfig.enableExport` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Adds a download button to the chatbot footer that exports the conversation history as a Markdown file with timestamps and trace IDs.
@@ -1320,6 +1320,52 @@ const App = () => {
   );
 };
 ```
+
+<a id="custom-footer-actions"></a>
+<br/>
+
+### Custom Footer Actions
+
+The `customFooterActions` prop adds extra buttons to the built-in footer alongside the default attachment buttons (upload / export / document). The rest of the footer — textarea, IME composition handling, send button, mic button, drag-and-drop — stays untouched. This is the right tool for the common "I just want to add a button" case; if you need to fully replace the footer, that requires a different (not-yet-shipped) prop.
+
+Items are plain `ReactNode`s; the consumer styles each button as they like.
+
+#### Usage Example
+
+```typescript
+import { Chatbot } from '@asgard-js/react';
+
+const App = () => {
+  const handleExportPdf = (): void => {
+    // ...
+  };
+
+  return (
+    <Chatbot
+      config={{
+        apiKey: 'your-api-key',
+        botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+      }}
+      customChannelId="your-channel-id"
+      customFooterActions={[
+        <button key="pdf" onClick={handleExportPdf} title="Export PDF">
+          📄
+        </button>,
+        <button key="bookmark" onClick={() => console.log('Bookmark')} title="Bookmark">
+          🔖
+        </button>,
+      ]}
+    />
+  );
+};
+```
+
+#### Notes
+
+- Items render in the same row as the built-in attachment buttons (after upload / export / document, before the textarea).
+- They do **not** participate in the built-in collapse-into-`+`-menu logic; they always render inline. Avoid passing many items, or the row may overflow.
+- When the chatbot is in preview mode (`sendMessage` unavailable) the built-in buttons remain visible but inert. Your custom buttons stay clickable — disable them yourself if that matters.
+- For the rare case where you need a completely different input UX (e.g. structured form, code editor), this prop is not enough; use `useAsgardContext()` to read SDK state and build something on the side, or open an issue for a `renderFooter` escape hatch.
 
 <a id="custom-menu"></a>
 <br/>
