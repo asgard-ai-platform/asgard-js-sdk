@@ -309,6 +309,7 @@ config: {
 - **autoResetChannel?**: `boolean` - Whether to automatically reset channel on mount. Defaults to `true`. When set to `false`, the channel is created without sending `RESET_CHANNEL`, preserving history messages loaded via `initMessages`. See [Auto Reset Channel](#auto-reset-channel) section for details.
 - **userIdentityHint?**: `string` - Optional user identity hint. When provided, all requests (SSE and file upload) will include the `X-ASGARD-USER-IDENTITY-HINT` header with this value.
 - **onMessageSent?**: `() => void` - Callback fired after a message is successfully sent. Useful for tracking message count or triggering side effects.
+- **onChannelReady?**: `() => void` - Callback fired once the chat channel is ready to accept messages. Use this instead of polling for `sendMessage` availability when you need to send an initial message right after the chatbot mounts. Re-fires after channel reset. See [On Channel Ready](#on-channel-ready) section for details.
 - **onReset**: `() => void` - Callback function when chat is reset
 - **onClose**: `() => void` - Callback function when chat is closed
 - **authState?**: `AuthState` - Authentication state for dynamic API key management. Available states: `'loading'`, `'needApiKey'`, `'authenticated'`, `'error'`, `'invalidApiKey'`
@@ -589,6 +590,65 @@ Note: When `fullScreen` prop is set to `true`, the chatbot's width and height wi
 <br/>
 
 ## Event Handlers
+
+<a id="on-channel-ready"></a>
+<br/>
+
+### On Channel Ready
+
+The `onChannelReady` callback fires once the chat channel is fully initialized and ready to accept messages. This is useful when you need to send an initial message right after the chatbot mounts — for example, when seeding a chat with a SQL statement carried over from another page.
+
+#### Why not call `sendMessage` from a `useEffect`?
+
+Channel initialization happens asynchronously after mount. The `serviceContext.sendMessage` exposed via `ref` becomes a function before the underlying channel is actually ready, so calling it too early results in a silent no-op. `onChannelReady` solves this by guaranteeing the callback fires only after the channel can receive messages.
+
+#### Behavior
+
+- Fires once after the channel is created and the imperative ref has been updated
+- Re-fires after a manual `resetChannel` (channel transitions from non-null → null → non-null)
+- Inside the callback, `ref.current.serviceContext.sendMessage` is guaranteed to be a working function bound to the new channel
+
+#### Usage Example
+
+```tsx
+import { Chatbot, ChatbotRef } from '@asgard-js/react';
+import { useCallback, useRef } from 'react';
+
+function MyChatbot({ initialText }: { initialText?: string }) {
+  const chatbotRef = useRef<ChatbotRef>(null);
+
+  const handleChannelReady = useCallback(() => {
+    if (initialText) {
+      chatbotRef.current?.serviceContext?.sendMessage?.({
+        text: initialText,
+        blobIds: [],
+      });
+    }
+  }, [initialText]);
+
+  return (
+    <Chatbot
+      ref={chatbotRef}
+      config={{ botProviderEndpoint: '...' }}
+      customChannelId="my-channel"
+      onChannelReady={handleChannelReady}
+    />
+  );
+}
+```
+
+#### Single-fire vs. Re-fire
+
+If you want the work to happen only on the first ready (not after subsequent resets), use a ref guard in your callback:
+
+```tsx
+const firedRef = useRef(false);
+const handleChannelReady = useCallback(() => {
+  if (firedRef.current) return;
+  firedRef.current = true;
+  // do one-time work here
+}, []);
+```
 
 <a id="tool-call-handler"></a>
 <br/>

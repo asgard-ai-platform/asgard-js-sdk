@@ -20,6 +20,7 @@ SDK for integrating AI chatbots with the [Asgard AI](https://asgard-ai.com) plat
     - [Chatbot Component Props](./packages/react/README.md#chatbot-component-props)
     - [Theme Configuration](./packages/react/README.md#theme-configuration)
   - [Event Handlers](./packages/react/README.md#event-handlers)
+    - [On Channel Ready](./packages/react/README.md#on-channel-ready)
     - [Tool Call Handler](./packages/react/README.md#tool-call-handler)
     - [Tool Call Consent](./packages/react/README.md#tool-call-consent)
     - [EMIT Action](./packages/react/README.md#emit-action)
