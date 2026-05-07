@@ -26,6 +26,7 @@ const navItems = [
   { to: '/tool-call', label: 'Tool Call' },
   { to: '/tool-call-consent', label: 'Tool Call Consent' },
   { to: '/user-identity-hint', label: 'User Identity Hint' },
+  { to: '/on-channel-ready', label: 'On Channel Ready' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {
