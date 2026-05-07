@@ -318,6 +318,7 @@ config: {
 - **messageActions?**: `(message: ConversationBotMessage) => MessageActionConfig[]` - Function to define which action buttons to display for each bot message. Returns an array of `{ id: string, label: string }` objects. See [Message Actions](#message-actions) section for details.
 - **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
 - **renderHeader?**: `() => ReactNode` - Custom header renderer. When provided, completely replaces the default header. Use `useAsgardContext()` inside the render function to access `resetChannel`, `isResetting`, and other internal state.
+- **renderFooter?**: `() => ReactNode` - Custom footer renderer. When provided, completely replaces the default footer. Use `useAsgardContext()` inside the render function to access `sendMessage`, `isConnecting`, `pendingInputValue`, `setPendingInputValue`, etc. See [Custom Footer](#custom-footer) section for details.
 - **renderMenu?**: `() => ReactNode` - Custom menu renderer. When provided, renders content between the chat body and footer. Useful for quick menus, suggested questions, or navigation panels. See [Custom Menu](#custom-menu) section for details.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
 - **renderToolCallGroup?**: `(props: ToolCallGroupRendererProps) => ReactNode` - Custom renderer for tool call group. Return `null` to hide, return JSX to fully customize, or call `renderDefaultContent()` to use the default UI with optional overrides (e.g., `renderDefaultContent({ title: 'AI is thinking...' })`). See [Tool Call Group Renderer](#tool-call-group-renderer) section for details.
@@ -1318,6 +1319,74 @@ const App = () => {
     />
   );
 };
+```
+
+<a id="custom-footer"></a>
+<br/>
+
+### Custom Footer
+
+The `renderFooter` prop allows you to completely replace the default chatbot footer with your own implementation. This is useful when the built-in input bar does not match your product's interaction pattern (e.g. fixed quick-reply buttons, custom send mechanics, or extra action buttons that cannot be expressed via `enableUpload` / `enableExport` / `enableDocumentUpload`).
+
+Use `useAsgardContext()` inside your custom footer to access `sendMessage`, `isConnecting`, `pendingInputValue`, `setPendingInputValue`, and other internal state. When `sendMessage` is `undefined`, the chatbot is in preview mode — disable input accordingly.
+
+#### Usage Example
+
+```typescript
+import { useEffect, useRef, useState } from 'react';
+import { Chatbot, useAsgardContext } from '@asgard-js/react';
+
+function CustomFooter() {
+  const { sendMessage, isConnecting, pendingInputValue, setPendingInputValue } = useAsgardContext();
+  const [value, setValue] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (pendingInputValue === null) return;
+
+    setValue(pendingInputValue);
+    setPendingInputValue(null);
+    textareaRef.current?.focus();
+  }, [pendingInputValue, setPendingInputValue]);
+
+  const isPreviewMode = !sendMessage;
+  const trimmed = value.trim();
+  const disabled = isPreviewMode || isConnecting || !trimmed;
+
+  const submit = () => {
+    if (disabled) return;
+
+    sendMessage?.({ text: trimmed });
+    setValue('');
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid #eee' }}>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        disabled={isPreviewMode}
+        placeholder={isPreviewMode ? 'Preview mode' : 'Type a message'}
+        style={{ flex: 1 }}
+      />
+      <button onClick={submit} disabled={disabled}>
+        Send
+      </button>
+    </div>
+  );
+}
+
+const App = () => (
+  <Chatbot
+    config={{
+      apiKey: 'your-api-key',
+      botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+    }}
+    customChannelId="your-channel-id"
+    renderFooter={() => <CustomFooter />}
+  />
+);
 ```
 
 <a id="custom-menu"></a>
