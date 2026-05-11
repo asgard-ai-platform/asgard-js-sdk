@@ -319,6 +319,7 @@ config: {
 - **onMessageAction?**: `(actionId: string, message: ConversationBotMessage) => void` - Callback when a message action button is clicked. Receives the action ID and the associated bot message.
 - **renderHeader?**: `() => ReactNode` - Custom header renderer. When provided, completely replaces the default header. Use `useAsgardContext()` inside the render function to access `resetChannel`, `isResetting`, and other internal state.
 - **renderMenu?**: `() => ReactNode` - Custom menu renderer. When provided, renders content between the chat body and footer. Useful for quick menus, suggested questions, or navigation panels. See [Custom Menu](#custom-menu) section for details.
+- **footerEndActions?**: `ReactNode[]` - Extra action nodes rendered at the end of the footer input row, after the send/mic button. Pure additive slot — built-in textarea / attachment buttons / send / mic remain unchanged. See [Footer End Actions](#footer-end-actions) section for details.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
 - **renderToolCallGroup?**: `(props: ToolCallGroupRendererProps) => ReactNode` - Custom renderer for tool call group. Return `null` to hide, return JSX to fully customize, or call `renderDefaultContent()` to use the default UI with optional overrides (e.g., `renderDefaultContent({ title: 'AI is thinking...' })`). See [Tool Call Group Renderer](#tool-call-group-renderer) section for details.
 - **onBeforeSendMessage?**: `(params: SendMessageParams) => SendMessageParams` - Callback to modify message params before sending. Allows injecting contextual data (payload, metadata) from parent components. See [Before Send Message Hook](#before-send-message-hook) section for details.
@@ -1319,6 +1320,62 @@ const App = () => {
   );
 };
 ```
+
+<a id="footer-end-actions"></a>
+<br/>
+
+### Footer End Actions
+
+The `footerEndActions` prop appends extra nodes at the **end of the footer input row**, after the send/mic button. Pure additive slot — the built-in textarea, attachment buttons, send button, mic button, drag-and-drop, IME composition guard, image preview, and document upload all stay untouched.
+
+Use this for actions that complement the send flow but aren't replacements for it — for example a button that opens a fullscreen SQL editor modal, a "switch to voice mode" toggle, or a settings popover.
+
+#### Usage Example
+
+```typescript
+import { useRef, useState } from 'react';
+import { Chatbot, ChatbotRef } from '@asgard-js/react';
+
+const App = () => {
+  const chatbotRef = useRef<ChatbotRef>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  return (
+    <>
+      <Chatbot
+        ref={chatbotRef}
+        config={{
+          apiKey: 'your-api-key',
+          botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+        }}
+        customChannelId="your-channel-id"
+        footerEndActions={[
+          <button key="sql" onClick={() => setEditorOpen(true)} title="Open SQL editor">
+            SQL
+          </button>,
+        ]}
+      />
+      {editorOpen && (
+        <SqlEditorModal
+          onSubmit={text => {
+            chatbotRef.current?.serviceContext?.sendMessage?.({ text });
+            setEditorOpen(false);
+          }}
+          onCancel={() => setEditorOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+```
+
+#### Notes
+
+- Items render at the trailing end of the footer input row (after send/mic). They do **not** participate in the attachment-buttons collapse-into-`+`-menu logic on the leading side.
+- Each item is a plain `ReactNode`; the consumer fully controls styling. Match the height of the built-in send/mic button (~36px) so the row stays visually consistent.
+- Avoid passing many items — the row width is finite and overflow will squeeze the textarea.
+- Use `chatbotRef.current?.serviceContext?.sendMessage` (or `useAsgardContext()` inside a wrapper component) to send messages from the consumer-owned UI that the action triggers (e.g. modal Submit button).
+- Distinct from `customActions` (header trailing): `customActions` appends to the **header** title bar, `footerEndActions` appends to the **footer** input row.
 
 <a id="custom-menu"></a>
 <br/>
