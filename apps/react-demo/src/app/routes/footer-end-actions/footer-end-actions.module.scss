@@ -1,0 +1,108 @@
+.chatbotContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  > div {
+    width: 100%;
+    max-width: 480px;
+    height: 600px;
+  }
+}
+
+.endActionButton {
+  height: 36px;
+  min-width: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: 90%;
+  max-width: 600px;
+  background: #1f1f1f;
+  border: 1px solid #434343;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.modalTextarea {
+  min-height: 200px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #434343;
+  background: #111;
+  color: #d4d4d4;
+  font-family: 'JetBrains Mono', Menlo, monospace;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: #6366f1;
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modalCancel,
+.modalSubmit {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modalCancel {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid #434343;
+}
+
+.modalSubmit {
+  background: #6366f1;
+  color: white;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
