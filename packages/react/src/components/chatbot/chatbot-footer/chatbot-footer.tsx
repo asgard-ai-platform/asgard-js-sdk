@@ -33,7 +33,11 @@ import {
 const MAX_IMAGE_COUNT = 10;
 const MAX_DOCUMENT_COUNT = 10;
 
-export function ChatbotFooter(): ReactNode {
+interface ChatbotFooterProps {
+  footerEndActions?: ReactNode[];
+}
+
+export function ChatbotFooter({ footerEndActions }: ChatbotFooterProps = {}): ReactNode {
   const {
     sendMessage,
     isConnecting,
@@ -868,22 +872,25 @@ export function ChatbotFooter(): ReactNode {
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
         />
-        {value || uploadableImages.length > 0 || uploadableDocuments.length > 0 ? (
-          <button
-            className={clsx(styles.chatbot_submit_button, disabled && styles.chatbot_submit_button__disabled)}
-            style={chatbot.footer?.submitButton?.style}
-            disabled={disabled}
-            onClick={onSubmit}
-          >
-            <SendSvg />
-          </button>
-        ) : (
-          <SpeechInputButton
-            setValue={setValue}
-            className={clsx(styles.chatbot_submit_button, isConnecting && styles.chatbot_submit_button__disabled)}
-            style={chatbot.footer?.speechInputButton?.style}
-          />
-        )}
+        <div className={styles.send_zone}>
+          {value || uploadableImages.length > 0 || uploadableDocuments.length > 0 ? (
+            <button
+              className={clsx(styles.chatbot_submit_button, disabled && styles.chatbot_submit_button__disabled)}
+              style={chatbot.footer?.submitButton?.style}
+              disabled={disabled}
+              onClick={onSubmit}
+            >
+              <SendSvg />
+            </button>
+          ) : (
+            <SpeechInputButton
+              setValue={setValue}
+              className={clsx(styles.chatbot_submit_button, isConnecting && styles.chatbot_submit_button__disabled)}
+              style={chatbot.footer?.speechInputButton?.style}
+            />
+          )}
+          {footerEndActions}
+        </div>
       </div>
 
       {previewImage && (

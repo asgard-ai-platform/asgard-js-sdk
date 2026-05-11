@@ -85,6 +85,12 @@
   align-items: center;
 }
 
+.send_zone {
+  display: flex;
+  gap: var(--asg-spacing-2);
+  align-items: center;
+}
+
 .attachment_menu_container {
   position: relative;
 }

@@ -89,6 +89,14 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /** Custom menu renderer. When provided, renders between chat body and footer. */
   renderMenu?: () => ReactNode;
 
+  /**
+   * Extra action nodes rendered at the end of the footer input row, after the
+   * send/mic button. Pure additive slot — built-in textarea / attachment
+   * buttons / send / mic remain unchanged. Use it to add buttons such as
+   * "open SQL editor modal", "switch input mode", etc.
+   */
+  footerEndActions?: ReactNode[];
+
   /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
   renderToolCallGroup?: AsgardTemplateContextValue['renderToolCallGroup'];
 
@@ -144,6 +152,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onChannelReady,
     renderHeader,
     renderMenu,
+    footerEndActions,
     renderToolCallGroup,
     autoResetChannel,
     userIdentityHint,
@@ -285,7 +294,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               <ChatbotBody />
             </AsgardTemplateContextProvider>
             {renderMenu?.()}
-            <ChatbotFooter />
+            <ChatbotFooter footerEndActions={footerEndActions} />
             <ToolCallConsentGate />
           </>
         );
