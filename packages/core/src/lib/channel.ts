@@ -24,6 +24,11 @@ export default class Channel {
   private statesObserver?: ObserverOrNext<ChannelStates>;
   private statesSubscription?: Subscription;
   private currentUserMessageId?: string;
+  // The most-recently-sent user message id. Unlike currentUserMessageId (which
+  // is cleared once a traceId is attached), this is kept across the SSE
+  // lifecycle so RESPONSE_TOOL_CALL_CONSENT — fired after run.done — can echo
+  // back the message id the bot is waiting on.
+  private lastSentMessageId?: string;
 
   private constructor(config: ChannelConfig) {
     if (!config.client) {
@@ -166,6 +171,7 @@ export default class Channel {
     const messageId = payload.customMessageId ?? uuidv4();
 
     this.currentUserMessageId = messageId;
+    this.lastSentMessageId = messageId;
 
     this.conversation$.next(
       this.conversation$.value.pushMessage({
@@ -199,7 +205,7 @@ export default class Channel {
       {
         action: FetchSseAction.RESPONSE_TOOL_CALL_CONSENT,
         customChannelId: this.customChannelId,
-        customMessageId: this.customMessageId,
+        customMessageId: this.lastSentMessageId ?? this.customMessageId,
         text: '',
         toolCallConsents,
       },
