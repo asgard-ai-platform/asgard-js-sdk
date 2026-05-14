@@ -10,7 +10,6 @@ import { Fullscreen } from './routes/fullscreen';
 import { Markdown } from './routes/markdown';
 import { Private } from './routes/private';
 import { CustomRenderer } from './routes/custom-renderer';
-import { DynamicPayload } from './routes/dynamic-payload';
 import { BeforeSendMessage } from './routes/before-send-message';
 import { CustomHeaderDemo } from './routes/custom-header';
 import { AutoResetChannel } from './routes/auto-reset-channel';
@@ -37,7 +36,6 @@ export function App(): React.ReactElement {
         <Route path="/markdown" element={<Markdown />} />
         <Route path="/private" element={<Private />} />
         <Route path="/custom-renderer" element={<CustomRenderer />} />
-        <Route path="/dynamic-payload" element={<DynamicPayload />} />
         <Route path="/before-send-message" element={<BeforeSendMessage />} />
         <Route path="/custom-header" element={<CustomHeaderDemo />} />
         <Route path="/auto-reset-channel" element={<AutoResetChannel />} />

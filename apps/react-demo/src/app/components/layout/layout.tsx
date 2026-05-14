@@ -16,7 +16,6 @@ const navItems = [
   { to: '/fullscreen', label: 'Fullscreen' },
   { to: '/markdown', label: 'Markdown' },
   { to: '/custom-renderer', label: 'Custom Renderer' },
-  { to: '/dynamic-payload', label: 'Dynamic Payload' },
   { to: '/before-send-message', label: 'Before Send Message' },
   { to: '/custom-header', label: 'Custom Header' },
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
