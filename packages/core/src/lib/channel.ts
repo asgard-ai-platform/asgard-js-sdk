@@ -198,7 +198,11 @@ export default class Channel {
     );
   }
 
-  public replyToolCallConsents(toolCallConsents: ToolCallConsentAnswer[], options?: FetchSseOptions): Promise<void> {
+  public replyToolCallConsents(
+    toolCallConsents: ToolCallConsentAnswer[],
+    options?: FetchSseOptions,
+    payload?: FetchSsePayload['payload'],
+  ): Promise<void> {
     this.conversation$.next(this.conversation$.value.clearPendingConsent());
 
     return this.fetchSse(
@@ -208,6 +212,7 @@ export default class Channel {
         customMessageId: this.lastSentMessageId ?? this.customMessageId,
         text: '',
         toolCallConsents,
+        payload: this.resolvePayload(payload),
       },
       options,
     );

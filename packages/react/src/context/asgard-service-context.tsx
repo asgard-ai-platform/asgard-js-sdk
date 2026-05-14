@@ -226,6 +226,21 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     };
   }, [sendMessage, onBeforeSendMessage, onMessageSent]);
 
+  // Consent reply runs through onBeforeSendMessage too, so consumers can use a
+  // single hook to attach session-level payload (e.g. interaction_mode) on
+  // every outbound. The callback is invoked with `text: ''` and no payload —
+  // only the resulting `payload` is forwarded; `text`/`blobIds` from the
+  // return are ignored on this path.
+  const wrappedReplyToolCallConsents: UseChannelReturn['replyToolCallConsents'] = useMemo(() => {
+    if (!replyToolCallConsents) return undefined;
+
+    return async answers => {
+      const resolved = onBeforeSendMessage ? onBeforeSendMessage({ text: '', payload: undefined }) : undefined;
+
+      return replyToolCallConsents(answers, resolved?.payload);
+    };
+  }, [replyToolCallConsents, onBeforeSendMessage]);
+
   const contextValue = useMemo(
     () => ({
       avatar,
@@ -239,7 +254,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       sendMessage: wrappedSendMessage,
       resetChannel,
       closeChannel,
-      replyToolCallConsents,
+      replyToolCallConsents: wrappedReplyToolCallConsents,
       pendingConsent: conversation?.pendingConsent ?? null,
       botTypingPlaceholder,
       inputPlaceholder,
@@ -268,7 +283,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       wrappedSendMessage,
       resetChannel,
       closeChannel,
-      replyToolCallConsents,
+      wrappedReplyToolCallConsents,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,

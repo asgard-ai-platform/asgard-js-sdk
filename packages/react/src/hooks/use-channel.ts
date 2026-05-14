@@ -54,7 +54,7 @@ export interface UseChannelReturn {
   ) => Promise<void>;
   resetChannel?: (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
   closeChannel?: () => void;
-  replyToolCallConsents?: (answers: ToolCallConsentAnswer[]) => Promise<void>;
+  replyToolCallConsents?: (answers: ToolCallConsentAnswer[], payload?: FetchSsePayload['payload']) => Promise<void>;
 }
 
 export function useChannel(props: UseChannelProps): UseChannelReturn {
@@ -231,14 +231,18 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   );
 
   const replyToolCallConsents = useCallback(
-    async (answers: ToolCallConsentAnswer[]): Promise<void> => {
-      await channel?.replyToolCallConsents(answers, {
-        onSseMessage(response: SseResponse<EventType>) {
-          onSseMessage?.(response, {
-            conversation,
-          });
+    async (answers: ToolCallConsentAnswer[], payload?: FetchSsePayload['payload']): Promise<void> => {
+      await channel?.replyToolCallConsents(
+        answers,
+        {
+          onSseMessage(response: SseResponse<EventType>) {
+            onSseMessage?.(response, {
+              conversation,
+            });
+          },
         },
-      });
+        payload,
+      );
     },
     [channel, onSseMessage, conversation],
   );
