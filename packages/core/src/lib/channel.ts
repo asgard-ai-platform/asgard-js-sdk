@@ -210,9 +210,9 @@ export default class Channel {
         action: FetchSseAction.RESPONSE_TOOL_CALL_CONSENT,
         customChannelId: this.customChannelId,
         customMessageId: this.lastSentMessageId ?? this.customMessageId,
+        payload: this.resolvePayload(payload),
         text: '',
         toolCallConsents,
-        payload: this.resolvePayload(payload),
       },
       options,
     );

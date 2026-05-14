@@ -66,7 +66,13 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /** Callback fired when SSE connection encounters an error */
   onSseError?: (error: unknown) => void;
 
-  /** Callback to modify message params before sending */
+  /**
+   * Callback to modify outbound params before they hit the wire. Fires for
+   * both regular `sendMessage` and tool-call consent reply (Allow / Deny on
+   * the consent modal). For consent reply, `params.text` is always `''` and
+   * `params.blobIds` is `undefined` — only the resulting `payload` is
+   * forwarded; `text` / `blobIds` from the return are dropped on that path.
+   */
   onBeforeSendMessage?: (params: SendMessageParams) => SendMessageParams;
 
   /** Callback fired after a message has been sent */
