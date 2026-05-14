@@ -228,16 +228,18 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
   // Consent reply runs through onBeforeSendMessage too, so consumers can use a
   // single hook to attach session-level payload (e.g. interaction_mode) on
-  // every outbound. The callback is invoked with `text: ''` and no payload —
-  // only the resulting `payload` is forwarded; `text`/`blobIds` from the
-  // return are ignored on this path.
+  // every outbound. The callback is invoked with `text: ''` and the
+  // caller-supplied payload (if any) — only the resulting `payload` is
+  // forwarded; `text`/`blobIds` from the return are ignored on this path.
+  // Side effects inside the callback fire on this path too — branch on
+  // intent (e.g. inspect `params.text === ''`) if they should not.
   const wrappedReplyToolCallConsents: UseChannelReturn['replyToolCallConsents'] = useMemo(() => {
     if (!replyToolCallConsents) return undefined;
 
-    return async answers => {
-      const resolved = onBeforeSendMessage ? onBeforeSendMessage({ text: '', payload: undefined }) : undefined;
+    return async (answers, payload) => {
+      const resolved = onBeforeSendMessage ? onBeforeSendMessage({ text: '', payload }) : { text: '', payload };
 
-      return replyToolCallConsents(answers, resolved?.payload);
+      return replyToolCallConsents(answers, resolved.payload);
     };
   }, [replyToolCallConsents, onBeforeSendMessage]);
 
