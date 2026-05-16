@@ -111,10 +111,10 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.header}>
           <div className={styles.title}>
-            Allow tool use <span className={styles.title_tool}>&quot;{pendingCall.toolName}&quot;</span>?
+            允許使用工具 <span className={styles.title_tool}>「{pendingCall.toolName}」</span>？
           </div>
           {onDismiss && (
-            <button type="button" className={styles.close_btn} onClick={onDismiss} aria-label="Close">
+            <button type="button" className={styles.close_btn} onClick={onDismiss} aria-label="關閉">
               <CloseIcon />
             </button>
           )}
@@ -123,10 +123,10 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
         <div className={styles.content}>
           <div className={styles.meta_row}>
             <span>
-              Toolset: <strong>{pendingCall.toolsetName}</strong>
+              工具集：<strong>{pendingCall.toolsetName}</strong>
             </span>
             <span>
-              Tool: <strong>{pendingCall.toolName}</strong>
+              工具：<strong>{pendingCall.toolName}</strong>
             </span>
           </div>
 
@@ -137,7 +137,7 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
               onClick={(): void => setIsInputExpanded(prev => !prev)}
             >
               <ChevronRightIcon />
-              <span>Input</span>
+              <span>輸入內容</span>
             </button>
             {isInputExpanded && (
               <div className={styles.input_viewer}>
@@ -148,12 +148,12 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
 
           {isDenyMode && (
             <div className={styles.deny_reason}>
-              <label htmlFor="asgard-consent-deny-reason">Deny reason (optional)</label>
+              <label htmlFor="asgard-consent-deny-reason">拒絕原因（選填）</label>
               <textarea
                 id="asgard-consent-deny-reason"
                 value={denyReason}
                 onChange={(e): void => setDenyReason(e.target.value)}
-                placeholder="Let the assistant know why you are denying this tool call."
+                placeholder="告訴 AI 你為什麼拒絕此次工具呼叫。"
               />
             </div>
           )}
@@ -161,7 +161,7 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
 
         {totalCount > 1 && (
           <div className={styles.pending_indicator}>
-            {currentIndex} / {totalCount} pending tool call{totalCount > 1 ? 's' : ''}
+            {currentIndex} / {totalCount} 個待處理工具呼叫
           </div>
         )}
 
@@ -172,13 +172,13 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
             style={primaryButtonStyle}
             onClick={handleAllowAlways}
           >
-            Allow for This Chat
+            本次對話皆允許
           </button>
           <button type="button" className={clsx(styles.action_btn, styles.action_secondary)} onClick={handleAllowOnce}>
-            Allow Once
+            僅此次允許
           </button>
           <button type="button" className={clsx(styles.action_btn, styles.action_danger)} onClick={handleDenyClick}>
-            {isDenyMode ? 'Send Deny' : 'Deny'}
+            {isDenyMode ? '送出拒絕' : '拒絕'}
           </button>
         </div>
       </div>
