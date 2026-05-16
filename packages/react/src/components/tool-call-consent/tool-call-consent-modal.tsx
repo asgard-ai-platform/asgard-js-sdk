@@ -1,6 +1,7 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { ToolCallConsentPendingCall } from '@asgard-js/core';
+import { useAsgardThemeContext } from '../../context/asgard-theme-context';
 import { CloseIcon, JsonViewer } from '../templates/tool-call-group/tool-call-group';
 import styles from './tool-call-consent-modal.module.scss';
 
@@ -35,6 +36,37 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isDenyMode, setIsDenyMode] = useState(false);
   const [denyReason, setDenyReason] = useState('');
+
+  const { chatbot } = useAsgardThemeContext();
+  const mainColor = chatbot?.primaryComponent?.mainColor ?? chatbot?.mainColor;
+  const secondaryColor = chatbot?.primaryComponent?.secondaryColor ?? chatbot?.secondaryColor;
+  const inactiveColor = chatbot?.inactiveColor;
+  const backgroundColor = chatbot?.backgroundColor;
+  const borderColor = chatbot?.borderColor;
+
+  const themeVars = useMemo<CSSProperties>(
+    () =>
+      ({
+        ...(mainColor && {
+          '--asgard-consent-modal-accent': mainColor,
+          // Darken accent ~15% on hover so the primary button keeps visual feedback
+          '--asgard-consent-modal-accent-hover': `color-mix(in srgb, ${mainColor} 85%, black)`,
+        }),
+        ...(backgroundColor && {
+          '--asgard-consent-modal-bg': backgroundColor,
+          '--asgard-consent-modal-input-bg': backgroundColor,
+        }),
+        ...(borderColor && { '--asgard-consent-modal-border': borderColor }),
+        ...(secondaryColor && { '--asgard-consent-modal-title': secondaryColor }),
+        ...(inactiveColor && { '--asgard-consent-modal-muted': inactiveColor }),
+      } as CSSProperties),
+    [mainColor, backgroundColor, borderColor, secondaryColor, inactiveColor],
+  );
+
+  const primaryButtonStyle = useMemo<CSSProperties>(
+    () => (secondaryColor ? { color: secondaryColor } : {}),
+    [secondaryColor],
+  );
 
   // Reset local state when the active pending call changes
   useEffect(() => {
@@ -75,7 +107,7 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
   );
 
   return (
-    <div className={styles.backdrop} onClick={handleBackdropClick}>
+    <div className={styles.backdrop} onClick={handleBackdropClick} style={themeVars}>
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.header}>
           <div className={styles.title}>
@@ -134,7 +166,12 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
         )}
 
         <div className={styles.actions}>
-          <button type="button" className={clsx(styles.action_btn, styles.action_primary)} onClick={handleAllowAlways}>
+          <button
+            type="button"
+            className={clsx(styles.action_btn, styles.action_primary)}
+            style={primaryButtonStyle}
+            onClick={handleAllowAlways}
+          >
             Allow for This Chat
           </button>
           <button type="button" className={clsx(styles.action_btn, styles.action_secondary)} onClick={handleAllowOnce}>
