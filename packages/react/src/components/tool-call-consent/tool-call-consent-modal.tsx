@@ -38,7 +38,6 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
   const [denyReason, setDenyReason] = useState('');
 
   const { chatbot } = useAsgardThemeContext();
-  const mainColor = chatbot?.primaryComponent?.mainColor ?? chatbot?.mainColor;
   const secondaryColor = chatbot?.primaryComponent?.secondaryColor ?? chatbot?.secondaryColor;
   const inactiveColor = chatbot?.inactiveColor;
   const backgroundColor = chatbot?.backgroundColor;
@@ -47,25 +46,18 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
   const themeVars = useMemo<CSSProperties>(
     () =>
       ({
-        ...(mainColor && {
-          '--asgard-consent-modal-accent': mainColor,
-          // Darken accent ~15% on hover so the primary button keeps visual feedback
-          '--asgard-consent-modal-accent-hover': `color-mix(in srgb, ${mainColor} 85%, black)`,
+        ...(secondaryColor && {
+          '--asgard-consent-modal-accent': secondaryColor,
+          '--asgard-consent-modal-accent-hover': `color-mix(in srgb, ${secondaryColor} 85%, black)`,
         }),
         ...(backgroundColor && {
           '--asgard-consent-modal-bg': backgroundColor,
           '--asgard-consent-modal-input-bg': backgroundColor,
         }),
         ...(borderColor && { '--asgard-consent-modal-border': borderColor }),
-        ...(secondaryColor && { '--asgard-consent-modal-title': secondaryColor }),
         ...(inactiveColor && { '--asgard-consent-modal-muted': inactiveColor }),
       } as CSSProperties),
-    [mainColor, backgroundColor, borderColor, secondaryColor, inactiveColor],
-  );
-
-  const primaryButtonStyle = useMemo<CSSProperties>(
-    () => (secondaryColor ? { color: secondaryColor } : {}),
-    [secondaryColor],
+    [secondaryColor, backgroundColor, borderColor, inactiveColor],
   );
 
   // Reset local state when the active pending call changes
@@ -166,12 +158,7 @@ export function ToolCallConsentModal(props: ToolCallConsentModalProps): ReactNod
         )}
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={clsx(styles.action_btn, styles.action_primary)}
-            style={primaryButtonStyle}
-            onClick={handleAllowAlways}
-          >
+          <button type="button" className={clsx(styles.action_btn, styles.action_primary)} onClick={handleAllowAlways}>
             本次對話皆允許
           </button>
           <button type="button" className={clsx(styles.action_btn, styles.action_secondary)} onClick={handleAllowOnce}>

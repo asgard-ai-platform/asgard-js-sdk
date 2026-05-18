@@ -34,7 +34,7 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
+  color: var(--asgard-consent-modal-headline, var(--asg-color-text-primary, #ffffff));
   word-break: break-word;
 }
 
@@ -192,7 +192,7 @@
 
 .action_primary {
   background-color: var(--asgard-consent-modal-accent, var(--asg-color-primary, #4f46e5));
-  color: #ffffff;
+  color: var(--asgard-consent-modal-primary-fg, #000000);
 
   &:hover:not(:disabled) {
     background-color: var(--asgard-consent-modal-accent-hover, var(--asg-color-primary-dark, #4338ca));
@@ -201,8 +201,8 @@
 
 .action_secondary {
   background-color: transparent;
-  color: var(--asgard-consent-modal-title, var(--asg-color-text-primary, #ffffff));
-  border-color: var(--asgard-consent-modal-border, var(--asg-color-border, #434343));
+  color: var(--asgard-consent-modal-accent, var(--asg-color-text-primary, #ffffff));
+  border-color: transparent;
 
   &:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.06);
@@ -212,7 +212,7 @@
 .action_danger {
   background-color: transparent;
   color: var(--asgard-consent-modal-danger, var(--asg-color-error, #dc2626));
-  border-color: var(--asgard-consent-modal-danger, var(--asg-color-error, #dc2626));
+  border-color: transparent;
 
   &:hover:not(:disabled) {
     background-color: color-mix(
