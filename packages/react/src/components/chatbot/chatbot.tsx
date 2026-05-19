@@ -89,7 +89,16 @@ interface ChatbotProps extends AsgardTemplateContextValue {
    */
   onChannelReady?: () => void;
 
-  /** Custom header renderer. When provided, replaces the default header entirely. */
+  /**
+   * Custom header renderer. When provided, replaces the default `<ChatbotHeader />`
+   * entirely — `title`, `onReset`, `onClose`, `customActions`, and
+   * `maintainConnectionWhenClosed` are no longer applied automatically; the
+   * renderer owns the header area in full.
+   *
+   * Use `useAsgardContext()` inside the renderer to access runtime state
+   * (`resetChannel`, `isResetting`, `avatar`, `title`, etc.) and
+   * `useAsgardThemeContext()` for theme tokens.
+   */
   renderHeader?: () => ReactNode;
 
   /** Custom menu renderer. When provided, renders between chat body and footer. */
@@ -102,6 +111,24 @@ interface ChatbotProps extends AsgardTemplateContextValue {
    * "open SQL editor modal", "switch input mode", etc.
    */
   footerEndActions?: ReactNode[];
+
+  /**
+   * Custom footer renderer. When provided, replaces the default `<ChatbotFooter />`
+   * entirely. The built-in textarea, send / mic button, image upload, document
+   * upload, export, drop-zone integration, IME composition guard, and
+   * `footerEndActions` are **not** rendered — the renderer fully owns the footer area.
+   *
+   * Use `useAsgardContext()` inside the renderer to access:
+   * - `sendMessage(params)` — submit a message (undefined in preview mode)
+   * - `isConnecting` — disable send while the channel is busy
+   * - `pendingInputValue` / `setPendingInputValue` — receive values pushed in
+   *   via `ChatbotRef.setInputValue` or `renderMenu` selection, then clear them
+   * - `inputPlaceholder`, `title`, `avatar`, `messages`, etc.
+   *
+   * Use `useAsgardThemeContext()` for theme tokens to stay visually consistent
+   * with the rest of the chatbot.
+   */
+  renderFooter?: () => ReactNode;
 
   /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
   renderToolCallGroup?: AsgardTemplateContextValue['renderToolCallGroup'];
@@ -159,6 +186,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     renderHeader,
     renderMenu,
     footerEndActions,
+    renderFooter,
     renderToolCallGroup,
     autoResetChannel,
     userIdentityHint,
@@ -300,7 +328,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               <ChatbotBody />
             </AsgardTemplateContextProvider>
             {renderMenu?.()}
-            <ChatbotFooter footerEndActions={footerEndActions} />
+            {renderFooter ? renderFooter() : <ChatbotFooter footerEndActions={footerEndActions} />}
             <ToolCallConsentGate />
           </>
         );

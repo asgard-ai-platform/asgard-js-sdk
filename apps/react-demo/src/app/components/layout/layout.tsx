@@ -21,6 +21,7 @@ const navItems = [
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
   { to: '/render-menu', label: 'Render Menu' },
   { to: '/footer-end-actions', label: 'Footer End Actions' },
+  { to: '/render-footer', label: 'Render Footer' },
   { to: '/http-error', label: 'HTTP Error' },
   { to: '/http-error-on-send', label: 'HTTP Error on Send' },
   { to: '/tool-call', label: 'Tool Call' },
