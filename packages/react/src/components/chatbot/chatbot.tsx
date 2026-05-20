@@ -115,8 +115,14 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /**
    * Custom footer renderer. When provided, replaces the default `<ChatbotFooter />`
    * entirely. The built-in textarea, send / mic button, image upload, document
-   * upload, export, drop-zone integration, IME composition guard, and
-   * `footerEndActions` are **not** rendered — the renderer fully owns the footer area.
+   * upload, export, IME composition guard, and `footerEndActions` are **not**
+   * rendered — the renderer fully owns the footer area.
+   *
+   * The container-level drag-and-drop overlay (`<DropZoneOverlay />`) still
+   * appears when `enableUpload` or `enableDocumentUpload` is set, but the
+   * default consumption path (textarea-side handling) is gone. If your custom
+   * footer wants to react to dropped files, read them from
+   * `useFileDropContext()`.
    *
    * Use `useAsgardContext()` inside the renderer to access:
    * - `sendMessage(params)` — submit a message (undefined in preview mode)
