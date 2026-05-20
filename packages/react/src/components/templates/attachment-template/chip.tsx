@@ -1,4 +1,4 @@
-import { KeyboardEvent, MouseEvent, ReactNode, useCallback } from 'react';
+import { CSSProperties, KeyboardEvent, MouseEvent, ReactNode, useCallback } from 'react';
 import { ButtonAction } from '@asgard-js/core';
 import DocumentSvg from '../../../icons/document.svg?react';
 import DownloadSvg from '../../../icons/download.svg?react';
@@ -13,10 +13,17 @@ interface AttachmentChipProps {
   defaultAction: ButtonAction;
   downloadAction?: ButtonAction;
   raw: string;
+  customStyle?: {
+    style?: CSSProperties;
+    title?: { style?: CSSProperties };
+    description?: { style?: CSSProperties };
+    iconBox?: { style?: CSSProperties };
+    downloadButton?: { style?: CSSProperties };
+  };
 }
 
 export function AttachmentChip(props: AttachmentChipProps): ReactNode {
-  const { title, text, defaultAction, downloadAction, raw } = props;
+  const { title, text, defaultAction, downloadAction, raw, customStyle } = props;
 
   const { sendMessage } = useAsgardContext();
   const { onTemplateBtnClick, defaultLinkTarget } = useAsgardTemplateContext();
@@ -74,16 +81,33 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
   );
 
   return (
-    <div role="button" tabIndex={0} className={styles.chip} onClick={handleChipClick} onKeyDown={handleChipKeyDown}>
-      <span className={styles.icon_box}>
+    <div
+      role="button"
+      tabIndex={0}
+      className={styles.chip}
+      onClick={handleChipClick}
+      onKeyDown={handleChipKeyDown}
+      style={customStyle?.style}
+    >
+      <span className={styles.icon_box} style={customStyle?.iconBox?.style}>
         <DocumentSvg />
       </span>
       <span className={styles.body}>
-        <span className={styles.title}>{title}</span>
-        <span className={styles.text}>{text}</span>
+        <span className={styles.title} style={customStyle?.title?.style}>
+          {title}
+        </span>
+        <span className={styles.text} style={customStyle?.description?.style}>
+          {text}
+        </span>
       </span>
       {downloadAction && (
-        <button type="button" className={styles.download_button} onClick={handleDownloadClick} aria-label="Download">
+        <button
+          type="button"
+          className={styles.download_button}
+          onClick={handleDownloadClick}
+          aria-label="Download"
+          style={customStyle?.downloadButton?.style}
+        >
           <DownloadSvg />
         </button>
       )}

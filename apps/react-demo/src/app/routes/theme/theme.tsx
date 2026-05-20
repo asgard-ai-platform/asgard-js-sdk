@@ -2,7 +2,12 @@ import { ReactNode, useState } from 'react';
 import { Chatbot, ChatbotTheme } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
-import { createTextTemplateExample, createButtonTemplateExample, createCarouselTemplateExample } from '../../mocks/messages';
+import {
+  createTextTemplateExample,
+  createButtonTemplateExample,
+  createCarouselTemplateExample,
+  createAttachmentTemplateExample,
+} from '../../mocks/messages';
 import styles from './theme.module.scss';
 
 const presets: { name: string; config: ChatbotTheme }[] = [
@@ -43,6 +48,7 @@ export function Theme(): ReactNode {
     createTextTemplateExample(),
     createButtonTemplateExample(),
     createCarouselTemplateExample(),
+    createAttachmentTemplateExample(),
   ];
 
   const handlePresetChange = (presetName: string): void => {

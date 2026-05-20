@@ -159,6 +159,24 @@ export interface AsgardThemeContextValue {
      * TBD: Fill the necessary properties based on the requirements.
      */
     TableMessageTemplate: Partial<{ style: CSSProperties }>;
+    /**
+     * TBD: Fill the necessary properties based on the requirements.
+     */
+    AttachmentMessageTemplate: Partial<{
+      style: CSSProperties;
+      title?: {
+        style: CSSProperties;
+      };
+      description?: {
+        style: CSSProperties;
+      };
+      iconBox?: {
+        style: CSSProperties;
+      };
+      downloadButton?: {
+        style: CSSProperties;
+      };
+    }>;
   }>;
 }
 
@@ -289,6 +307,21 @@ export const defaultAsgardThemeContextValue: AsgardThemeContextValue = {
     },
     TableMessageTemplate: {
       style: {},
+    },
+    AttachmentMessageTemplate: {
+      style: {},
+      title: {
+        style: {},
+      },
+      description: {
+        style: {},
+      },
+      iconBox: {
+        style: {},
+      },
+      downloadButton: {
+        style: {},
+      },
     },
   },
 };
@@ -470,6 +503,32 @@ export function AsgardThemeContextProvider(
               },
             },
           },
+          AttachmentMessageTemplate: {
+            style: {
+              backgroundColor: themeFromAnnotations.botMessage?.carouselButtonBackgroundColor,
+            },
+            title: {
+              style: {
+                color: themeFromAnnotations.chatbot?.primaryComponent?.secondaryColor,
+              },
+            },
+            description: {
+              style: {
+                color: themeFromAnnotations.chatbot?.inactiveColor,
+              },
+            },
+            iconBox: {
+              style: {
+                backgroundColor: themeFromAnnotations.chatbot?.primaryComponent?.mainColor,
+                color: themeFromAnnotations.chatbot?.primaryComponent?.secondaryColor,
+              },
+            },
+            downloadButton: {
+              style: {
+                color: themeFromAnnotations.chatbot?.inactiveColor,
+              },
+            },
+          },
         },
       });
 
@@ -575,6 +634,11 @@ export function AsgardThemeContextProvider(
         if (mergedTheme.template?.LocationMessageTemplate?.style) {
           mergedTheme.template.LocationMessageTemplate.style.backgroundColor = cardBgColor;
         }
+
+        // Apply to attachment chip background color
+        if (mergedTheme.template?.AttachmentMessageTemplate?.style) {
+          mergedTheme.template.AttachmentMessageTemplate.style.backgroundColor = cardBgColor;
+        }
       }
 
       // Ensure prop-level chatbot.primaryComponent.secondaryColor is also applied to titles and text
@@ -605,6 +669,11 @@ export function AsgardThemeContextProvider(
         if (mergedTheme.template?.LocationMessageTemplate?.title?.style) {
           mergedTheme.template.LocationMessageTemplate.title.style.color = titleColor;
         }
+
+        // Apply to attachment chip title color
+        if (mergedTheme.template?.AttachmentMessageTemplate?.title?.style) {
+          mergedTheme.template.AttachmentMessageTemplate.title.style.color = titleColor;
+        }
       }
 
       // Ensure prop-level chatbot.inactiveColor is also applied to card descriptions
@@ -623,6 +692,16 @@ export function AsgardThemeContextProvider(
         if (mergedTheme.template?.LocationMessageTemplate?.description?.style) {
           mergedTheme.template.LocationMessageTemplate.description.style.color = theme.chatbot.inactiveColor;
         }
+
+        // Apply to attachment chip description color
+        if (mergedTheme.template?.AttachmentMessageTemplate?.description?.style) {
+          mergedTheme.template.AttachmentMessageTemplate.description.style.color = theme.chatbot.inactiveColor;
+        }
+
+        // Apply to attachment download button color
+        if (mergedTheme.template?.AttachmentMessageTemplate?.downloadButton?.style) {
+          mergedTheme.template.AttachmentMessageTemplate.downloadButton.style.color = theme.chatbot.inactiveColor;
+        }
       }
 
       // Ensure prop-level chatbot.primaryComponent colors are also applied to card buttons
@@ -639,6 +718,11 @@ export function AsgardThemeContextProvider(
         if (mergedTheme.template?.CarouselMessageTemplate?.card?.button?.style) {
           mergedTheme.template.CarouselMessageTemplate.card.button.style.backgroundColor = buttonBgColor;
           mergedTheme.template.CarouselMessageTemplate.card.button.style.borderColor = buttonBgColor;
+        }
+
+        // Apply to attachment chip icon box background
+        if (mergedTheme.template?.AttachmentMessageTemplate?.iconBox?.style) {
+          mergedTheme.template.AttachmentMessageTemplate.iconBox.style.backgroundColor = buttonBgColor;
         }
       }
 
@@ -658,6 +742,11 @@ export function AsgardThemeContextProvider(
         // Apply to quick reply button text color
         if (mergedTheme.template?.quickReplies?.button?.style) {
           mergedTheme.template.quickReplies.button.style.color = buttonTextColor;
+        }
+
+        // Apply to attachment chip icon box color (the icon glyph color)
+        if (mergedTheme.template?.AttachmentMessageTemplate?.iconBox?.style) {
+          mergedTheme.template.AttachmentMessageTemplate.iconBox.style.color = buttonTextColor;
         }
       }
 
