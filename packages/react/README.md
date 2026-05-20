@@ -320,6 +320,7 @@ config: {
 - **renderHeader?**: `() => ReactNode` - Custom header renderer. When provided, completely replaces the default header. Use `useAsgardContext()` inside the render function to access `resetChannel`, `isResetting`, and other internal state.
 - **renderMenu?**: `() => ReactNode` - Custom menu renderer. When provided, renders content between the chat body and footer. Useful for quick menus, suggested questions, or navigation panels. See [Custom Menu](#custom-menu) section for details.
 - **footerEndActions?**: `ReactNode[]` - Extra action nodes rendered at the end of the footer input row, after the send/mic button. Pure additive slot — built-in textarea / attachment buttons / send / mic remain unchanged. See [Footer End Actions](#footer-end-actions) section for details.
+- **renderFooter?**: `() => ReactNode` - Custom footer renderer. When provided, completely replaces the default footer — built-in textarea, send/mic, upload, export, IME guard, and `footerEndActions` are not rendered. Use `useAsgardContext()` to access `sendMessage`, `isConnecting`, `pendingInputValue` / `setPendingInputValue`, etc. See [Custom Footer](#custom-footer) section for details.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
 - **renderToolCallGroup?**: `(props: ToolCallGroupRendererProps) => ReactNode` - Custom renderer for tool call group. Return `null` to hide, return JSX to fully customize, or call `renderDefaultContent()` to use the default UI with optional overrides (e.g., `renderDefaultContent({ title: 'AI is thinking...' })`). See [Tool Call Group Renderer](#tool-call-group-renderer) section for details.
 - **onBeforeSendMessage?**: `(params: SendMessageParams) => SendMessageParams` - Callback to modify message params before sending. Allows injecting contextual data (payload, metadata) from parent components. See [Before Send Message Hook](#before-send-message-hook) section for details.
@@ -1376,6 +1377,107 @@ const App = () => {
 - Avoid passing many items — the row width is finite and overflow will squeeze the textarea.
 - Use `chatbotRef.current?.serviceContext?.sendMessage` (or `useAsgardContext()` inside a wrapper component) to send messages from the consumer-owned UI that the action triggers (e.g. modal Submit button).
 - Distinct from `customActions` (header trailing): `customActions` appends to the **header** title bar, `footerEndActions` appends to the **footer** input row.
+
+<a id="custom-footer"></a>
+<br/>
+
+### Custom Footer
+
+The `renderFooter` prop completely replaces the default `<ChatbotFooter />`. Reach for it when you need to redesign the entire input area — for example a single-line input, a custom voice-only flow, or a different layout. If you only need to add a button next to send, use [`footerEndActions`](#footer-end-actions) instead, which keeps every built-in feature intact.
+
+What `renderFooter` removes from the default footer:
+
+- Built-in textarea (with auto-resize)
+- Send button, microphone button
+- Image upload, document upload, conversation export
+- IME composition guard (skip submit while composing)
+- The `footerEndActions` slot
+
+The container-level drag-and-drop overlay still appears when `enableUpload` or `enableDocumentUpload` is set, but textarea-side file handling is gone. If your custom footer needs to react to dropped files, read them from `useFileDropContext()`.
+
+Use `useAsgardContext()` to access runtime state:
+
+- `sendMessage(params)` — submit a message (`undefined` in preview mode, e.g. while config is loading)
+- `isConnecting` — disable send while the channel is busy
+- `pendingInputValue` / `setPendingInputValue` — receive values pushed in via `ChatbotRef.setInputValue` or `renderMenu` selection, then clear them
+- `inputPlaceholder`, `title`, `avatar`, `messages`, etc.
+
+Use `useAsgardThemeContext()` for theme tokens to stay visually consistent with the rest of the chatbot.
+
+#### Usage Example
+
+```typescript
+import { useEffect, useRef, useState } from 'react';
+import { Chatbot, ChatbotRef, useAsgardContext } from '@asgard-js/react';
+
+function CustomFooter() {
+  const { sendMessage, isConnecting, pendingInputValue, setPendingInputValue, inputPlaceholder } = useAsgardContext();
+
+  const [value, setValue] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Receive text pushed in via ChatbotRef.setInputValue or renderMenu
+  useEffect(() => {
+    if (pendingInputValue == null) return;
+    setValue(pendingInputValue);
+    setPendingInputValue(null);
+    textareaRef.current?.focus();
+  }, [pendingInputValue, setPendingInputValue]);
+
+  const submit = () => {
+    const text = value.trim();
+    if (!text || isConnecting) return;
+    sendMessage?.({ text });
+    setValue('');
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 8, padding: '8px 12px' }}>
+      <textarea
+        ref={textareaRef}
+        placeholder={inputPlaceholder ?? 'Type a message...'}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => {
+          // Skip submit while IME is composing
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        rows={1}
+        style={{ flex: 1 }}
+      />
+      <button onClick={submit} disabled={!value.trim() || isConnecting}>
+        Send
+      </button>
+    </div>
+  );
+}
+
+const App = () => {
+  const chatbotRef = useRef<ChatbotRef>(null);
+
+  return (
+    <Chatbot
+      ref={chatbotRef}
+      config={{
+        apiKey: 'your-api-key',
+        botProviderEndpoint: 'https://api.asgard-ai.com/ns/{namespace}/bot-provider/{botProviderId}',
+      }}
+      customChannelId="your-channel-id"
+      renderFooter={() => <CustomFooter />}
+    />
+  );
+};
+```
+
+#### Notes
+
+- `renderFooter` is a full replacement, not an additive slot. If you only want to add buttons after send, use [`footerEndActions`](#footer-end-actions).
+- When `renderFooter` is provided, `footerEndActions` is silently ignored.
+- `sendMessage` is `undefined` while the chatbot is in preview / not yet connected — guard with `?.()` and disable your submit UI until it's defined.
+- The `<ToolCallConsentGate />` is rendered outside `renderFooter`, so tool-call consent modals still appear normally.
 
 <a id="custom-menu"></a>
 <br/>
