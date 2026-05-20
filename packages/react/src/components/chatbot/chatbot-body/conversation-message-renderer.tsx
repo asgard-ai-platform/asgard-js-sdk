@@ -13,6 +13,7 @@ import {
   LocationTemplate,
   UserImageTemplate,
   TableTemplate,
+  AttachmentTemplate,
   TemplateBox,
   TemplateBoxContent,
 } from '../../templates';
@@ -100,6 +101,8 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
         return <LocationTemplate message={message} />;
       case MessageTemplateType.TABLE:
         return <TableTemplate message={message} />;
+      case MessageTemplateType.ATTACHMENT:
+        return <AttachmentTemplate message={message} />;
       default:
         return <div />;
     }

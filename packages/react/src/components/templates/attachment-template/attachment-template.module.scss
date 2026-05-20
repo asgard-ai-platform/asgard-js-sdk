@@ -1,0 +1,103 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 320px;
+  max-width: 100%;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(51, 51, 51, 1);
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+
+  &:hover {
+    background: rgba(64, 64, 64, 1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(71, 103, 235, 1);
+    outline-offset: 2px;
+  }
+}
+
+.icon_box {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(71, 103, 235, 1);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  > svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text {
+  color: rgba(140, 140, 140, 1);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.download_button {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: rgba(180, 180, 180, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: rgba(80, 80, 80, 1);
+    color: white;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(71, 103, 235, 1);
+    outline-offset: 2px;
+  }
+}

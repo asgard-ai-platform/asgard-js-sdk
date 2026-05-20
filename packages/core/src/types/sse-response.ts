@@ -122,6 +122,16 @@ export interface CarouselMessageTemplate extends MessageTemplate {
   columns: Omit<ButtonMessageTemplate, 'type' | 'quickReplies'>[];
 }
 
+export interface AttachmentMessageTemplate extends MessageTemplate {
+  type: MessageTemplateType.ATTACHMENT;
+  attachments: {
+    title: string;
+    text: string;
+    defaultAction: ButtonAction;
+    downloadAction?: ButtonAction;
+  }[];
+}
+
 export interface Message<Payload = unknown> {
   messageId: string;
   replyToCustomMessageId: string;
@@ -139,7 +149,8 @@ export interface Message<Payload = unknown> {
     | LocationMessageTemplate
     | CarouselMessageTemplate
     | ChartMessageTemplate
-    | TableMessageTemplate;
+    | TableMessageTemplate
+    | AttachmentMessageTemplate;
 }
 
 export type IsEqual<A, B, DataType> = A extends B ? (B extends A ? DataType : null) : null;

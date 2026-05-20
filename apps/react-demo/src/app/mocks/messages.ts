@@ -871,3 +871,51 @@ export function createMixedCustomRendererMessages(): ConversationMessage[] {
     createAlertExample('info'),
   ];
 }
+
+export function createAttachmentTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: '',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.ATTACHMENT,
+      attachments: [
+        {
+          title: 'article-1.md',
+          text: 'Plain Text',
+          defaultAction: {
+            type: 'uri',
+            uri: 'https://store.com/',
+          },
+        },
+        {
+          title: 'article-2.pdf',
+          text: 'Plain Text',
+          defaultAction: {
+            type: 'uri',
+            uri: 'https://store.com/',
+          },
+          downloadAction: {
+            type: 'emit',
+            eventName: 'my_event',
+            payload: {},
+          },
+        },
+        {
+          title: 'article-3.md',
+          text: 'Plain Text',
+          defaultAction: {
+            type: 'uri',
+            uri: 'https://store.com/',
+          },
+        },
+      ],
+      quickReplies: [],
+    },
+  });
+}

@@ -11,10 +11,11 @@ import {
   createChartTemplateExample,
   createTableTemplateExample,
   createMathTemplateExample,
+  createAttachmentTemplateExample,
 } from '../../mocks/messages';
 import styles from './templates.module.scss';
 
-type TemplateType = 'text' | 'hint' | 'button' | 'carousel' | 'image' | 'chart' | 'table' | 'math';
+type TemplateType = 'text' | 'hint' | 'button' | 'carousel' | 'image' | 'chart' | 'table' | 'math' | 'attachment';
 
 const templateOptions: { value: TemplateType; label: string }[] = [
   { value: 'text', label: 'Text' },
@@ -25,6 +26,7 @@ const templateOptions: { value: TemplateType; label: string }[] = [
   { value: 'chart', label: 'Chart' },
   { value: 'table', label: 'Table' },
   { value: 'math', label: 'Math' },
+  { value: 'attachment', label: 'Attachment' },
 ];
 
 const templateCreators: Record<TemplateType, () => ReturnType<typeof createTextTemplateExample>> = {
@@ -36,6 +38,7 @@ const templateCreators: Record<TemplateType, () => ReturnType<typeof createTextT
   chart: createChartTemplateExample,
   table: createTableTemplateExample,
   math: createMathTemplateExample,
+  attachment: createAttachmentTemplateExample,
 };
 
 export function Templates(): ReactNode {

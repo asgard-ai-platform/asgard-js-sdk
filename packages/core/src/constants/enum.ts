@@ -38,4 +38,5 @@ export enum MessageTemplateType {
   CAROUSEL = 'CAROUSEL',
   CHART = 'CHART',
   TABLE = 'TABLE',
+  ATTACHMENT = 'ATTACHMENT',
 }
