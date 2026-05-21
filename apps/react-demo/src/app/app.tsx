@@ -22,6 +22,7 @@ import { UserIdentityHint } from './routes/user-identity-hint';
 import { OnChannelReady } from './routes/on-channel-ready';
 import { FooterEndActions } from './routes/footer-end-actions';
 import { RenderFooter } from './routes/render-footer';
+import { TextNewlines } from './routes/text-newlines';
 
 export function App(): React.ReactElement {
   return (
@@ -49,6 +50,7 @@ export function App(): React.ReactElement {
         <Route path="/on-channel-ready" element={<OnChannelReady />} />
         <Route path="/footer-end-actions" element={<FooterEndActions />} />
         <Route path="/render-footer" element={<RenderFooter />} />
+        <Route path="/text-newlines" element={<TextNewlines />} />
       </Routes>
     </Layout>
   );
