@@ -80,6 +80,10 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
     [dispatchAction, downloadAction],
   );
 
+  const showDownloadIcon =
+    (downloadAction?.type === 'emit' || downloadAction?.type === 'EMIT') &&
+    downloadAction.eventName === 'download_file';
+
   return (
     <div
       role="button"
@@ -100,7 +104,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
           {text}
         </span>
       </span>
-      {downloadAction && (
+      {showDownloadIcon && (
         <button
           type="button"
           className={styles.download_button}

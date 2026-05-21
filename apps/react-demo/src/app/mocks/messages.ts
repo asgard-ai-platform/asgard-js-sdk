@@ -902,7 +902,7 @@ export function createAttachmentTemplateExample(): ConversationMessage {
           },
           downloadAction: {
             type: 'emit',
-            eventName: 'my_event',
+            eventName: 'download_file',
             payload: {},
           },
         },
