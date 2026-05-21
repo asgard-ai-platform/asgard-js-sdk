@@ -34,6 +34,7 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.2.5",
     "react-vega": "^8.0.0",
+    "remark-breaks": "^4.0.0",
     "streamdown": "^1.6.8",
     "vega": "^6.1.2",
     "vega-embed": "^7.0.2",
