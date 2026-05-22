@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
+import remarkBreaks from 'remark-breaks';
 import { streamdownComponents } from './streamdown-components';
 
 // Load KaTeX CSS from CDN for math rendering
@@ -21,6 +22,7 @@ function loadKatexCss(): void {
 interface StreamdownProps {
   children: string;
   components?: Record<string, unknown>;
+  remarkPlugins?: unknown[];
 }
 
 interface StreamdownClientProps {
@@ -37,7 +39,7 @@ export function StreamdownClient({ children }: StreamdownClientProps): ReactNode
     const loadStreamdown = async (): Promise<void> => {
       try {
         const { Streamdown } = await import('streamdown');
-        setStreamdownComponent(() => Streamdown);
+        setStreamdownComponent(() => Streamdown as unknown as React.ComponentType<StreamdownProps>);
       } catch {
         setError(true);
       }
@@ -50,5 +52,9 @@ export function StreamdownClient({ children }: StreamdownClientProps): ReactNode
     return children;
   }
 
-  return <StreamdownComponent components={streamdownComponents}>{children}</StreamdownComponent>;
+  return (
+    <StreamdownComponent components={streamdownComponents} remarkPlugins={[remarkBreaks]}>
+      {children}
+    </StreamdownComponent>
+  );
 }
