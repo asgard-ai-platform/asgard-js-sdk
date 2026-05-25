@@ -1,4 +1,4 @@
-import { Fragment, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Fragment, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
@@ -81,6 +81,29 @@ export function ChatbotBody(): ReactNode {
 
   const lastMessageCountRef = useRef<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
+  const didInitialScrollRef = useRef<boolean>(false);
+
+  // 初次有 messages 時，在 browser paint 之前同步把 chat 滾到底，避免：
+  // 1. 看到「先頂部 → 然後跳/滾到底」的閃爍
+  // 2. ResizeObserver + 'smooth' scroll 的 race condition — smooth 動畫期間
+  //    fire 的 'scroll' events 會被下方 handleScroll 誤判為使用者滾走，把
+  //    isFollowingLatest 設成 false，後續 async 內容（例如圖片載入）造成的
+  //    layout 增高就不再被追，scroll 停在半路。
+  // useLayoutEffect 在 commit DOM 之後、瀏覽器 paint 之前同步執行；
+  // 此時 scroll 事件監聽器（下方 useEffect）尚未掛上，所以直接設 scrollTop
+  // 不會觸發 handleScroll，也就不會錯誤更新 isFollowingLatest。
+  useLayoutEffect(() => {
+    if (didInitialScrollRef.current) return;
+
+    if (!messages || messages.size === 0) return;
+
+    const container = scrollContainerRef.current;
+
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+    didInitialScrollRef.current = true;
+  }, [messages, scrollContainerRef]);
 
   // 監聽滾動事件，根據距離底部的距離判斷是否跟隨
   useEffect(() => {
