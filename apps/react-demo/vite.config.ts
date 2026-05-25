@@ -1,8 +1,27 @@
 /// <reference types='vitest' />
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
+
+// Dev-only: 在 dev server 內攔截 POST `/mock-asgard/message/sse`，回傳 streaming SSE，
+// 讓 demo 不需要真實 Asgard backend 也能測 send-message + bot streaming 行為。
+function asgardSseMockPlugin(): Plugin {
+  return {
+    name: 'asgard-sse-mock',
+    configureServer(server) {
+      server.middlewares.use('/mock-asgard/message/sse', async (req, res, next) => {
+        try {
+          const { handleMockSse } = await import('./src/mock-server/sse-mock');
+
+          await handleMockSse(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
+    },
+  };
+}
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -15,7 +34,7 @@ export default defineConfig(() => ({
     port: 4200,
     host: 'localhost',
   },
-  plugins: [react(), svgr(), nxViteTsPaths()],
+  plugins: [react(), svgr(), nxViteTsPaths(), asgardSseMockPlugin()],
   build: {
     outDir: './dist',
     emptyOutDir: true,

@@ -47,6 +47,11 @@ const demoCards = [
     description: 'Test chatbot with a private bot provider requiring authentication.',
     to: '/private',
   },
+  {
+    title: '🐛 History Scroll Bug',
+    description: 'Repro: chat does not scroll to bottom when opened with pre-existing history (ClickUp 86exneerk).',
+    to: '/history-scroll-bug',
+  },
 ];
 
 export function Home(): ReactNode {

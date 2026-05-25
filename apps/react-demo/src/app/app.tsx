@@ -23,6 +23,7 @@ import { OnChannelReady } from './routes/on-channel-ready';
 import { FooterEndActions } from './routes/footer-end-actions';
 import { RenderFooter } from './routes/render-footer';
 import { TextNewlines } from './routes/text-newlines';
+import { HistoryScrollBug } from './routes/history-scroll-bug';
 
 export function App(): React.ReactElement {
   return (
@@ -51,6 +52,7 @@ export function App(): React.ReactElement {
         <Route path="/footer-end-actions" element={<FooterEndActions />} />
         <Route path="/render-footer" element={<RenderFooter />} />
         <Route path="/text-newlines" element={<TextNewlines />} />
+        <Route path="/history-scroll-bug" element={<HistoryScrollBug />} />
       </Routes>
     </Layout>
   );

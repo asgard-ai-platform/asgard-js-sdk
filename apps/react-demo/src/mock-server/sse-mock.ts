@@ -1,0 +1,202 @@
+// 本地 mock SSE handler,給 Vite dev server 用。
+// 攔截 POST `/mock-asgard/message/sse`,回傳一段預設好的 streaming bot reply,
+// 不接真實 Asgard backend,純測 SDK 的 send-message + streaming scroll 行為。
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { randomUUID } from 'node:crypto';
+
+interface ParsedPayload {
+  customChannelId?: string;
+  customMessageId?: string;
+  text?: string;
+  action?: string;
+}
+
+function readBody(req: IncomingMessage): Promise<ParsedPayload> {
+  return new Promise(resolve => {
+    const chunks: Buffer[] = [];
+
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const body = Buffer.concat(chunks).toString('utf-8');
+
+        resolve(JSON.parse(body) as ParsedPayload);
+      } catch {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const NAMESPACE = 'mock-namespace';
+const BOT_PROVIDER_NAME = 'mock-bot-provider';
+
+// 預設的長回覆 (~28 個 deltas),夠 overflow 一個高度 600px 的 chatbot,
+// 讓 scroll follow-bottom 行為在 streaming 過程中可被觀察。
+const REPLY_CHUNKS = [
+  '收到 ',
+  '你的訊息了！',
+  '我來回覆',
+  '一段較長',
+  '的內容，',
+  '主要是為了',
+  '測試 chatbot ',
+  '在 streaming ',
+  '過程中,',
+  '滾動是否能',
+  '一直貼著底部。',
+  '\n\n首先，',
+  '當 bot 訊息一邊到達、',
+  '一邊渲染時，',
+  'ResizeObserver ',
+  '會持續 fire，',
+  '觸發 programmaticScrollToBottom，',
+  '視窗應該',
+  '持續貼底。',
+  '\n\n其次，',
+  '使用者送出訊息',
+  '的瞬間，',
+  'scrollToBottom ',
+  '會 snap 到底，',
+  '並重置 ',
+  'isFollowingLatest=true。',
+  '\n\n最後一段',
+  '是收尾，完整訊息會在 ',
+  'message.complete ',
+  '時被換成 final template。',
+];
+
+function writeEvent(res: ServerResponse, event: object): void {
+  res.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+interface CommonHeader {
+  requestId: string;
+  namespace: string;
+  botProviderName: string;
+  customChannelId: string;
+}
+
+function emptyFact(): Record<string, unknown> {
+  return {
+    runInit: null,
+    runDone: null,
+    runError: null,
+    messageStart: null,
+    messageDelta: null,
+    messageComplete: null,
+    toolCallStart: null,
+    toolCallComplete: null,
+    toolCallConsent: null,
+  };
+}
+
+export async function handleMockSse(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== 'POST') {
+    res.statusCode = 405;
+    res.end();
+
+    return;
+  }
+
+  const payload = await readBody(req);
+  const requestId = randomUUID();
+  const customChannelId = payload.customChannelId ?? 'mock-channel';
+  const replyToCustomMessageId = payload.customMessageId ?? '';
+  const messageId = randomUUID();
+  const fullText = REPLY_CHUNKS.join('');
+
+  const header: CommonHeader = {
+    requestId,
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+
+  // 1. run.init
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+  await sleep(40);
+
+  // 2. message.start (空 text,bot 訊息進入 isTyping 狀態)
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.start',
+    fact: {
+      ...emptyFact(),
+      messageStart: {
+        message: {
+          messageId,
+          replyToCustomMessageId,
+          text: '',
+          payload: null,
+          isDebug: false,
+          idx: null,
+          template: { type: 'TEXT', text: '' },
+        },
+      },
+    },
+  });
+
+  // 3. message.delta * N — 每 60ms 一筆,模擬真實 LLM streaming
+  let idx = 0;
+
+  for (const chunk of REPLY_CHUNKS) {
+    await sleep(60);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.message.delta',
+      fact: {
+        ...emptyFact(),
+        messageDelta: {
+          message: {
+            messageId,
+            replyToCustomMessageId,
+            text: chunk,
+            payload: null,
+            isDebug: false,
+            idx: idx++,
+            template: null,
+          },
+        },
+      },
+    });
+  }
+
+  await sleep(40);
+
+  // 4. message.complete (final 文字 + template)
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.complete',
+    fact: {
+      ...emptyFact(),
+      messageComplete: {
+        message: {
+          messageId,
+          replyToCustomMessageId,
+          text: fullText,
+          payload: null,
+          isDebug: false,
+          idx: null,
+          template: { type: 'TEXT', text: fullText },
+        },
+      },
+    },
+  });
+
+  // 5. run.done
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+
+  res.end();
+}
