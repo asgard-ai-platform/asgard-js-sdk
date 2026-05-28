@@ -58,12 +58,13 @@
 }
 
 .tab {
-  padding: 6px 12px;
+  padding: 12px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: rgba(255, 255, 255, 0.5);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
   margin-bottom: -1px;
@@ -93,7 +94,7 @@
 }
 
 .table_header_cell {
-  padding: 8px 12px;
+  padding: 4px 8px;
   text-align: left;
   white-space: nowrap;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -124,7 +125,7 @@
 }
 
 .table_cell {
-  padding: 10px 12px;
+  padding: 8px;
   white-space: nowrap;
 }
 
@@ -171,35 +172,48 @@
   opacity: 0.7;
 }
 
-.sql_content {
-  padding: 12px;
+.tab_content_header {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sql_body {
+  display: flex;
+  min-height: 0;
+}
+
+.sql_code_area {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sql_code {
   margin: 0;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
+  padding: 12px 16px;
+  background: transparent;
   font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.6;
   overflow-x: auto;
   white-space: pre;
   color: rgba(255, 255, 255, 0.9);
+  max-height: 340px;
 }
 
-.sql_explanation {
-  margin: 0;
+.sql_explanation_panel {
+  width: 280px;
+  flex-shrink: 0;
+  padding: 16px;
+  max-height: 340px;
+  overflow-y: auto;
   font-size: 13px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.75);
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .time {

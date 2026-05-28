@@ -227,49 +227,151 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
       <Avatar avatar={avatar} />
       <TemplateBoxContent quickReplies={template?.quickReplies}>
         <div className={classes.container} style={styles}>
-          <div className={classes.header}>
-            {title && <div className={classes.title}>{title}</div>}
-            {data.length > 0 && (
-              <div className={classes.download_buttons}>
+          {sql ? (
+            <>
+              <div className={classes.tabs}>
                 <button
-                  className={classes.download_button}
-                  onClick={handleDownloadCsv}
-                  aria-label="Download CSV"
-                  title="Download CSV"
+                  className={clsx(classes.tab, activeTab === 'table' && classes.tab_active)}
+                  onClick={() => setActiveTab('table')}
                 >
-                  <DownloadIcon /> CSV
+                  Table
                 </button>
                 <button
-                  className={classes.download_button}
-                  onClick={handleDownloadJsonl}
-                  aria-label="Download JSONL"
-                  title="Download JSON Lines"
+                  className={clsx(classes.tab, activeTab === 'sql' && classes.tab_active)}
+                  onClick={() => setActiveTab('sql')}
                 >
-                  <DownloadIcon /> JSONL
+                  SQL
                 </button>
               </div>
-            )}
-          </div>
 
-          {sql && (
-            <div className={classes.tabs}>
-              <button
-                className={clsx(classes.tab, activeTab === 'table' && classes.tab_active)}
-                onClick={() => setActiveTab('table')}
-              >
-                Table
-              </button>
-              <button
-                className={clsx(classes.tab, activeTab === 'sql' && classes.tab_active)}
-                onClick={() => setActiveTab('sql')}
-              >
-                SQL
-              </button>
-            </div>
-          )}
+              {activeTab === 'table' && (
+                <>
+                  <div className={classes.tab_content_header}>
+                    {title && <div className={classes.title}>{title}</div>}
+                    {data.length > 0 && (
+                      <div className={classes.download_buttons}>
+                        <button
+                          className={classes.download_button}
+                          onClick={handleDownloadCsv}
+                          aria-label="Download CSV"
+                          title="Download CSV"
+                        >
+                          <DownloadIcon /> CSV
+                        </button>
+                        <button
+                          className={classes.download_button}
+                          onClick={handleDownloadJsonl}
+                          aria-label="Download JSONL"
+                          title="Download JSON Lines"
+                        >
+                          <DownloadIcon /> JSONL
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {data.length === 0 ? (
+                    <div className={classes.empty_state}>No data available</div>
+                  ) : (
+                    <>
+                      <div className={classes.table_wrapper}>
+                        <table className={classes.table}>
+                          <thead className={classes.table_header}>
+                            <tr>
+                              {columns.map((column, index) => (
+                                <th key={index} className={classes.table_header_cell}>
+                                  <span className={classes.cell_header}>{column.header}</span>
+                                  {column.key && <span className={classes.cell_key}>{column.key}</span>}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedData.map((row, rowIndex) => (
+                              <tr key={rowIndex} className={classes.table_row}>
+                                {columns.map((column, colIndex) => {
+                                  const rawValue = getCellValue(row, column, colIndex, rowType);
+                                  const formattedValue = formatCellValue(rawValue, column.format);
 
-          {activeTab === 'table' && (
+                                  return (
+                                    <td key={colIndex} className={classes.table_cell}>
+                                      {formattedValue}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {pagination && totalPages > 1 && (
+                        <div className={classes.pagination}>
+                          <button
+                            className={classes.pagination_button}
+                            onClick={handlePrevPage}
+                            disabled={currentPage === 1}
+                            aria-label="Previous page"
+                          >
+                            &lt;
+                          </button>
+                          <span className={classes.pagination_info}>
+                            {currentPage} / {totalPages}
+                          </span>
+                          <button
+                            className={classes.pagination_button}
+                            onClick={handleNextPage}
+                            disabled={currentPage === totalPages}
+                            aria-label="Next page"
+                          >
+                            &gt;
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'sql' && (
+                <>
+                  <div className={classes.tab_content_header}>
+                    {title && <div className={classes.title}>{title}</div>}
+                  </div>
+                  <div className={classes.sql_body}>
+                    <div className={classes.sql_code_area}>
+                      <pre className={classes.sql_code}>
+                        <code>{sql}</code>
+                      </pre>
+                    </div>
+                    {sqlExplanation && <div className={classes.sql_explanation_panel}>{sqlExplanation}</div>}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
             <>
+              <div className={classes.header}>
+                {title && <div className={classes.title}>{title}</div>}
+                {data.length > 0 && (
+                  <div className={classes.download_buttons}>
+                    <button
+                      className={classes.download_button}
+                      onClick={handleDownloadCsv}
+                      aria-label="Download CSV"
+                      title="Download CSV"
+                    >
+                      <DownloadIcon /> CSV
+                    </button>
+                    <button
+                      className={classes.download_button}
+                      onClick={handleDownloadJsonl}
+                      aria-label="Download JSONL"
+                      title="Download JSON Lines"
+                    >
+                      <DownloadIcon /> JSONL
+                    </button>
+                  </div>
+                )}
+              </div>
               {data.length === 0 ? (
                 <div className={classes.empty_state}>No data available</div>
               ) : (
@@ -304,7 +406,6 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                       </tbody>
                     </table>
                   </div>
-
                   {pagination && totalPages > 1 && (
                     <div className={classes.pagination}>
                       <button
@@ -331,15 +432,6 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                 </>
               )}
             </>
-          )}
-
-          {activeTab === 'sql' && sql && (
-            <div className={classes.sql_content}>
-              <pre className={classes.sql_code}>
-                <code>{sql}</code>
-              </pre>
-              {sqlExplanation && <p className={classes.sql_explanation}>{sqlExplanation}</p>}
-            </div>
           )}
 
           {snackbar.visible && (

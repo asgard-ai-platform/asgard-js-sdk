@@ -4,18 +4,20 @@
   background: #585858;
   border-radius: 8px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .chart_header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  min-height: 36px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 44px;
 }
 
 .chart_title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: white;
 }
