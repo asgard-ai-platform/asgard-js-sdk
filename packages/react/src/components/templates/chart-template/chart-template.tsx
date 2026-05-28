@@ -6,7 +6,6 @@ import { Time } from '../time';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { VegaEmbed } from 'react-vega';
 import { VisualizationSpec } from 'vega-embed';
-import clsx from 'clsx';
 import classes from './chart-template.module.scss';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 
@@ -33,7 +32,7 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
     [option, template.chartOptions, options],
   );
 
-  const styles = useMemo<CSSProperties>(
+  const containerStyles = useMemo<CSSProperties>(
     () => ({
       color: botMessage?.color,
       backgroundColor: botMessage?.backgroundColor,
@@ -49,21 +48,22 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
       style={themeTemplate?.ChartMessageTemplate?.style}
     >
       <Avatar avatar={avatar} />
-      <div className={clsx(classes.text, classes['text--bot'])} style={styles}>
-        <div>{template.title}</div>
-        <div>{template.text}</div>
-      </div>
-      {options.length > 1 && (
-        <div className={classes.quick_replies_box}>
-          {options.map((option: { type: string; title: string; spec: Record<string, unknown> }) => (
-            <button key={option.type} className={classes.quick_reply} onClick={() => setOption(option.type)}>
-              {option.title}
-            </button>
-          ))}
-        </div>
-      )}
       <TemplateBoxContent quickReplies={template?.quickReplies} references={template?.references} message={message}>
-        <VegaEmbed spec={spec} />
+        <div className={classes.chart_container} style={containerStyles}>
+          <div className={classes.chart_header}>
+            {template.title && <span className={classes.chart_title}>{template.title}</span>}
+            {options.length > 1 && (
+              <select className={classes.chart_type_select} value={option} onChange={e => setOption(e.target.value)}>
+                {options.map((o: { type: string; title: string; spec: Record<string, unknown> }) => (
+                  <option key={o.type} value={o.type}>
+                    {o.title}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <VegaEmbed spec={spec} options={{ actions: false }} />
+        </div>
       </TemplateBoxContent>
       <Time className={classes.chart_time} time={message.time} />
     </TemplateBox>

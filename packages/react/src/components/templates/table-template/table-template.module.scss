@@ -1,12 +1,13 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   width: 100%;
   position: relative;
   background: #585858;
   color: white;
   border-radius: 8px;
+  overflow: hidden;
 }
 
 .header {
@@ -14,7 +15,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-radius: 8px 8px 0 0;
 }
 
 .title {
@@ -22,17 +22,23 @@
   font-weight: 600;
 }
 
+.download_buttons {
+  display: flex;
+  gap: 4px;
+}
+
 .download_button {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: 4px;
+  padding: 4px 8px;
   border: none;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.1);
   color: inherit;
   cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
   transition: background-color 0.2s;
 
   &:hover {
@@ -44,9 +50,36 @@
   }
 }
 
+.tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 12px;
+  gap: 0;
+}
+
+.tab {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+.tab_active {
+  color: white;
+  border-bottom-color: white;
+}
+
 .table_wrapper {
   overflow-x: auto;
-  border-radius: 8px;
 }
 
 .table {
@@ -60,11 +93,24 @@
 }
 
 .table_header_cell {
-  padding: 10px 12px;
+  padding: 8px 12px;
   text-align: left;
-  font-weight: 600;
   white-space: nowrap;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cell_header {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.cell_key {
+  display: block;
+  font-size: 11px;
+  opacity: 0.55;
+  font-weight: 400;
+  margin-top: 2px;
 }
 
 .table_row {
@@ -125,6 +171,37 @@
   opacity: 0.7;
 }
 
+.sql_content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sql_code {
+  margin: 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sql_explanation {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+}
+
 .time {
   justify-content: flex-end;
 }
@@ -159,6 +236,9 @@
   flex: 1;
   font-size: 13px;
   color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .snackbar_action {

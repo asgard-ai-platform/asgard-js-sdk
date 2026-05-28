@@ -11,6 +11,7 @@ import {
 import { Time } from '../time';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
+import clsx from 'clsx';
 import classes from './table-template.module.scss';
 
 interface TableTemplateProps {
@@ -84,9 +85,28 @@ function convertToCsv(
   return [headers, ...rows].join('\n');
 }
 
+function convertToJsonLines(
+  columns: TableColumn[],
+  data: Record<string, unknown>[] | unknown[][],
+  rowType: TableRowType,
+): string {
+  return data
+    .map(row => {
+      const obj: Record<string, unknown> = {};
+
+      columns.forEach((column, colIndex) => {
+        const key = column.key ?? column.header;
+        obj[key] = getCellValue(row, column, colIndex, rowType);
+      });
+
+      return JSON.stringify(obj);
+    })
+    .join('\n');
+}
+
 function DownloadIcon(): ReactNode {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -97,12 +117,13 @@ function DownloadIcon(): ReactNode {
 export function TableTemplate(props: TableTemplateProps): ReactNode {
   const { message } = props;
   const template = message.message.template as TableMessageTemplate;
-  const { table, title } = template;
+  const { table, title, sql, sqlExplanation } = template;
   const { columns, data, pagination, rowType } = table;
 
   const { template: themeTemplate, botMessage } = useAsgardThemeContext();
   const { avatar } = useAsgardContext();
 
+  const [activeTab, setActiveTab] = useState<'table' | 'sql'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     visible: false,
@@ -138,25 +159,37 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
     setCurrentPage(prev => Math.min(totalPages, prev + 1));
   };
 
-  const handleDownload = useCallback((): void => {
-    const csvContent = convertToCsv(columns, data, rowType);
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const blobUrl = URL.createObjectURL(blob);
+  const triggerDownload = useCallback(
+    (content: string, mimeType: string, extension: string): void => {
+      const BOM = extension === 'csv' ? '﻿' : '';
+      const blob = new Blob([BOM + content], { type: `${mimeType};charset=utf-8;` });
+      const blobUrl = URL.createObjectURL(blob);
 
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const safeTitle = (title || 'table').replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_');
-    const fileName = `${safeTitle}_${timestamp}.csv`;
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const safeTitle = (title || 'table').replace(/[^a-zA-Z0-9一-鿿]/g, '_');
+      const fileName = `${safeTitle}_${timestamp}.${extension}`;
 
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    setSnackbar({ visible: true, fileName, blobUrl });
-  }, [columns, data, rowType, title]);
+      setSnackbar({ visible: true, fileName, blobUrl });
+    },
+    [title],
+  );
+
+  const handleDownloadCsv = useCallback((): void => {
+    const content = convertToCsv(columns, data, rowType);
+    triggerDownload(content, 'text/csv', 'csv');
+  }, [columns, data, rowType, triggerDownload]);
+
+  const handleDownloadJsonl = useCallback((): void => {
+    const content = convertToJsonLines(columns, data, rowType);
+    triggerDownload(content, 'application/x-ndjson', 'jsonl');
+  }, [columns, data, rowType, triggerDownload]);
 
   const handleOpenFile = useCallback((): void => {
     if (snackbar.blobUrl) {
@@ -197,80 +230,121 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
           <div className={classes.header}>
             {title && <div className={classes.title}>{title}</div>}
             {data.length > 0 && (
-              <button
-                className={classes.download_button}
-                onClick={handleDownload}
-                aria-label="Download CSV"
-                title="Download CSV"
-              >
-                <DownloadIcon />
-              </button>
+              <div className={classes.download_buttons}>
+                <button
+                  className={classes.download_button}
+                  onClick={handleDownloadCsv}
+                  aria-label="Download CSV"
+                  title="Download CSV"
+                >
+                  <DownloadIcon /> CSV
+                </button>
+                <button
+                  className={classes.download_button}
+                  onClick={handleDownloadJsonl}
+                  aria-label="Download JSONL"
+                  title="Download JSON Lines"
+                >
+                  <DownloadIcon /> JSONL
+                </button>
+              </div>
             )}
           </div>
 
-          {data.length === 0 ? (
-            <div className={classes.empty_state}>No data available</div>
-          ) : (
+          {sql && (
+            <div className={classes.tabs}>
+              <button
+                className={clsx(classes.tab, activeTab === 'table' && classes.tab_active)}
+                onClick={() => setActiveTab('table')}
+              >
+                Table
+              </button>
+              <button
+                className={clsx(classes.tab, activeTab === 'sql' && classes.tab_active)}
+                onClick={() => setActiveTab('sql')}
+              >
+                SQL
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'table' && (
             <>
-              <div className={classes.table_wrapper}>
-                <table className={classes.table}>
-                  <thead className={classes.table_header}>
-                    <tr>
-                      {columns.map((column, index) => (
-                        <th key={index} className={classes.table_header_cell}>
-                          {column.header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedData.map((row, rowIndex) => (
-                      <tr key={rowIndex} className={classes.table_row}>
-                        {columns.map((column, colIndex) => {
-                          const rawValue = getCellValue(row, column, colIndex, rowType);
-                          const formattedValue = formatCellValue(rawValue, column.format);
+              {data.length === 0 ? (
+                <div className={classes.empty_state}>No data available</div>
+              ) : (
+                <>
+                  <div className={classes.table_wrapper}>
+                    <table className={classes.table}>
+                      <thead className={classes.table_header}>
+                        <tr>
+                          {columns.map((column, index) => (
+                            <th key={index} className={classes.table_header_cell}>
+                              <span className={classes.cell_header}>{column.header}</span>
+                              {column.key && <span className={classes.cell_key}>{column.key}</span>}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedData.map((row, rowIndex) => (
+                          <tr key={rowIndex} className={classes.table_row}>
+                            {columns.map((column, colIndex) => {
+                              const rawValue = getCellValue(row, column, colIndex, rowType);
+                              const formattedValue = formatCellValue(rawValue, column.format);
 
-                          return (
-                            <td key={colIndex} className={classes.table_cell}>
-                              {formattedValue}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              return (
+                                <td key={colIndex} className={classes.table_cell}>
+                                  {formattedValue}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-              {pagination && totalPages > 1 && (
-                <div className={classes.pagination}>
-                  <button
-                    className={classes.pagination_button}
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                    aria-label="Previous page"
-                  >
-                    &lt;
-                  </button>
-                  <span className={classes.pagination_info}>
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    className={classes.pagination_button}
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                    aria-label="Next page"
-                  >
-                    &gt;
-                  </button>
-                </div>
+                  {pagination && totalPages > 1 && (
+                    <div className={classes.pagination}>
+                      <button
+                        className={classes.pagination_button}
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                        aria-label="Previous page"
+                      >
+                        &lt;
+                      </button>
+                      <span className={classes.pagination_info}>
+                        {currentPage} / {totalPages}
+                      </span>
+                      <button
+                        className={classes.pagination_button}
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        aria-label="Next page"
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
 
+          {activeTab === 'sql' && sql && (
+            <div className={classes.sql_content}>
+              <pre className={classes.sql_code}>
+                <code>{sql}</code>
+              </pre>
+              {sqlExplanation && <p className={classes.sql_explanation}>{sqlExplanation}</p>}
+            </div>
+          )}
+
           {snackbar.visible && (
             <div className={classes.snackbar}>
-              <span className={classes.snackbar_text}>Downloaded</span>
+              <span className={classes.snackbar_text}>Downloaded: {snackbar.fileName}</span>
               <button className={classes.snackbar_action} onClick={handleOpenFile}>
                 Open
               </button>

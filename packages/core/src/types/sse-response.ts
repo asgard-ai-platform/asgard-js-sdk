@@ -85,6 +85,8 @@ export interface TableMessageTemplate extends MessageTemplate {
   type: MessageTemplateType.TABLE;
   title: string;
   table: TableData;
+  sql?: string;
+  sqlExplanation?: string;
 }
 
 export type ButtonAction =
