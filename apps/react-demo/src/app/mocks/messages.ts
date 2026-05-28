@@ -364,13 +364,36 @@ export function createChartTemplateExample(): ConversationMessage {
               },
             ],
           },
-          type: '',
-          title: '',
+          type: 'bar',
+          title: '堆疊長條圖',
+        },
+        {
+          spec: {
+            $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+            description: 'A simple pie chart.',
+            width: 300,
+            height: 200,
+            data: {
+              values: [
+                { category: '外部廠商', value: 31 },
+                { category: '楊*閔', value: 32 },
+                { category: '張*麟', value: 25 },
+                { category: '蔣*安', value: 17 },
+              ],
+            },
+            mark: 'arc',
+            encoding: {
+              theta: { field: 'value', type: 'quantitative' },
+              color: { field: 'category', type: 'nominal' },
+            },
+          },
+          type: 'pie',
+          title: '圓餅圖',
         },
       ],
       defaultChart: 'bar',
       text: '好的，這邊已經為您整理出圖表。',
-      title: '好的，這邊已經為您整理出圖表。',
+      title: '各工作站新增數量統計',
       type: MessageTemplateType.CHART,
     },
   });
@@ -488,6 +511,18 @@ export function createTableTemplateExample(): ConversationMessage {
       ],
     },
     quickReplies: [{ text: '查看更多統計' }, { text: '匯出報表' }],
+    sql: `SELECT
+  s.salesperson_id,
+  s.salesperson_name,
+  SUM(o.total_sales_ntd) AS total_sales_ntd,
+  SUM(o.total_gross_profit) AS total_gross_profit,
+  COUNT(o.sales_count) AS sales_count
+FROM salespeople s
+LEFT JOIN orders o ON s.salesperson_id = o.salesperson_id
+GROUP BY s.salesperson_id, s.salesperson_name
+ORDER BY total_sales_ntd DESC`,
+    sqlExplanation:
+      '此查詢從 salespeople 資料表聯結 orders，統計每位業務員的總銷售額、毛利及訂單數，並依銷售額降冪排序。',
   };
 
   return createBaseTemplateExample({
