@@ -46,12 +46,15 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
   }, []);
 
   const responsiveSpec = useMemo<VisualizationSpec>(() => {
-    if (!chartWidth) return spec;
-
     const cloned = JSON.parse(JSON.stringify(spec)) as Record<string, unknown>;
 
-    cloned.width = chartWidth;
-    cloned.autosize = { type: 'fit', resize: true, contains: 'padding' };
+    // Data Insight 要求圖表固定白色背景，避免在深色主題下軸標等文字不可讀。
+    cloned.background = '#ffffff';
+
+    if (chartWidth) {
+      cloned.width = chartWidth;
+      cloned.autosize = { type: 'fit', resize: true, contains: 'padding' };
+    }
 
     return cloned as unknown as VisualizationSpec;
   }, [spec, chartWidth]);

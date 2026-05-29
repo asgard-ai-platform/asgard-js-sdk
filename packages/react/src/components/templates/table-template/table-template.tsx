@@ -19,6 +19,8 @@ interface TableTemplateProps {
 
 type TableTab = 'table' | 'sql';
 
+type DownloadFormat = 'csv' | 'jsonl';
+
 interface SnackbarState {
   visible: boolean;
   fileName: string;
@@ -86,6 +88,48 @@ function convertToCsv(
   return [headers, ...rows].join('\n');
 }
 
+function convertToJsonLines(
+  columns: TableColumn[],
+  data: Record<string, unknown>[] | unknown[][],
+  rowType: TableRowType,
+): string {
+  return data
+    .map(row => {
+      const obj: Record<string, unknown> = {};
+
+      columns.forEach((column, colIndex) => {
+        const key = column.key ?? column.header;
+
+        obj[key] = getCellValue(row, column, colIndex, rowType);
+      });
+
+      return JSON.stringify(obj);
+    })
+    .join('\n');
+}
+
+function getPageItems(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const items: (number | 'ellipsis')[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+
+  if (start > 2) items.push('ellipsis');
+
+  for (let page = start; page <= end; page++) {
+    items.push(page);
+  }
+
+  if (end < total - 1) items.push('ellipsis');
+
+  items.push(total);
+
+  return items;
+}
+
 function DownloadIcon(): ReactNode {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -107,6 +151,7 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
   const { template: themeTemplate, botMessage } = useAsgardThemeContext();
 
   const [activeTab, setActiveTab] = useState<TableTab>('table');
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     visible: false,
@@ -142,25 +187,32 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
     setCurrentPage(prev => Math.min(totalPages, prev + 1));
   };
 
-  const handleDownload = useCallback((): void => {
-    const csvContent = convertToCsv(columns, data, rowType);
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const blobUrl = URL.createObjectURL(blob);
+  const handleDownload = useCallback(
+    (format: DownloadFormat): void => {
+      const content =
+        format === 'jsonl'
+          ? convertToJsonLines(columns, data, rowType)
+          : `\uFEFF${convertToCsv(columns, data, rowType)}`;
+      const mimeType = format === 'jsonl' ? 'application/x-ndjson;charset=utf-8;' : 'text/csv;charset=utf-8;';
+      const blob = new Blob([content], { type: mimeType });
+      const blobUrl = URL.createObjectURL(blob);
 
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const safeTitle = (title || 'table').replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_');
-    const fileName = `${safeTitle}_${timestamp}.csv`;
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const safeTitle = (title || 'table').replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_');
+      const fileName = `${safeTitle}_${timestamp}.${format}`;
 
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    setSnackbar({ visible: true, fileName, blobUrl });
-  }, [columns, data, rowType, title]);
+      setDownloadMenuOpen(false);
+      setSnackbar({ visible: true, fileName, blobUrl });
+    },
+    [columns, data, rowType, title],
+  );
 
   const handleOpenFile = useCallback((): void => {
     if (snackbar.blobUrl) {
@@ -221,14 +273,39 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
           <div className={classes.header}>
             {title && <div className={classes.title}>{title}</div>}
             {activeTab === 'table' && data.length > 0 && (
-              <button
-                className={classes.download_button}
-                onClick={handleDownload}
-                aria-label="Download CSV"
-                title="Download CSV"
-              >
-                <DownloadIcon />
-              </button>
+              <div className={classes.download}>
+                <button
+                  className={classes.download_button}
+                  onClick={() => setDownloadMenuOpen(prev => !prev)}
+                  aria-label="Download"
+                  aria-haspopup="menu"
+                  aria-expanded={downloadMenuOpen}
+                  title="Download"
+                >
+                  <DownloadIcon />
+                </button>
+                {downloadMenuOpen && (
+                  <>
+                    <div className={classes.download_backdrop} onClick={() => setDownloadMenuOpen(false)} />
+                    <div className={classes.download_menu} role="menu">
+                      <button
+                        className={classes.download_menu_item}
+                        role="menuitem"
+                        onClick={() => handleDownload('csv')}
+                      >
+                        CSV
+                      </button>
+                      <button
+                        className={classes.download_menu_item}
+                        role="menuitem"
+                        onClick={() => handleDownload('jsonl')}
+                      >
+                        JSON Lines
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -294,9 +371,25 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                   >
                     &lt;
                   </button>
-                  <span className={classes.pagination_info}>
-                    {currentPage} / {totalPages}
-                  </span>
+                  {getPageItems(currentPage, totalPages).map((item, index) =>
+                    item === 'ellipsis' ? (
+                      <span key={`ellipsis-${index}`} className={classes.pagination_ellipsis}>
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={item}
+                        className={clsx(
+                          classes.pagination_page,
+                          item === currentPage && classes['pagination_page--active'],
+                        )}
+                        onClick={() => setCurrentPage(item)}
+                        aria-current={item === currentPage ? 'page' : undefined}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
                   <button
                     className={classes.pagination_button}
                     onClick={handleNextPage}
