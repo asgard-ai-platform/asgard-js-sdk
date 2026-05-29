@@ -79,6 +79,8 @@ export interface TableData {
   columns: TableColumn[];
   pagination: TablePagination | null;
   data: Record<string, unknown>[] | unknown[][];
+  sql?: string;
+  sqlExplanation?: string;
 }
 
 export interface TableMessageTemplate extends MessageTemplate {

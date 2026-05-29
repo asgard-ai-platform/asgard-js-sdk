@@ -11,11 +11,15 @@ import {
 import { Time } from '../time';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
+import { StreamdownClient } from '../text-template/streamdown-client';
+import clsx from 'clsx';
 import classes from './table-template.module.scss';
 
 interface TableTemplateProps {
   message: ConversationBotMessage;
 }
+
+type TableTab = 'table' | 'sql';
 
 interface SnackbarState {
   visible: boolean;
@@ -98,11 +102,14 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
   const { message } = props;
   const template = message.message.template as TableMessageTemplate;
   const { table, title } = template;
-  const { columns, data, pagination, rowType } = table;
+  const { columns, data, pagination, rowType, sql, sqlExplanation } = table;
+
+  const hasSql = Boolean(sql || sqlExplanation);
 
   const { template: themeTemplate, botMessage } = useAsgardThemeContext();
   const { avatar } = useAsgardContext();
 
+  const [activeTab, setActiveTab] = useState<TableTab>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     visible: false,
@@ -194,9 +201,30 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
       <Avatar avatar={avatar} />
       <TemplateBoxContent quickReplies={template?.quickReplies}>
         <div className={classes.container} style={styles}>
+          {hasSql && (
+            <div className={classes.tabs} role="tablist">
+              <button
+                className={clsx(classes.tab, activeTab === 'table' && classes['tab--active'])}
+                role="tab"
+                aria-selected={activeTab === 'table'}
+                onClick={() => setActiveTab('table')}
+              >
+                Table
+              </button>
+              <button
+                className={clsx(classes.tab, activeTab === 'sql' && classes['tab--active'])}
+                role="tab"
+                aria-selected={activeTab === 'sql'}
+                onClick={() => setActiveTab('sql')}
+              >
+                SQL
+              </button>
+            </div>
+          )}
+
           <div className={classes.header}>
             {title && <div className={classes.title}>{title}</div>}
-            {data.length > 0 && (
+            {activeTab === 'table' && data.length > 0 && (
               <button
                 className={classes.download_button}
                 onClick={handleDownload}
@@ -208,7 +236,20 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
             )}
           </div>
 
-          {data.length === 0 ? (
+          {activeTab === 'sql' ? (
+            <div className={classes.sql_view}>
+              {sql && (
+                <div className={classes.sql_block}>
+                  <StreamdownClient>{`\`\`\`sql\n${sql}\n\`\`\``}</StreamdownClient>
+                </div>
+              )}
+              {sqlExplanation && (
+                <div className={classes.sql_explanation}>
+                  <StreamdownClient>{sqlExplanation}</StreamdownClient>
+                </div>
+              )}
+            </div>
+          ) : data.length === 0 ? (
             <div className={classes.empty_state}>No data available</div>
           ) : (
             <>
@@ -218,7 +259,12 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                     <tr>
                       {columns.map((column, index) => (
                         <th key={index} className={classes.table_header_cell}>
-                          {column.header}
+                          <div className={classes.header_cell_content}>
+                            <span className={classes.header_label}>{column.header}</span>
+                            {rowType === 'OBJECT' && column.key && (
+                              <span className={classes.header_key}>{column.key}</span>
+                            )}
+                          </div>
                         </th>
                       ))}
                     </tr>

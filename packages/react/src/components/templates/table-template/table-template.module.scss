@@ -6,7 +6,40 @@
   position: relative;
   background: #585858;
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.tab {
+  padding: 10px 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity 0.2s,
+    border-color 0.2s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.tab--active {
+  opacity: 1;
+  border-bottom-color: currentColor;
 }
 
 .header {
@@ -67,6 +100,23 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.header_cell_content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header_label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.header_key {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.55;
+}
+
 .table_row {
   &:hover {
     background: rgba(255, 255, 255, 0.05);
@@ -123,6 +173,26 @@
   text-align: center;
   font-size: 13px;
   opacity: 0.7;
+}
+
+.sql_view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 12px;
+  font-size: 13px;
+}
+
+.sql_block {
+  overflow-x: auto;
+}
+
+.sql_explanation {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: 0.85;
 }
 
 .time {

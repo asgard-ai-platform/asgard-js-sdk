@@ -1,52 +1,61 @@
-.text {
-  display: inline-block;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: white;
-  word-break: break-all;
-
-  > span {
-    word-break: break-all;
-  }
-
-  .md_container {
-    display: inline-block;
-
-    p {
-      margin: 0;
-    }
-  }
-}
-
-.text--user {
-  max-width: 75%;
-  background: #4767eb;
-  border-top-right-radius: 0;
-}
-
-.text--bot {
-  max-width: 70%;
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
   background: #585858;
-  border-top-left-radius: 0;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title_box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.description {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.chart_select {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.chart_wrapper {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .chart_time {
   justify-content: flex-end;
-}
-
-.quick_replies_box {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.quick_reply {
-  font: inherit;
-  font-size: 13px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  border: 1px solid #434343;
-  background: rgba(88, 88, 88, 0.2);
-  color: white;
-  cursor: pointer;
 }
