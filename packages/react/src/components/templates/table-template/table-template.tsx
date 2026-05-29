@@ -114,6 +114,47 @@ function DownloadIcon(): ReactNode {
   );
 }
 
+function ChevronLeft(): ReactNode {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function ChevronRight(): ReactNode {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function getPaginationPages(currentPage: number, totalPages: number): (number | '...')[] {
+  const maxVisible = 5;
+  const half = Math.floor(maxVisible / 2);
+  const start = Math.max(1, currentPage - half);
+  const end = Math.min(totalPages, currentPage + half);
+  const visible = Array.from({ length: end - start + 1 }, (_, i) => i + start);
+
+  const pages: (number | '...')[] = [];
+
+  if (visible[0] !== 1) {
+    pages.push(1);
+    if (visible[0] !== 2) pages.push('...');
+  }
+
+  pages.push(...visible);
+
+  if (visible[visible.length - 1] !== totalPages) {
+    if (visible[visible.length - 1] !== totalPages - 1) pages.push('...');
+
+    pages.push(totalPages);
+  }
+
+  return pages;
+}
+
 export function TableTemplate(props: TableTemplateProps): ReactNode {
   const { message } = props;
   const template = message.message.template as TableMessageTemplate;
@@ -311,18 +352,34 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                             disabled={currentPage === 1}
                             aria-label="Previous page"
                           >
-                            &lt;
+                            <ChevronLeft />
                           </button>
-                          <span className={classes.pagination_info}>
-                            {currentPage} / {totalPages}
-                          </span>
+                          {getPaginationPages(currentPage, totalPages).map((page, i) =>
+                            page === '...' ? (
+                              <span key={`ellipsis-${i}`} className={classes.pagination_ellipsis}>
+                                ···
+                              </span>
+                            ) : (
+                              <button
+                                key={page}
+                                className={clsx(
+                                  classes.pagination_button,
+                                  page === currentPage && classes.pagination_button_active,
+                                )}
+                                onClick={() => setCurrentPage(page)}
+                                aria-current={page === currentPage ? 'page' : undefined}
+                              >
+                                {page}
+                              </button>
+                            ),
+                          )}
                           <button
                             className={classes.pagination_button}
                             onClick={handleNextPage}
                             disabled={currentPage === totalPages}
                             aria-label="Next page"
                           >
-                            &gt;
+                            <ChevronRight />
                           </button>
                         </div>
                       )}
@@ -414,18 +471,34 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
                         disabled={currentPage === 1}
                         aria-label="Previous page"
                       >
-                        &lt;
+                        <ChevronLeft />
                       </button>
-                      <span className={classes.pagination_info}>
-                        {currentPage} / {totalPages}
-                      </span>
+                      {getPaginationPages(currentPage, totalPages).map((page, i) =>
+                        page === '...' ? (
+                          <span key={`ellipsis-${i}`} className={classes.pagination_ellipsis}>
+                            ···
+                          </span>
+                        ) : (
+                          <button
+                            key={page}
+                            className={clsx(
+                              classes.pagination_button,
+                              page === currentPage && classes.pagination_button_active,
+                            )}
+                            onClick={() => setCurrentPage(page)}
+                            aria-current={page === currentPage ? 'page' : undefined}
+                          >
+                            {page}
+                          </button>
+                        ),
+                      )}
                       <button
                         className={classes.pagination_button}
                         onClick={handleNextPage}
                         disabled={currentPage === totalPages}
                         aria-label="Next page"
                       >
-                        &gt;
+                        <ChevronRight />
                       </button>
                     </div>
                   )}
