@@ -1,6 +1,5 @@
 import { ReactNode, useMemo, useState, CSSProperties, useCallback, useEffect } from 'react';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
-import { Avatar } from '../avatar';
 import {
   ConversationBotMessage,
   TableMessageTemplate,
@@ -9,7 +8,6 @@ import {
   TableRowType,
 } from '@asgard-js/core';
 import { Time } from '../time';
-import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { StreamdownClient } from '../text-template/streamdown-client';
 import clsx from 'clsx';
@@ -107,7 +105,6 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
   const hasSql = Boolean(sql || sqlExplanation);
 
   const { template: themeTemplate, botMessage } = useAsgardThemeContext();
-  const { avatar } = useAsgardContext();
 
   const [activeTab, setActiveTab] = useState<TableTab>('table');
   const [currentPage, setCurrentPage] = useState(1);
@@ -198,7 +195,6 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
       direction="vertical"
       style={themeTemplate?.TableMessageTemplate?.style}
     >
-      <Avatar avatar={avatar} />
       <TemplateBoxContent quickReplies={template?.quickReplies}>
         <div className={classes.container} style={styles}>
           {hasSql && (

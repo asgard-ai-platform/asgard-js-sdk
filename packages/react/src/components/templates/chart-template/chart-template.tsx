@@ -1,9 +1,7 @@
 import { ReactNode, useMemo, useState, useRef, useEffect, CSSProperties } from 'react';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
-import { Avatar } from '../avatar';
 import { ConversationBotMessage, ChartMessageTemplate } from '@asgard-js/core';
 import { Time } from '../time';
-import { useAsgardContext } from '../../../context/asgard-service-context';
 import { VegaEmbed } from 'react-vega';
 import { VisualizationSpec } from 'vega-embed';
 import classes from './chart-template.module.scss';
@@ -18,7 +16,6 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
   const template = message.message.template as ChartMessageTemplate;
 
   const { template: themeTemplate, botMessage } = useAsgardThemeContext();
-  const { avatar } = useAsgardContext();
 
   const [option, setOption] = useState(template?.defaultChart ?? template?.chartOptions?.[0]?.type);
 
@@ -74,7 +71,6 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
       direction="vertical"
       style={themeTemplate?.ChartMessageTemplate?.style}
     >
-      <Avatar avatar={avatar} />
       <TemplateBoxContent quickReplies={template?.quickReplies} references={template?.references} message={message}>
         <div className={classes.container} style={styles}>
           <div className={classes.header}>
