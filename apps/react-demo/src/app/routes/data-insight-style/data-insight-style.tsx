@@ -20,6 +20,10 @@ const exampleCreators: Record<ExampleType, () => ReturnType<typeof createDataIns
 // 近似 Data Insight（Mimir）的深色主題，用來目視比對樣式是否對齊。
 const dataInsightTheme: ChatbotTheme = {
   chatbot: {
+    // 讓 chatbot 填滿較寬的容器，模擬整合進 Data Insight（其聊天面板為 w-full）後的寬度。
+    width: '100%',
+    maxWidth: '100%',
+    height: '100%',
     backgroundColor: '#141414',
     borderColor: '#434343',
     inactiveColor: '#8c8c8c',
