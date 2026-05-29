@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { Home } from './routes/home';
 import { Templates } from './routes/templates';
+import { DataInsightStyle } from './routes/data-insight-style';
 import { Features } from './routes/features';
 import { Theme } from './routes/theme';
 import { Auth } from './routes/auth';
@@ -31,6 +32,7 @@ export function App(): React.ReactElement {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/templates" element={<Templates />} />
+        <Route path="/data-insight-style" element={<DataInsightStyle />} />
         <Route path="/features" element={<Features />} />
         <Route path="/theme" element={<Theme />} />
         <Route path="/auth" element={<Auth />} />

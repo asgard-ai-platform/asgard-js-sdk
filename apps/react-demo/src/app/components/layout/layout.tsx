@@ -9,6 +9,7 @@ interface LayoutProps {
 const navItems = [
   { to: '/', label: 'Home' },
   { to: '/templates', label: 'Templates' },
+  { to: '/data-insight-style', label: 'Data Insight Style' },
   { to: '/features', label: 'Features' },
   { to: '/theme', label: 'Theme' },
   { to: '/auth', label: 'Auth' },

@@ -1,0 +1,76 @@
+import { ReactNode, useState } from 'react';
+import { Chatbot, ChatbotTheme } from '@asgard-js/react';
+import '@asgard-js/react/style';
+import { DemoWrapper } from '../../components/demo-wrapper';
+import { createDataInsightTableExample, createDataInsightChartExample } from '../../mocks/data-insight-templates';
+import styles from './data-insight-style.module.scss';
+
+type ExampleType = 'table' | 'chart';
+
+const exampleOptions: { value: ExampleType; label: string }[] = [
+  { value: 'table', label: 'TABLE (Table / SQL)' },
+  { value: 'chart', label: 'CHART (長條圖 / 折線圖)' },
+];
+
+const exampleCreators: Record<ExampleType, () => ReturnType<typeof createDataInsightTableExample>> = {
+  table: createDataInsightTableExample,
+  chart: createDataInsightChartExample,
+};
+
+// 近似 Data Insight（Mimir）的深色主題，用來目視比對樣式是否對齊。
+const dataInsightTheme: ChatbotTheme = {
+  chatbot: {
+    backgroundColor: '#141414',
+    borderColor: '#434343',
+    inactiveColor: '#8c8c8c',
+    primaryComponent: {
+      mainColor: '#ef4444',
+      secondaryColor: '#ffffff',
+    },
+  },
+  botMessage: {
+    color: '#ffffff',
+    backgroundColor: '#1f1f1f',
+  },
+  userMessage: {
+    color: '#ffffff',
+    backgroundColor: '#ef4444',
+  },
+};
+
+export function DataInsightStyle(): ReactNode {
+  const [selected, setSelected] = useState<ExampleType>('table');
+  const initMessages = [exampleCreators[selected]()];
+
+  return (
+    <DemoWrapper
+      title="Data Insight Style"
+      description="驗證 TABLE / CHART 模板對齊 Data Insight 風格（ClickUp 86exrpun9）。使用 Data Insight 測試 response 的資料。"
+    >
+      <div className={styles.controls}>
+        <h3>Select Example</h3>
+        <div className={styles.buttons}>
+          {exampleOptions.map(option => (
+            <button
+              key={option.value}
+              className={`${styles.button} ${selected === option.value ? styles.active : ''}`}
+              onClick={() => setSelected(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.chatbotContainer}>
+        <Chatbot
+          title="業務員業績排名"
+          config={{ botProviderEndpoint: 'skip' }}
+          customChannelId="data-insight-style-demo"
+          theme={dataInsightTheme}
+          initMessages={initMessages}
+        />
+      </div>
+    </DemoWrapper>
+  );
+}
