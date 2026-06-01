@@ -44,7 +44,22 @@ const dataInsightTheme: ChatbotTheme = {
 
 export function DataInsightStyle(): ReactNode {
   const [selected, setSelected] = useState<ExampleType>('table');
+  const [showCreateView, setShowCreateView] = useState(true);
   const initMessages = [exampleCreators[selected]()];
+
+  // 模擬 Data Insight 透過 renderTemplateHeaderActions 注入自己的「Create View」按鈕。
+  // 按鈕的樣式與邏輯都留在嵌入端（這裡的 demo），SDK 只負責在 header 留位子。
+  const renderTemplateHeaderActions = showCreateView
+    ? (): ReactNode => (
+        <button
+          type="button"
+          className={styles.createViewBtn}
+          onClick={() => console.log('[demo] Create View clicked')}
+        >
+          Create View
+        </button>
+      )
+    : undefined;
 
   return (
     <DemoWrapper
@@ -64,6 +79,10 @@ export function DataInsightStyle(): ReactNode {
             </button>
           ))}
         </div>
+        <label className={styles.toggle}>
+          <input type="checkbox" checked={showCreateView} onChange={e => setShowCreateView(e.target.checked)} />
+          注入 Create View 按鈕（header slot）
+        </label>
       </div>
 
       <div className={styles.chatbotContainer}>
@@ -73,6 +92,7 @@ export function DataInsightStyle(): ReactNode {
           customChannelId="data-insight-style-demo"
           theme={dataInsightTheme}
           initMessages={initMessages}
+          renderTemplateHeaderActions={renderTemplateHeaderActions}
         />
       </div>
     </DemoWrapper>
