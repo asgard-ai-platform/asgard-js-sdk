@@ -1,5 +1,10 @@
 import { createContext, FC, PropsWithChildren, ReactNode, useContext, useMemo } from 'react';
-import { ConversationBotMessage, ConversationErrorMessage, ConversationMessage } from '@asgard-js/core';
+import {
+  ConversationBotMessage,
+  ConversationErrorMessage,
+  ConversationMessage,
+  MessageTemplateType,
+} from '@asgard-js/core';
 import { ToolCallItemData } from '../components/templates';
 
 /**
@@ -43,6 +48,21 @@ export interface ToolCallGroupRendererProps {
   renderDefaultContent: (overrides?: { title?: string }) => ReactNode;
 }
 
+/**
+ * Props passed to the template header actions renderer function.
+ *
+ * Lets the embedding app inject custom buttons into the TABLE / CHART template
+ * header (e.g. Data Insight's "Create View"). The button's styling and logic
+ * stay in the embedding app — the SDK only reserves the slot. Optional: return
+ * a falsy value to render nothing.
+ */
+export interface TemplateHeaderActionsRendererProps {
+  /** The bot message whose template is being rendered */
+  message: ConversationBotMessage;
+  /** The template type currently rendering the header (TABLE or CHART) */
+  templateType: MessageTemplateType;
+}
+
 export interface AsgardTemplateContextValue {
   onErrorClick?: (message: ConversationErrorMessage) => void;
   errorMessageRenderer?: (message: ConversationErrorMessage) => ReactNode;
@@ -56,6 +76,8 @@ export interface AsgardTemplateContextValue {
   renderMessageContent?: (props: MessageContentRendererProps) => ReactNode;
   /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
   renderToolCallGroup?: (props: ToolCallGroupRendererProps) => ReactNode;
+  /** Optional renderer for extra buttons in TABLE / CHART template headers. Rendered before the built-in controls (chart-type select / download). Return falsy to render nothing. */
+  renderTemplateHeaderActions?: (props: TemplateHeaderActionsRendererProps) => ReactNode;
 }
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
@@ -67,6 +89,7 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   onMessageAction: undefined,
   renderMessageContent: undefined,
   renderToolCallGroup: undefined,
+  renderTemplateHeaderActions: undefined,
 });
 
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
@@ -78,6 +101,7 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   onMessageAction?: (actionId: string, message: ConversationBotMessage) => void;
   renderMessageContent?: (props: MessageContentRendererProps) => ReactNode;
   renderToolCallGroup?: (props: ToolCallGroupRendererProps) => ReactNode;
+  renderTemplateHeaderActions?: (props: TemplateHeaderActionsRendererProps) => ReactNode;
 }
 
 export function AsgardTemplateContextProvider(props: AsgardTemplateContextProviderProps): ReactNode {
@@ -91,6 +115,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
     onMessageAction,
     renderMessageContent,
     renderToolCallGroup,
+    renderTemplateHeaderActions,
   } = props;
 
   const contextValue = useMemo(
@@ -103,6 +128,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       onMessageAction,
       renderMessageContent,
       renderToolCallGroup,
+      renderTemplateHeaderActions,
     }),
     [
       errorMessageRenderer,
@@ -113,6 +139,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       onMessageAction,
       renderMessageContent,
       renderToolCallGroup,
+      renderTemplateHeaderActions,
     ],
   );
 

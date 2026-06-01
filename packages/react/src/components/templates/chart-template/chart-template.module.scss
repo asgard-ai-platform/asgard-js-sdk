@@ -35,6 +35,15 @@
   opacity: 0.75;
 }
 
+.top_bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 28px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .chart_select {
   flex-shrink: 0;
   font: inherit;

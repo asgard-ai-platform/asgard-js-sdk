@@ -6,9 +6,11 @@ import {
   TableColumn,
   TableColumnFormat,
   TableRowType,
+  MessageTemplateType,
 } from '@asgard-js/core';
 import { Time } from '../time';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
+import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import { StreamdownClient } from '../text-template/streamdown-client';
 import clsx from 'clsx';
 import classes from './table-template.module.scss';
@@ -149,6 +151,9 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
   const hasSql = Boolean(sql || sqlExplanation);
 
   const { template: themeTemplate, botMessage } = useAsgardThemeContext();
+  const { renderTemplateHeaderActions } = useAsgardTemplateContext();
+
+  const headerActions = renderTemplateHeaderActions?.({ message, templateType: MessageTemplateType.TABLE });
 
   const [activeTab, setActiveTab] = useState<TableTab>('table');
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
@@ -249,24 +254,29 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
     >
       <TemplateBoxContent quickReplies={template?.quickReplies}>
         <div className={classes.container} style={styles}>
-          {hasSql && (
-            <div className={classes.tabs} role="tablist">
-              <button
-                className={clsx(classes.tab, activeTab === 'table' && classes['tab--active'])}
-                role="tab"
-                aria-selected={activeTab === 'table'}
-                onClick={() => setActiveTab('table')}
-              >
-                Table
-              </button>
-              <button
-                className={clsx(classes.tab, activeTab === 'sql' && classes['tab--active'])}
-                role="tab"
-                aria-selected={activeTab === 'sql'}
-                onClick={() => setActiveTab('sql')}
-              >
-                SQL
-              </button>
+          {(hasSql || headerActions) && (
+            <div className={classes.tabs} role={hasSql ? 'tablist' : undefined}>
+              {hasSql && (
+                <>
+                  <button
+                    className={clsx(classes.tab, activeTab === 'table' && classes['tab--active'])}
+                    role="tab"
+                    aria-selected={activeTab === 'table'}
+                    onClick={() => setActiveTab('table')}
+                  >
+                    Table
+                  </button>
+                  <button
+                    className={clsx(classes.tab, activeTab === 'sql' && classes['tab--active'])}
+                    role="tab"
+                    aria-selected={activeTab === 'sql'}
+                    onClick={() => setActiveTab('sql')}
+                  >
+                    SQL
+                  </button>
+                </>
+              )}
+              {headerActions && <div className={classes.tabs_actions}>{headerActions}</div>}
             </div>
           )}
 

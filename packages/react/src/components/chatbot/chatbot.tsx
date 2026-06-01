@@ -139,6 +139,14 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
   renderToolCallGroup?: AsgardTemplateContextValue['renderToolCallGroup'];
 
+  /**
+   * Optional renderer for extra buttons in TABLE / CHART template headers
+   * (e.g. Data Insight's "Create View"). Rendered on the header's right side,
+   * before the built-in controls (chart-type select / download). The button's
+   * styling and logic stay in your app; return a falsy value to render nothing.
+   */
+  renderTemplateHeaderActions?: AsgardTemplateContextValue['renderTemplateHeaderActions'];
+
   /** Whether to automatically reset channel on mount. Defaults to true. When false, the channel is created without sending RESET_CHANNEL, allowing history messages to be preserved via initMessages. */
   autoResetChannel?: boolean;
 
@@ -194,6 +202,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     footerEndActions,
     renderFooter,
     renderToolCallGroup,
+    renderTemplateHeaderActions,
     autoResetChannel,
     userIdentityHint,
   } = props;
@@ -330,6 +339,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               onMessageAction={onMessageAction}
               renderMessageContent={renderMessageContent}
               renderToolCallGroup={renderToolCallGroup}
+              renderTemplateHeaderActions={renderTemplateHeaderActions}
             >
               <ChatbotBody />
             </AsgardTemplateContextProvider>

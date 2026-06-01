@@ -40,6 +40,14 @@
   border-bottom-color: currentColor;
 }
 
+.tabs_actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 6px 0;
+}
+
 .header {
   display: flex;
   align-items: center;
