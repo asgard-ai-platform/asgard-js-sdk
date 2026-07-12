@@ -18,6 +18,10 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
   return new Observable<SseResponse<EventType>>(subscriber => {
     const controller = new AbortController();
     let currentTraceId: string | undefined;
+    // Whether the stream has produced a cursor yet (an event carrying `id:`). Once it has,
+    // a mid-stream drop can be resumed natively via Last-Event-ID; before it, a failure must
+    // not trigger a blind reconnect/re-POST (the backend would re-dispatch the run). See F-002.
+    let hasCursor = false;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -70,6 +74,12 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
         }
       },
       onmessage: (esm: EventSourceMessage) => {
+        // fetch-event-source tracks the last `id:` internally and replays it as the
+        // `Last-Event-ID` header on native reconnect; we only track whether one exists.
+        if (esm.id) {
+          hasCursor = true;
+        }
+
         const data = JSON.parse(esm.data) as SseResponse<EventType>;
 
         if (currentTraceId) {
@@ -87,6 +97,14 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
         subscriber.complete();
       },
       onerror: err => {
+        // With a cursor already established, let fetch-event-source reconnect natively
+        // (it replays `Last-Event-ID` and honors the server's `retry:`); returning here
+        // means "retry", so the mid-stream drop is resumed transparently. (UC-003)
+        if (hasCursor) return;
+
+        // No cursor yet (pre-200, or no `id:` received): surface the error and stop.
+        // Do NOT reconnect/re-POST — an empty-cursor POST makes the backend re-dispatch
+        // the run (duplicate). The caller decides whether to retry. (UC-004)
         subscriber.error(err);
         controller.abort();
         throw err;

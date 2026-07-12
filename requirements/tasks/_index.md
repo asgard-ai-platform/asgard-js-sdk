@@ -29,11 +29,13 @@ None yet.
 
 ## ▶ Next Task
 
-None — awaiting task selection.
+Batch 1 done — F-011 (BUILD-001/REVIEW-001) + F-002 (BUILD-002/REVIEW-002) all `done`, uncommitted on `fix/f-011-message-stream-robustness`. Next: **Batch 2 → F-001** (thinking message 顯示) — awaiting go.
 
 ## Task Queue
 
-| Task ID | Title | Priority | Status | Spec |
-| ------- | ----- | -------- | ------ | ---- |
-
-尚無任務 / none yet.
+| Task ID      | Title                                          | Priority | Status | Spec                                                                                 |
+| ------------ | ---------------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------ |
+| `BUILD-001`  | Message Stream Assembly Robustness (F-011)     | High     | done   | [BUILD-001-message-stream-robustness.md](./BUILD-001-message-stream-robustness.md)   |
+| `REVIEW-001` | Review: Message Stream Assembly Robustness     | —        | done   | [REVIEW-001-message-stream-robustness.md](./REVIEW-001-message-stream-robustness.md) |
+| `BUILD-002`  | Last-Event-ID Resume — core enablement (F-002) | High     | done   | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)             |
+| `REVIEW-002` | Review: Last-Event-ID Resume                   | —        | done   | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)           |

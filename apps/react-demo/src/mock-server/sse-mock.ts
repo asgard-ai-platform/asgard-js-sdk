@@ -1,6 +1,12 @@
 // 本地 mock SSE handler,給 Vite dev server 用。
 // 攔截 POST `/mock-asgard/message/sse`,回傳一段預設好的 streaming bot reply,
 // 不接真實 Asgard backend,純測 SDK 的 send-message + streaming scroll 行為。
+//
+// F-002 續傳驗證:
+// - 每筆 delta 帶 `id: <messageId>:<idx>` cursor。
+// - 收到帶 `Last-Event-ID` header 的請求(fetch-event-source 原生重連)→ 從 cursor 續傳同一則 messageId。
+// - 使用者訊息含「斷線 / 續傳 / drop / resume」→ 串到一半 `res.destroy()` 模擬中途斷線,觸發原生重連。
+// - 使用者訊息含「fail / no-cursor」→ 200 前回 500,模擬 UC-004 無 cursor 失敗(surface、不重送)。
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 
@@ -71,7 +77,11 @@ const REPLY_CHUNKS = [
   '時被換成 final template。',
 ];
 
-function writeEvent(res: ServerResponse, event: object): void {
+function writeEvent(res: ServerResponse, event: object, id?: string): void {
+  if (id) {
+    res.write(`id: ${id}\n`);
+  }
+
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
@@ -96,6 +106,12 @@ function emptyFact(): Record<string, unknown> {
   };
 }
 
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream',
+  'Cache-Control': 'no-cache, no-transform',
+  Connection: 'keep-alive',
+} as const;
+
 export async function handleMockSse(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.statusCode = 405;
@@ -108,8 +124,8 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   const requestId = randomUUID();
   const customChannelId = payload.customChannelId ?? 'mock-channel';
   const replyToCustomMessageId = payload.customMessageId ?? '';
-  const messageId = randomUUID();
-  const fullText = REPLY_CHUNKS.join('');
+  const text = payload.text ?? '';
+  const lastEventId = typeof req.headers['last-event-id'] === 'string' ? req.headers['last-event-id'] : undefined;
 
   const header: CommonHeader = {
     requestId,
@@ -117,18 +133,81 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     botProviderName: BOT_PROVIDER_NAME,
     customChannelId,
   };
+  const fullText = REPLY_CHUNKS.join('');
 
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
+  const deltaEvent = (messageId: string, chunk: string, idx: number): object => ({
+    ...header,
+    eventType: 'asgard.message.delta',
+    fact: {
+      ...emptyFact(),
+      messageDelta: {
+        message: { messageId, replyToCustomMessageId, text: chunk, payload: null, isDebug: false, idx, template: null },
+      },
+    },
   });
 
-  // 1. run.init
+  const completeEvent = (messageId: string): object => ({
+    ...header,
+    eventType: 'asgard.message.complete',
+    fact: {
+      ...emptyFact(),
+      messageComplete: {
+        message: {
+          messageId,
+          replyToCustomMessageId,
+          text: fullText,
+          payload: null,
+          isDebug: false,
+          idx: null,
+          template: { type: 'TEXT', text: fullText },
+        },
+      },
+    },
+  });
+
+  const runDoneEvent = (): object => ({
+    ...header,
+    eventType: 'asgard.run.done',
+    fact: { ...emptyFact(), runDone: {} },
+  });
+
+  // UC-004 — 200 前失敗:無 cursor,不重送 POST,錯誤 surface 給呼叫端。
+  if (!lastEventId && /fail|no-cursor/i.test(text)) {
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('simulated pre-200 failure (UC-004)');
+
+    return;
+  }
+
+  // UC-003 — 原生重連帶 Last-Event-ID = `${messageId}:${idx}` → 從斷點續傳同一則訊息。
+  if (lastEventId) {
+    const sep = lastEventId.lastIndexOf(':');
+    const messageId = lastEventId.slice(0, sep);
+    const resumeFrom = Number(lastEventId.slice(sep + 1)) + 1;
+
+    res.writeHead(200, SSE_HEADERS);
+
+    for (let i = resumeFrom; i < REPLY_CHUNKS.length; i++) {
+      await sleep(60);
+      writeEvent(res, deltaEvent(messageId, REPLY_CHUNKS[i], i), `${messageId}:${i}`);
+    }
+
+    await sleep(40);
+    writeEvent(res, completeEvent(messageId));
+    writeEvent(res, runDoneEvent());
+    res.end();
+
+    return;
+  }
+
+  // 全新 run。
+  const messageId = randomUUID();
+  const dropMode = /斷線|續傳|drop|resume/i.test(text);
+  const dropAt = Math.floor(REPLY_CHUNKS.length / 2);
+
+  res.writeHead(200, SSE_HEADERS);
   writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
   await sleep(40);
-
-  // 2. message.start (空 text,bot 訊息進入 isTyping 狀態)
   writeEvent(res, {
     ...header,
     eventType: 'asgard.message.start',
@@ -148,55 +227,21 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     },
   });
 
-  // 3. message.delta * N — 每 60ms 一筆,模擬真實 LLM streaming
-  let idx = 0;
-
-  for (const chunk of REPLY_CHUNKS) {
+  for (let i = 0; i < REPLY_CHUNKS.length; i++) {
     await sleep(60);
-    writeEvent(res, {
-      ...header,
-      eventType: 'asgard.message.delta',
-      fact: {
-        ...emptyFact(),
-        messageDelta: {
-          message: {
-            messageId,
-            replyToCustomMessageId,
-            text: chunk,
-            payload: null,
-            isDebug: false,
-            idx: idx++,
-            template: null,
-          },
-        },
-      },
-    });
+    writeEvent(res, deltaEvent(messageId, REPLY_CHUNKS[i], i), `${messageId}:${i}`);
+
+    if (dropMode && i === dropAt) {
+      // 串到一半硬砍 socket → client 收到 transport error → fetch-event-source 帶
+      // Last-Event-ID = `${messageId}:${dropAt}` 原生重連,打到上面的續傳分支。(UC-003)
+      res.destroy();
+
+      return;
+    }
   }
 
   await sleep(40);
-
-  // 4. message.complete (final 文字 + template)
-  writeEvent(res, {
-    ...header,
-    eventType: 'asgard.message.complete',
-    fact: {
-      ...emptyFact(),
-      messageComplete: {
-        message: {
-          messageId,
-          replyToCustomMessageId,
-          text: fullText,
-          payload: null,
-          isDebug: false,
-          idx: null,
-          template: { type: 'TEXT', text: fullText },
-        },
-      },
-    },
-  });
-
-  // 5. run.done
-  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
-
+  writeEvent(res, completeEvent(messageId));
+  writeEvent(res, runDoneEvent());
   res.end();
 }

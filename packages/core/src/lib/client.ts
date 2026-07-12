@@ -9,7 +9,7 @@ import {
   CwdDownloadResult,
 } from '../types';
 import { createSseObservable } from './create-sse-observable';
-import { concatMap, delay, of, retry, Subject, takeUntil } from 'rxjs';
+import { concatMap, delay, of, Subject, takeUntil } from 'rxjs';
 import { EventType } from '../constants/enum';
 import { EventEmitter } from './event-emitter';
 
@@ -122,7 +122,8 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       .pipe(
         concatMap(event => of(event).pipe(delay(options?.delayTime ?? 50))),
         takeUntil(this.destroy$),
-        retry(3),
+        // No RxJS retry: a transport drop is resumed natively via Last-Event-ID inside
+        // createSseObservable. Re-subscribing here would re-POST and re-dispatch the run. (F-002)
       )
       .subscribe({
         next: response => {
