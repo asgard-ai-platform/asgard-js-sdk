@@ -7,6 +7,13 @@ interface IConversation {
   pendingConsent?: ToolCallConsentEventData | null;
 }
 
+// A bot message that has already reached its terminal (complete) state. Once
+// terminal, late/replayed `start`/`delta` frames (F-002 resume, out-of-order)
+// must not roll it back to typing.
+function isTerminalBotMessage(message: ConversationMessage | undefined): boolean {
+  return message?.type === 'bot' && message.eventType === EventType.MESSAGE_COMPLETE;
+}
+
 export default class Conversation implements IConversation {
   public messages: Map<string, ConversationMessage> | null = null;
   public pendingConsent: ToolCallConsentEventData | null = null;
@@ -54,6 +61,9 @@ export default class Conversation implements IConversation {
     const message = response.fact.messageStart.message;
     const messages = new Map(this.messages);
 
+    // Terminal anti-rollback guard: ignore a late `start` for an already-complete message.
+    if (isTerminalBotMessage(messages.get(message.messageId))) return this;
+
     messages.set(message.messageId, {
       type: 'bot',
       eventType: EventType.MESSAGE_START,
@@ -76,8 +86,15 @@ export default class Conversation implements IConversation {
 
     const currentMessage = messages.get(message.messageId);
 
-    if (currentMessage?.type !== 'bot') return this;
+    // Terminal anti-rollback guard: ignore a late `delta` for an already-complete message
+    // (also avoids the `null` typingText concatenation path).
+    if (isTerminalBotMessage(currentMessage)) return this;
 
+    // Don't clobber a non-bot entry that happens to share this id.
+    if (currentMessage && currentMessage.type !== 'bot') return this;
+
+    // Lazy-init when there is no prior bot entry (skipped `start` / mid-stream resume):
+    // accumulate onto any existing typing text, or start fresh — never drop the delta.
     const typingText = `${currentMessage?.typingText ?? ''}${message.text}`;
 
     messages.set(message.messageId, {
@@ -88,8 +105,8 @@ export default class Conversation implements IConversation {
       messageId: message.messageId,
       message,
       time: new Date(),
-      traceId: response.traceId ?? currentMessage.traceId,
-      raw: currentMessage.raw,
+      traceId: response.traceId ?? currentMessage?.traceId,
+      raw: currentMessage?.raw ?? '',
     });
 
     return new Conversation({ messages, pendingConsent: this.pendingConsent });
