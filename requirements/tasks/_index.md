@@ -29,12 +29,12 @@ None yet.
 
 ## ▶ Next Task
 
-`main` is **complete: F-001~F-015 + shared conversation provider** — F-001~F-013 re-verified against the PM criteria (2026-07-14; `.github/verification/f001-f013/`); F-014/F-015 via **#284**; shared-provider + Sindri multi-panel via **#283**. No tag / no npm release.
+**All PM features F-001~F-017 are `done`.** `main` = F-001~F-016 + shared conversation provider (F-001~F-013 re-verified 2026-07-14, `.github/verification/f001-f013/`; F-014/F-015 via #284; shared-provider + Sindri multi-panel via #283; F-016 via #285). No tag / no npm release.
 
 - **EXT-002 / EXT-003 closed** (F-010 sidecar via #281; F-012 subagent contract).
 - **Open follow-up** — [FOLLOWUP-f002-background-tab-detach](./FOLLOWUP-f002-background-tab-detach.md): F-002's background-tab `openWhenHidden` return + `detach`→cursor-rejoin (2 of 6 criteria), deferred pending real-backend regression.
 
-**On this branch (`feat/f016-channel-title`):** F-016 (BUILD-012, channel title `channelTitle$` store — data layer) `done`. **Next: F-017** — title display UI (default header slot + custom renderer + hideable), **prototype-first** (needs `prototype/asgard-chat-kit-prototype` design → push → pin first; see `docs/prototype-gaps.md`).
+**On this branch (`feat/f017-channel-title-ui`):** F-017 (BUILD-013, channel title UI + custom renderer) `done` — UI per the pinned prototype `asgard-chat-kit@5480a67`. After this merges, the PM backlog is empty (next: whatever PM opens, or the F-002 real-backend follow-up).
 
 ## Task Queue
 
@@ -64,3 +64,5 @@ None yet.
 | `REVIEW-011` | Review: Channel init lifecycle                           | —        | done   | [REVIEW-011-channel-init-lifecycle.md](./REVIEW-011-channel-init-lifecycle.md)                   |
 | `BUILD-012`  | Channel title store (F-016)                              | Normal   | done   | [BUILD-012-channel-title-store.md](./BUILD-012-channel-title-store.md)                           |
 | `REVIEW-012` | Review: Channel title store                              | —        | done   | [REVIEW-012-channel-title-store.md](./REVIEW-012-channel-title-store.md)                         |
+| `BUILD-013`  | Channel title UI + custom renderer (F-017)               | High     | done   | [BUILD-013-channel-title-ui.md](./BUILD-013-channel-title-ui.md)                                 |
+| `REVIEW-013` | Review: Channel title UI                                 | —        | done   | [REVIEW-013-channel-title-ui.md](./REVIEW-013-channel-title-ui.md)                               |
