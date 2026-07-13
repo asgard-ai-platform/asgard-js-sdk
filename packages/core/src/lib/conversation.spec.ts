@@ -35,6 +35,8 @@ const nullFact = {
   toolCallConsent: null,
   subagentStart: null,
   subagentComplete: null,
+  messageUser: null,
+  channelTitleUpdate: null,
 };
 
 function start(messageId: string, text = ''): SseResponse<EventType.MESSAGE_START> {
@@ -370,6 +372,65 @@ function subagentMessage(conv: Conversation, key: string): ConversationSubagentM
 
   return message as ConversationSubagentMessage;
 }
+
+function userReplay(
+  messageId: string,
+  text: string,
+  opts: { customMessageId?: string; identityHint?: string; blobIds?: string[] } = {},
+): SseResponse<EventType.MESSAGE_USER> {
+  const fact: Fact<EventType.MESSAGE_USER> = {
+    ...nullFact,
+    messageUser: {
+      messageId,
+      text,
+      customMessageId: opts.customMessageId,
+      identityHint: opts.identityHint,
+      blobIds: opts.blobIds,
+    },
+  };
+
+  return {
+    eventType: EventType.MESSAGE_USER,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
+describe('Conversation user-message replay (F-014)', () => {
+  it('cold replay materializes a user message with its fields', () => {
+    const conv = emptyConversation().onMessageUser(
+      userReplay('u1', 'hi there', { customMessageId: 'c1', identityHint: 'agent-x', blobIds: ['b1'] }),
+    );
+    const m = conv.messages?.get('c1');
+    expect(m?.type).toBe('user');
+    if (m?.type === 'user') {
+      expect(m.text).toBe('hi there');
+      expect(m.customMessageId).toBe('c1');
+      expect(m.identityHint).toBe('agent-x');
+      expect(m.blobIds).toEqual(['b1']);
+    }
+  });
+
+  it('dedupes against the optimistic bubble (keyed by customMessageId)', () => {
+    const conv = emptyConversation()
+      .pushMessage({ type: 'user', messageId: 'c1', text: 'hi', time: new Date(0) })
+      .onMessageUser(userReplay('u1', 'hi', { customMessageId: 'c1' }));
+    expect(conv.messages?.size).toBe(1);
+  });
+
+  it('dedupes a duplicate replay (same messageId)', () => {
+    const conv = emptyConversation().onMessageUser(userReplay('u1', 'hi')).onMessageUser(userReplay('u1', 'hi'));
+    expect(conv.messages?.size).toBe(1);
+  });
+
+  it('replay without customMessageId keys by the backend messageId', () => {
+    const conv = emptyConversation().onMessageUser(userReplay('u1', 'hi'));
+    expect(conv.messages?.get('u1')?.type).toBe('user');
+  });
+});
 
 describe('Conversation subagent stream assembly (F-012)', () => {
   it('normal flow: start → running, complete → terminal status with merged meta', () => {

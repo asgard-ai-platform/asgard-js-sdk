@@ -161,6 +161,21 @@ export interface MessageEventData {
   message: Message;
 }
 
+// The user's own turn, replayed on a transcript rejoin (F-014). Fields mirror asgard-core@dev-1.16.19
+// `GenericBotSseEventFactUserMessage`.
+export interface UserMessageEventData {
+  messageId: string;
+  text: string;
+  identityHint?: string;
+  customMessageId?: string;
+  blobIds?: string[];
+}
+
+// The agent-updated channel title (F-016 consumes; type added with F-014 for enum/fact parity).
+export interface ChannelTitleUpdateEventData {
+  title: string;
+}
+
 export interface ErrorMessage {
   message: string;
   code: string;
@@ -274,6 +289,8 @@ export interface Fact<Type extends EventType> {
   toolCallConsent: IsEqual<Type, EventType.TOOL_CALL_CONSENT, ToolCallConsentEventData>;
   subagentStart: IsEqual<Type, EventType.SUBAGENT_START, SubagentStartEventData>;
   subagentComplete: IsEqual<Type, EventType.SUBAGENT_COMPLETE, SubagentCompleteEventData>;
+  messageUser: IsEqual<Type, EventType.MESSAGE_USER, UserMessageEventData>;
+  channelTitleUpdate: IsEqual<Type, EventType.CHANNEL_TITLE_UPDATE, ChannelTitleUpdateEventData>;
 }
 
 export interface SseResponse<Type extends EventType> {

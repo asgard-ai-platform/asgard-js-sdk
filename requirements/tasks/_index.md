@@ -29,11 +29,13 @@ None yet.
 
 ## ▶ Next Task
 
-None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**, and re-verified against the PM acceptance criteria on `main` (2026-07-14; report + evidence in `.github/verification/f001-f013/`).
+`main` is **complete: 13/13** (F-001~F-013), re-verified against the PM acceptance criteria (2026-07-14; report + evidence in `.github/verification/f001-f013/`).
 
 - **EXT-003 closed** — F-012 subagent contract confirmed field-for-field against `asgard-core@dev-1.16.19`.
-- **EXT-002 closed** — F-010 now reads the authoritative `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId`+`statusChange.to`), parameter fallback (PR #281, merged to `main`).
+- **EXT-002 closed** — F-010 reads the authoritative `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId`+`statusChange.to`), parameter fallback (PR #281, merged to `main`).
 - **Open follow-up** — [FOLLOWUP-f002-background-tab-detach](./FOLLOWUP-f002-background-tab-detach.md): F-002's background-tab `openWhenHidden` return + `detach`→cursor-rejoin (2 of 6 criteria), deferred pending real-backend regression.
+
+**On this branch (PR-B, stacked on the shared-provider PR):** F-014 (BUILD-010, transcript replay kernel) `done`; **`BUILD-011` — F-015** 進房初始化編排 (metadata gate + autoResetChannel 改版 + GET replay transport, **breaking**) next. After F-015: F-016 (channelTitle$ store), F-017 (title UI, deferred).
 
 ## Task Queue
 
@@ -57,3 +59,5 @@ None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is 
 | `REVIEW-008` | Review: Subagent List Panel                              | —        | done   | [REVIEW-008-subagent-list-panel.md](./REVIEW-008-subagent-list-panel.md)                         |
 | `BUILD-009`  | Framework-agnostic derived-state store (F-013)           | High     | done   | [BUILD-009-derived-state-store.md](./BUILD-009-derived-state-store.md)                           |
 | `REVIEW-009` | Review: Derived-state store                              | —        | done   | [REVIEW-009-derived-state-store.md](./REVIEW-009-derived-state-store.md)                         |
+| `BUILD-010`  | Transcript replay kernel + message.user (F-014)          | High     | done   | [BUILD-010-transcript-user-replay-kernel.md](./BUILD-010-transcript-user-replay-kernel.md)       |
+| `REVIEW-010` | Review: Transcript replay kernel                         | —        | done   | [REVIEW-010-transcript-user-replay-kernel.md](./REVIEW-010-transcript-user-replay-kernel.md)     |
