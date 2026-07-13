@@ -38,3 +38,18 @@ export function useSubagents(): Subagent[] {
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
+
+// Channel title (F-016): seeded from `GET /channel/metadata` on entry, then updated live by the
+// `channel.title.update` event. Re-renders ONLY on a title change — not on `message.delta`. Returns
+// `null` when unnamed or in preview mode.
+export function useChannelTitle(): string | null {
+  const { channelTitleStore } = useAsgardContext();
+
+  const subscribe = useCallback(
+    (listener: () => void) => channelTitleStore?.subscribe(listener) ?? noopUnsubscribe,
+    [channelTitleStore],
+  );
+  const getSnapshot = useCallback(() => channelTitleStore?.getSnapshot() ?? null, [channelTitleStore]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}

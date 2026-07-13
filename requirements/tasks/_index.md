@@ -29,15 +29,12 @@ None yet.
 
 ## ▶ Next Task
 
-`main` is **complete: 13/13** (F-001~F-013), re-verified against the PM acceptance criteria (2026-07-14; report + evidence in `.github/verification/f001-f013/`).
+`main` is **complete: F-001~F-015 + shared conversation provider** — F-001~F-013 re-verified against the PM criteria (2026-07-14; `.github/verification/f001-f013/`); F-014/F-015 via **#284**; shared-provider + Sindri multi-panel via **#283**. No tag / no npm release.
 
-- **EXT-003 closed** — F-012 subagent contract confirmed field-for-field against `asgard-core@dev-1.16.19`.
-- **EXT-002 closed** — F-010 reads the authoritative `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId`+`statusChange.to`), parameter fallback (PR #281, merged to `main`).
+- **EXT-002 / EXT-003 closed** (F-010 sidecar via #281; F-012 subagent contract).
 - **Open follow-up** — [FOLLOWUP-f002-background-tab-detach](./FOLLOWUP-f002-background-tab-detach.md): F-002's background-tab `openWhenHidden` return + `detach`→cursor-rejoin (2 of 6 criteria), deferred pending real-backend regression.
 
-**On this branch (PR-B):** F-014 (BUILD-010, transcript replay kernel) + F-015 (BUILD-011, transcript-first init lifecycle, **breaking** `autoResetChannel`) both `done`. Next: **F-016** (channel title 動態狀態 + `channel.title.update` → `channelTitle$` store; `ChannelMetadata.title` already available from F-015), then F-017 (title UI, deferred).
-
-**PR split (user decision):** shared-provider + multi-panel demo merged via **PR #283**; PR-B (this branch, F-014 + F-015) stacks on it. No tag / no npm release.
+**On this branch (`feat/f016-channel-title`):** F-016 (BUILD-012, channel title `channelTitle$` store — data layer) `done`. **Next: F-017** — title display UI (default header slot + custom renderer + hideable), **prototype-first** (needs `prototype/asgard-chat-kit-prototype` design → push → pin first; see `docs/prototype-gaps.md`).
 
 ## Task Queue
 
@@ -65,3 +62,5 @@ None yet.
 | `REVIEW-010` | Review: Transcript replay kernel                         | —        | done   | [REVIEW-010-transcript-user-replay-kernel.md](./REVIEW-010-transcript-user-replay-kernel.md)     |
 | `BUILD-011`  | Channel init lifecycle — metadata gate (F-015)           | High     | done   | [BUILD-011-channel-init-lifecycle.md](./BUILD-011-channel-init-lifecycle.md)                     |
 | `REVIEW-011` | Review: Channel init lifecycle                           | —        | done   | [REVIEW-011-channel-init-lifecycle.md](./REVIEW-011-channel-init-lifecycle.md)                   |
+| `BUILD-012`  | Channel title store (F-016)                              | Normal   | done   | [BUILD-012-channel-title-store.md](./BUILD-012-channel-title-store.md)                           |
+| `REVIEW-012` | Review: Channel title store                              | —        | done   | [REVIEW-012-channel-title-store.md](./REVIEW-012-channel-title-store.md)                         |

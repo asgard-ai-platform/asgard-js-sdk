@@ -44,10 +44,16 @@ export default class Channel {
   private conversation$: BehaviorSubject<Conversation>;
   private tasks$: BehaviorSubject<Task[]>;
   private subagents$: BehaviorSubject<Subagent[]>;
+  // Channel title (F-016). Seeded from `metadata.title` on entry; updated by the ephemeral
+  // `channel.title.update` event. Its own subject (independent of `conversation$`), so a consumer
+  // that only wants the title is not redrawn by high-frequency `message.delta`.
+  private channelTitle$: BehaviorSubject<string | null>;
 
   /** Framework-agnostic derived-state stores (F-013): current-list snapshot + change notification. */
   public readonly tasks: ReactiveStore<Task[]>;
   public readonly subagents: ReactiveStore<Subagent[]>;
+  /** Channel-title store (F-016): current title snapshot + change notification (title-only changes). */
+  public readonly channelTitle: ReactiveStore<string | null>;
 
   private statesObserver?: ObserverOrNext<ChannelStates>;
   private statesSubscription?: Subscription;
@@ -82,6 +88,10 @@ export default class Channel {
     this.subagents$ = new BehaviorSubject<Subagent[]>(reduceSubagents(initialMessages));
     this.tasks = toReactiveStore(this.tasks$);
     this.subagents = toReactiveStore(this.subagents$);
+
+    // Seed the title from metadata (F-016); `channel.title.update` events refine it thereafter.
+    this.channelTitle$ = new BehaviorSubject<string | null>(config.initialTitle ?? null);
+    this.channelTitle = toReactiveStore(this.channelTitle$);
 
     this.statesObserver = config.statesObserver;
   }
@@ -170,13 +180,20 @@ export default class Channel {
         .subscribe(this.subagents$),
     );
 
-    this.statesSubscription = combineLatest([this.isConnecting$, this.conversation$, this.tasks$, this.subagents$])
+    this.statesSubscription = combineLatest([
+      this.isConnecting$,
+      this.conversation$,
+      this.tasks$,
+      this.subagents$,
+      this.channelTitle$,
+    ])
       .pipe(
-        map(([isConnecting, conversation, tasks, subagents]) => ({
+        map(([isConnecting, conversation, tasks, subagents, title]) => ({
           isConnecting,
           conversation,
           tasks,
           subagents,
+          title,
         })),
       )
       .subscribe(this.statesObserver);
@@ -220,6 +237,16 @@ export default class Channel {
         onSseStart: options?.onSseStart,
         onSseMessage: (response: SseResponse<EventType>) => {
           options?.onSseMessage?.(response);
+
+          // Channel title (F-016): the ephemeral `channel.title.update` event carries the new title
+          // on the channel (not a conversation message), so update the title store directly. Guard on
+          // change so a repeated title does not re-notify title-only subscribers.
+          if (response.eventType === EventType.CHANNEL_TITLE_UPDATE) {
+            const nextTitle = (response as SseResponse<EventType.CHANNEL_TITLE_UPDATE>).fact.channelTitleUpdate.title;
+            if (nextTitle !== this.channelTitle$.value) {
+              this.channelTitle$.next(nextTitle);
+            }
+          }
 
           if (this.currentUserMessageId && response.traceId) {
             const messages = new Map(this.conversation$.value.messages);
@@ -345,6 +372,7 @@ export default class Channel {
     this.conversation$.complete();
     this.tasks$.complete();
     this.subagents$.complete();
+    this.channelTitle$.complete();
     this.derivedSubscription?.unsubscribe();
     this.statesSubscription?.unsubscribe();
   }

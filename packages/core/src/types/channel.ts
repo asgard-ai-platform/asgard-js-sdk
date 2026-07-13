@@ -14,6 +14,9 @@ export interface ChannelStates {
   // each keeps a stable reference until its content changes.
   tasks: Task[];
   subagents: Subagent[];
+  // Channel title (F-016): seeded from `GET /channel/metadata` on entry, then updated by the
+  // ephemeral `channel.title.update` event. `null` = unnamed. Also exposed as a per-slice store.
+  title: string | null;
 }
 
 /**
@@ -37,6 +40,8 @@ export interface ChannelConfig {
   customMessageId?: string;
   conversation: Conversation;
   statesObserver?: ObserverOrNext<ChannelStates>;
+  // Initial channel title (F-016), seeded from `GET /channel/metadata.title` on entry. `null` = unnamed.
+  initialTitle?: string | null;
 }
 
 export type ConversationUserMessage = {

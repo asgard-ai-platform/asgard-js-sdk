@@ -2,7 +2,7 @@ import { ReactNode, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { AsgardConversationProvider, Chatbot } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
-import { AgentTeamsPanel, FilesPanel, PlanPanel } from './panels';
+import { AgentTeamsPanel, ChannelTitleBar, FilesPanel, PlanPanel } from './panels';
 import styles from './multi-panel.module.scss';
 
 // A Sindri-style layout (F-014): ONE <AsgardConversationProvider> owns the channel; the <Chatbot> and
@@ -76,6 +76,8 @@ export function MultiPanelDemo(): ReactNode {
         </div>
 
         <AsgardConversationProvider config={config} customChannelId="multi-panel-demo">
+          {/* F-016: channel title rendered OUTSIDE the Chatbot, from the shared provider. */}
+          <ChannelTitleBar />
           <ResizableSplit
             // No config on <Chatbot> — the shared provider owns the channel; drag the divider to resize.
             left={<Chatbot title="Agent Hub" locale="zh-TW" />}

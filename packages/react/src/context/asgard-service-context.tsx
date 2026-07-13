@@ -39,6 +39,8 @@ export interface AsgardServiceContextValue {
   /** Framework-agnostic derived-state stores (F-013); absent in preview mode. Read via `useTaskList()` / `useSubagents()`. */
   taskStore?: UseChannelReturn['taskStore'];
   subagentStore?: UseChannelReturn['subagentStore'];
+  /** Channel-title store (F-016); absent in preview mode. Read via `useChannelTitle()`. */
+  channelTitleStore?: UseChannelReturn['channelTitleStore'];
   pendingConsent: ToolCallConsentEventData | null;
   botTypingPlaceholder?: string;
   inputPlaceholder?: string;
@@ -231,6 +233,7 @@ function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderPr
     replyToolCallConsents,
     taskStore,
     subagentStore,
+    channelTitleStore,
   } = useChannel({
     client,
     customChannelId,
@@ -306,6 +309,7 @@ function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderPr
       pendingConsent: conversation?.pendingConsent ?? null,
       taskStore,
       subagentStore,
+      channelTitleStore,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,
@@ -338,6 +342,7 @@ function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderPr
       wrappedReplyToolCallConsents,
       taskStore,
       subagentStore,
+      channelTitleStore,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,

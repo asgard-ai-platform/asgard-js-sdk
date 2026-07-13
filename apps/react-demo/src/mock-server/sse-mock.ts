@@ -286,6 +286,15 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   });
   await sleep(40);
 
+  // Channel title (F-016): the agent names the topic once it's clear. Ephemeral (live-only, not in
+  // rejoin replay); the SDK updates `channelTitle$` from `fact.channelTitleUpdate.title`.
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.channel.title.update',
+    fact: { ...emptyFact(), channelTitleUpdate: { title: '上週各通路訂單分析' } },
+  });
+  await sleep(40);
+
   // Tool-call phase (F-004/F-006): a few native built-in tool calls before the answer, so the
   // demo shows synthesized labels, per-variant icons, and the localized group summary.
   const processId = randomUUID();
