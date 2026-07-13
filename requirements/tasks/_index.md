@@ -29,7 +29,11 @@ None yet.
 
 ## ▶ Next Task
 
-None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**. F-001/002/003, the tool-call series F-004–009, F-010 (Task panel), F-011 (stream robustness), F-012 (Subagent panel), F-013 (framework-agnostic derived-state store) all `done` with BUILD/REVIEW pairs. **EXT-003 closed** — the F-012 subagent event contract is confirmed field-for-field against `asgard-core@dev-1.16.19` (`internal/models/edgeserver.go`; the SSE backend is `asgard-core`, not `asgard-sdk-go`). Awaiting the user's review + push/merge (+ `done`-authorization per feature-workflow Stage 5). Remaining follow-up: **EXT-002** (F-010 tasks should read `taskId`/`statusChange` sidecar instead of the `parameter` fallback).
+None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**, and re-verified against the PM acceptance criteria on `main` (2026-07-14; report + evidence in `.github/verification/f001-f013/`).
+
+- **EXT-003 closed** — F-012 subagent contract confirmed field-for-field against `asgard-core@dev-1.16.19`.
+- **EXT-002 closed** — F-010 now reads the authoritative `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId`+`statusChange.to`), parameter fallback (PR #281, merged to `main`).
+- **Open follow-up** — [FOLLOWUP-f002-background-tab-detach](./FOLLOWUP-f002-background-tab-detach.md): F-002's background-tab `openWhenHidden` return + `detach`→cursor-rejoin (2 of 6 criteria), deferred pending real-backend regression.
 
 ## Task Queue
 
