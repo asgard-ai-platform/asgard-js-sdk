@@ -27,6 +27,7 @@ import clsx from 'clsx';
 import { ApiKeyInput } from './api-key-input';
 import { ChatbotHeader } from './chatbot-header';
 import { ChatbotBody } from './chatbot-body';
+import { ChannelTitle, ChannelTitleRenderArgs } from './channel-title';
 import { ChatbotFooter } from './chatbot-footer';
 import { RunningIndicator } from './running-indicator';
 import { SubagentList } from './subagent-list';
@@ -122,6 +123,17 @@ interface ChatbotProps extends AsgardTemplateContextValue {
    * `useAsgardThemeContext()` for theme tokens.
    */
   renderHeader?: () => ReactNode;
+
+  /**
+   * Channel title row (F-017) shown at the top of the thread — the live conversation title from the
+   * F-016 `channelTitle$` store (seeded from `GET /channel/metadata`, updated by `channel.title.update`).
+   * Distinct from the bot-name header `title`. Renders only for a live channel.
+   * `renderChannelTitle({ title, renderDefault })` replaces the default row (return `null` to hide);
+   * `hideChannelTitle` hides it outright; `channelUntitledLabel` overrides the unnamed placeholder.
+   */
+  renderChannelTitle?: (args: ChannelTitleRenderArgs) => ReactNode;
+  hideChannelTitle?: boolean;
+  channelUntitledLabel?: string;
 
   /** Custom menu renderer. When provided, renders between chat body and footer. */
   renderMenu?: () => ReactNode;
@@ -226,6 +238,9 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onMessageSent,
     onChannelReady,
     renderHeader,
+    renderChannelTitle,
+    hideChannelTitle,
+    channelUntitledLabel,
     renderMenu,
     footerEndActions,
     renderFooter,
@@ -421,6 +436,12 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                 maintainConnectionWhenClosed={maintainConnectionWhenClosed}
               />
             )}
+            {/* F-017: live channel title row at the top of the thread (below the bot-name header). */}
+            <ChannelTitle
+              renderTitle={renderChannelTitle}
+              hidden={hideChannelTitle}
+              untitledLabel={channelUntitledLabel}
+            />
             {renderContent()}
             <DropZoneOverlay />
           </ChatbotContainer>
