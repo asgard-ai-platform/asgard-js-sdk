@@ -372,7 +372,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
 
   // A shared channel provider already exists above — don't open a second channel; the ambient
   // AsgardServiceContext (and its Task/Subagent stores) stays in effect for these children.
-  if (alreadyProvided) return <>{props.children}</>;
+  if (alreadyProvided) return props.children;
 
   return (
     <AsgardChannelProvidedContext.Provider value={true}>

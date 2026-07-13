@@ -50,12 +50,8 @@ export function SharedProviderDemo(): ReactNode {
         <div className={styles.layout}>
           <SiblingPanel />
           <div className={styles.chat}>
-            <Chatbot
-              title="Shared Channel Demo"
-              config={config}
-              customChannelId="shared-provider-demo"
-              locale="zh-TW"
-            />
+            {/* No config / customChannelId here — the shared provider owns the channel (F-014). */}
+            <Chatbot title="Shared Channel Demo" locale="zh-TW" />
           </div>
         </div>
       </AsgardConversationProvider>
