@@ -30,6 +30,7 @@ const navItems = [
   { to: '/tool-call', label: 'Tool Call' },
   { to: '/tool-call-consent', label: 'Tool Call Consent' },
   { to: '/subagent', label: 'Subagent List' },
+  { to: '/shared-provider', label: 'Shared Provider' },
   { to: '/user-identity-hint', label: 'User Identity Hint' },
   { to: '/on-channel-ready', label: 'On Channel Ready' },
   { to: '/upload-mime-constraint', label: 'Upload MIME Constraint' },

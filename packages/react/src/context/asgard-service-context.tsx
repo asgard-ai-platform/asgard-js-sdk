@@ -139,7 +139,20 @@ export interface AsgardServiceContextProviderProps {
   onChannelReady?: () => void;
 }
 
-export function AsgardServiceContextProvider(props: AsgardServiceContextProviderProps): ReactNode {
+// Marks that a channel-owning AsgardServiceContextProvider is already mounted above (F-014). Lets a
+// nested provider (e.g. the one `<Chatbot>` creates internally) detect an ambient shared channel and
+// pass through instead of opening a second connection — so sibling components rendered under a shared
+// provider (Task/Subagent panels, custom UI) read the SAME conversation as the Chatbot.
+const AsgardChannelProvidedContext = createContext(false);
+
+/** True when a shared channel provider (`AsgardConversationProvider` / a parent service provider) is above. */
+export function useIsAsgardChannelProvided(): boolean {
+  return useContext(AsgardChannelProvidedContext);
+}
+
+// Owns the channel + all state hooks. Only mounted when there is no ambient channel provider, so its
+// hooks never run conditionally (the pass-through decision lives in the public wrapper below).
+function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderProps): ReactNode {
   const {
     avatar,
     title,
@@ -348,6 +361,36 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
   });
 
   return <AsgardServiceContext.Provider value={contextValue}>{children}</AsgardServiceContext.Provider>;
+}
+
+// Public entry — idempotent (F-014). Reuse an ambient channel provider if one is already mounted
+// above (so `<Chatbot>` and sibling panels under a shared provider share ONE channel); otherwise open
+// a channel of its own. `useContext` runs unconditionally; the channel-owning hooks live in the inner
+// component, which only mounts on the non-ambient branch — so no hook runs conditionally.
+export function AsgardServiceContextProvider(props: AsgardServiceContextProviderProps): ReactNode {
+  const alreadyProvided = useContext(AsgardChannelProvidedContext);
+
+  // A shared channel provider already exists above — don't open a second channel; the ambient
+  // AsgardServiceContext (and its Task/Subagent stores) stays in effect for these children.
+  if (alreadyProvided) return <>{props.children}</>;
+
+  return (
+    <AsgardChannelProvidedContext.Provider value={true}>
+      <AsgardServiceContextProviderInner {...props} />
+    </AsgardChannelProvidedContext.Provider>
+  );
+}
+
+/**
+ * Wrap a whole layout — a `<Chatbot>` plus sibling panels / custom UI — in ONE shared conversation
+ * channel (F-014). Everything inside reads the same conversation: `<Chatbot>`'s own internal provider
+ * detects this one and passes through, and any component calling `useTaskList()` / `useSubagents()` /
+ * `useAsgardContext()` as a sibling of `<Chatbot>` sees that same channel. Use this when the chat and
+ * its derived-state panels are laid out independently (e.g. a docking layout where the consumer owns
+ * sizing/placement). For a standalone chat, `<Chatbot>` alone still opens its own channel as before.
+ */
+export function AsgardConversationProvider(props: AsgardServiceContextProviderProps): ReactNode {
+  return <AsgardServiceContextProvider {...props} />;
 }
 
 export function useAsgardContext(): AsgardServiceContextValue {
