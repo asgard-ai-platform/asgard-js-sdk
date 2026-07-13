@@ -76,6 +76,28 @@ export type ConversationToolCallMessage = {
   isComplete: boolean;
   // Backend-authoritative failure flag (F-009); populated from `toolCallComplete.isError`.
   isError?: boolean;
+  // Subagent association keys (F-012). `parentToolUseId` non-empty ⇒ a child of that subagent;
+  // an `Agent` call carries its own `toolUseId` (= children's `parentToolUseId`).
+  toolUseId?: string;
+  parentToolUseId?: string;
+  time: Date;
+  traceId?: string;
+};
+
+// A spawned subagent's lifecycle, folded from `subagent.start` / `subagent.complete` and keyed by
+// `parentToolUseId` (F-012). Surfaced into the conversation `messages` map (like tool-call messages)
+// so consumers can derive the subagent list; routed OUT of the message thread. `status` is
+// replay-safe: only `.complete` moves it terminal; a late/replayed `.start` never rolls it back.
+export type ConversationSubagentMessage = {
+  type: 'subagent';
+  messageId: string; // = parentToolUseId
+  eventType: EventType.SUBAGENT_START | EventType.SUBAGENT_COMPLETE;
+  parentToolUseId: string;
+  agentId?: string;
+  subagentType?: string;
+  description?: string;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  summary?: string;
   time: Date;
   traceId?: string;
 };
@@ -84,4 +106,6 @@ export type ConversationMessage =
   | ConversationUserMessage
   | ConversationBotMessage
   | ConversationErrorMessage
-  | ConversationToolCallMessage;
+  | ConversationThinkingMessage
+  | ConversationToolCallMessage
+  | ConversationSubagentMessage;

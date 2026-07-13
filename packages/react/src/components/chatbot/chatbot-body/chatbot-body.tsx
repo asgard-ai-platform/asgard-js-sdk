@@ -6,6 +6,7 @@ import { ConversationMessageRenderer } from './conversation-message-renderer';
 import { ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
 import { DEFAULT_LOCALE, groupSummary, isNativeBuiltin, Locale, toolDiff, toolLabel } from '../../../i18n';
 import { isTaskTool } from '../task-list';
+import { isSubagentRelated } from '../subagent-list';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
@@ -179,45 +180,45 @@ export function ChatbotBody(): ReactNode {
         data-scrollable="true"
       >
         <div ref={contentRef} className={styles.chatbot_body__content} style={contentStyles}>
-          {groupMessages(Array.from(messages?.values() ?? []).filter(message => !isTaskTool(message))).map(
-            (group, index) => {
-              if (group.type === 'tool-call-group') {
-                const items = group.toolCalls.map(toolCall => toolCallToItemData(toolCall, locale));
-                const firstToolCall = group.toolCalls[0];
-                const key = `tool-call-group-${firstToolCall?.processId || index}`;
-                const summary = groupSummary(group.toolCalls, locale);
+          {groupMessages(
+            Array.from(messages?.values() ?? []).filter(message => !isTaskTool(message) && !isSubagentRelated(message)),
+          ).map((group, index) => {
+            if (group.type === 'tool-call-group') {
+              const items = group.toolCalls.map(toolCall => toolCallToItemData(toolCall, locale));
+              const firstToolCall = group.toolCalls[0];
+              const key = `tool-call-group-${firstToolCall?.processId || index}`;
+              const summary = groupSummary(group.toolCalls, locale);
 
-                const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
-                  <ToolCallGroupTemplate
-                    items={items}
-                    time={firstToolCall?.time}
-                    title={overrides?.title ?? summary}
-                    locale={locale}
-                  />
-                );
-
-                if (renderToolCallGroup) {
-                  const custom = renderToolCallGroup({
-                    items,
-                    time: firstToolCall?.time,
-                    renderDefaultContent,
-                  });
-                  if (custom === null) return null;
-
-                  return <Fragment key={key}>{custom}</Fragment>;
-                }
-
-                return <Fragment key={key}>{renderDefaultContent()}</Fragment>;
-              }
-
-              return (
-                <ConversationMessageRenderer
-                  key={group.message.messageId || `${group.message.type}-${index}-${group.message.time.getTime()}`}
-                  message={group.message}
+              const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
+                <ToolCallGroupTemplate
+                  items={items}
+                  time={firstToolCall?.time}
+                  title={overrides?.title ?? summary}
+                  locale={locale}
                 />
               );
-            },
-          )}
+
+              if (renderToolCallGroup) {
+                const custom = renderToolCallGroup({
+                  items,
+                  time: firstToolCall?.time,
+                  renderDefaultContent,
+                });
+                if (custom === null) return null;
+
+                return <Fragment key={key}>{custom}</Fragment>;
+              }
+
+              return <Fragment key={key}>{renderDefaultContent()}</Fragment>;
+            }
+
+            return (
+              <ConversationMessageRenderer
+                key={group.message.messageId || `${group.message.type}-${index}-${group.message.time.getTime()}`}
+                message={group.message}
+              />
+            );
+          })}
           <div ref={messageBoxBottomRef} />
         </div>
       </div>

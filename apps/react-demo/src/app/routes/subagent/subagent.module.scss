@@ -1,0 +1,12 @@
+.chatbotContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  > div {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+  }
+}

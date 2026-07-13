@@ -180,6 +180,11 @@ export interface ErrorEventData {
 export interface ToolCallBaseEventData {
   processId: string;
   callSeq: number;
+  // Subagent association keys (F-012). `omitempty`: absent ⇒ a main-line tool call.
+  // `toolUseId` identifies this call; a child call sets `parentToolUseId` to the spawning
+  // `Agent` call's `toolUseId`. Inferred from prototype@f73545c pending asgard-sdk-go (EXT-003).
+  toolUseId?: string;
+  parentToolUseId?: string;
   toolCall: {
     toolsetName: string;
     toolName: string;
@@ -193,6 +198,23 @@ export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
   // Backend-authoritative failure flag (F-009). `omitempty` ⇒ absent means success.
   // Valid for native tools whose result is plain text (where `result.error` is not meaningful).
   isError?: boolean;
+}
+
+// Terminal status of a subagent, from `subagent.complete.status` (F-012). A subagent stays
+// running until `subagent.complete` lands. Inferred from prototype@f73545c pending asgard-sdk-go (EXT-003).
+export type SubagentCompleteStatus = 'completed' | 'failed' | 'cancelled';
+
+export interface SubagentStartEventData {
+  agentId: string;
+  // Association key = the spawning `Agent` tool call's `toolUseId`; shared by every child event.
+  parentToolUseId: string;
+  subagentType?: string;
+  description?: string;
+}
+
+export interface SubagentCompleteEventData extends SubagentStartEventData {
+  status: SubagentCompleteStatus;
+  summary?: string;
 }
 
 export interface ToolCallConsentPendingCall {
@@ -228,6 +250,8 @@ export interface Fact<Type extends EventType> {
   toolCallStart: IsEqual<Type, EventType.TOOL_CALL_START, ToolCallBaseEventData>;
   toolCallComplete: IsEqual<Type, EventType.TOOL_CALL_COMPLETE, ToolCallCompleteEventData>;
   toolCallConsent: IsEqual<Type, EventType.TOOL_CALL_CONSENT, ToolCallConsentEventData>;
+  subagentStart: IsEqual<Type, EventType.SUBAGENT_START, SubagentStartEventData>;
+  subagentComplete: IsEqual<Type, EventType.SUBAGENT_COMPLETE, SubagentCompleteEventData>;
 }
 
 export interface SseResponse<Type extends EventType> {

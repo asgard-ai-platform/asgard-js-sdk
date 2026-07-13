@@ -26,6 +26,12 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'task.in_progress': 'In progress',
     'task.completed': 'Completed',
     'subagent.title': 'Subagents',
+    'subagent.running': 'Running',
+    'subagent.completed': 'Completed',
+    'subagent.failed': 'Failed',
+    'subagent.cancelled': 'Cancelled',
+    'subagent.activeTool': 'Running: {tool}',
+    'subagent.toolCount': '{n} tools',
   },
   'ja-JP': {
     'tool.read': '{file} を読み込み',
@@ -44,6 +50,12 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'task.in_progress': '進行中',
     'task.completed': '完了',
     'subagent.title': 'サブエージェント',
+    'subagent.running': '実行中',
+    'subagent.completed': '完了',
+    'subagent.failed': '失敗',
+    'subagent.cancelled': 'キャンセル',
+    'subagent.activeTool': '実行中：{tool}',
+    'subagent.toolCount': 'ツール {n} 件',
   },
   'zh-TW': {
     'tool.read': '讀取 {file}',
@@ -62,6 +74,12 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'task.in_progress': '進行中',
     'task.completed': '已完成',
     'subagent.title': '子代理',
+    'subagent.running': '執行中',
+    'subagent.completed': '已完成',
+    'subagent.failed': '失敗',
+    'subagent.cancelled': '已取消',
+    'subagent.activeTool': '執行中：{tool}',
+    'subagent.toolCount': '{n} 個工具',
   },
 };
 

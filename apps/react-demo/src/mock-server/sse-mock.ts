@@ -106,6 +106,8 @@ function emptyFact(): Record<string, unknown> {
     toolCallStart: null,
     toolCallComplete: null,
     toolCallConsent: null,
+    subagentStart: null,
+    subagentComplete: null,
   };
 }
 
@@ -334,6 +336,109 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
       },
     });
   }
+
+  // Subagent phase (F-012): an `Agent` tool call spawns a subagent that runs its own child tool
+  // calls and finishes via `subagent.complete`. The `Agent` tool_call.complete returns early with
+  // `async_launched` — it must NOT mark the subagent done (terminal status is driven by
+  // subagent.complete). The `Agent` call and every child are routed OUT of the main tool-call group.
+  const subToolUseId = randomUUID();
+  const subAgentId = randomUUID();
+  const subDescription = '分析上週各通路訂單並找出異常';
+  const agentProcessId = randomUUID();
+  const agentToolCall = { toolsetName: '', toolName: 'Agent', parameter: { description: subDescription } };
+
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.tool_call.start',
+    fact: {
+      ...emptyFact(),
+      toolCallStart: { processId: agentProcessId, callSeq: 0, toolUseId: subToolUseId, toolCall: agentToolCall },
+    },
+  });
+  await sleep(80);
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.subagent.start',
+    fact: {
+      ...emptyFact(),
+      subagentStart: {
+        agentId: subAgentId,
+        parentToolUseId: subToolUseId,
+        subagentType: 'general-purpose',
+        description: subDescription,
+      },
+    },
+  });
+  await sleep(80);
+  // Agent tool call returns early (async_launched); the subagent is still running.
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.tool_call.complete',
+    fact: {
+      ...emptyFact(),
+      toolCallComplete: {
+        processId: agentProcessId,
+        callSeq: 0,
+        toolUseId: subToolUseId,
+        toolCall: agentToolCall,
+        toolCallResult: { status: 'async_launched' },
+      },
+    },
+  });
+
+  const childProcessId = randomUUID();
+  const childTools: { toolName: string; parameter: Record<string, unknown>; isError?: boolean }[] = [
+    { toolName: 'Read', parameter: { file_path: '/repo/data/orders.csv' } },
+    { toolName: 'Bash', parameter: { description: '彙總各通路訂單金額', command: 'python analyze.py' } },
+    { toolName: 'WebSearch', parameter: { query: 'retail order anomaly detection' } },
+  ];
+  for (let seq = 0; seq < childTools.length; seq++) {
+    const tc = childTools[seq];
+    const toolUseId = `${subToolUseId}-child-${seq}`;
+    const toolCall = { toolsetName: '', toolName: tc.toolName, parameter: tc.parameter };
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.start',
+      fact: {
+        ...emptyFact(),
+        toolCallStart: { processId: childProcessId, callSeq: seq, toolUseId, parentToolUseId: subToolUseId, toolCall },
+      },
+    });
+    await sleep(150);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.complete',
+      fact: {
+        ...emptyFact(),
+        toolCallComplete: {
+          processId: childProcessId,
+          callSeq: seq,
+          toolUseId,
+          parentToolUseId: subToolUseId,
+          toolCall,
+          toolCallResult: tc.isError ? { message: 'failed' } : { ok: true },
+          isError: tc.isError ?? false,
+        },
+      },
+    });
+  }
+
+  // subagent.complete drives the terminal status (not the early Agent tool_call.complete).
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.subagent.complete',
+    fact: {
+      ...emptyFact(),
+      subagentComplete: {
+        agentId: subAgentId,
+        parentToolUseId: subToolUseId,
+        subagentType: 'general-purpose',
+        description: subDescription,
+        status: 'completed',
+        summary: '完成上週各通路訂單分析，發現東區通路退貨率異常偏高。',
+      },
+    },
+  });
 
   await sleep(40);
 

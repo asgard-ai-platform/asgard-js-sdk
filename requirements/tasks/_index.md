@@ -29,7 +29,7 @@ None yet.
 
 ## ▶ Next Task
 
-Autonomous full-batch run on `feat/stream-robustness-and-resume` (one branch, PR #280). Done: F-011, F-002, F-001, F-003, the full **tool-call series** F-004/005/006/007/008/009 (i18n, variants, summary, isError, diff+status, expand), and F-010 (Task panel). **11/13.** Remaining: F-012 (Subagent panel — needs new core `asgard.subagent.{start,complete}` events + `parentToolUseId`/`toolUseId` on tool calls), F-013 (framework-agnostic store — move reducers into core, `tasks$`/`subagents$`, `useSyncExternalStore` hooks).
+`BUILD-008` — Subagent List Panel (F-012), in-progress on `feat/stream-robustness-and-resume` (one branch, PR #280). Done: F-011, F-002, F-001, F-003, the full **tool-call series** F-004/005/006/007/008/009 (i18n, variants, summary, isError, diff+status, expand), and F-010 (Task panel). **11/13.** Remaining: F-012 (Subagent panel — new core `asgard.subagent.{start,complete}` events + `parentToolUseId`/`toolUseId` on tool calls; grounded on prototype@f73545c, event shapes inferred pending `asgard-sdk-go` = EXT-003), F-013 (framework-agnostic store — move reducers into core, `tasks$`/`subagents$`, `useSyncExternalStore` hooks).
 
 ## Task Queue
 
@@ -49,3 +49,5 @@ Autonomous full-batch run on `feat/stream-robustness-and-resume` (one branch, PR
 | `REVIEW-006` | Review: Tool-call isError + Diff/Status + Expand         | —        | done   | [REVIEW-006-tool-call-iserror-diff-expand.md](./REVIEW-006-tool-call-iserror-diff-expand.md)     |
 | `BUILD-007`  | Task Check List Panel (F-010)                            | High     | done   | [BUILD-007-task-check-list-panel.md](./BUILD-007-task-check-list-panel.md)                       |
 | `REVIEW-007` | Review: Task Check List Panel                            | —        | done   | [REVIEW-007-task-check-list-panel.md](./REVIEW-007-task-check-list-panel.md)                     |
+| `BUILD-008`  | Subagent List Panel (F-012)                              | High     | done   | [BUILD-008-subagent-list-panel.md](./BUILD-008-subagent-list-panel.md)                           |
+| `REVIEW-008` | Review: Subagent List Panel                              | —        | done   | [REVIEW-008-subagent-list-panel.md](./REVIEW-008-subagent-list-panel.md)                         |

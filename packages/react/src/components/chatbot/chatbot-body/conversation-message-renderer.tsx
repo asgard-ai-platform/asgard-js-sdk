@@ -77,6 +77,11 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
       return null;
     }
 
+    // subagent messages surface only in the docked Subagent panel, never inline (F-012).
+    if (message.type === 'subagent') {
+      return null;
+    }
+
     // thinking messages render as a standalone collapsible block (F-001)
     if (message.type === 'thinking') {
       return <ThinkingBlock message={message} />;

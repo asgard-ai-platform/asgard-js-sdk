@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import Conversation from './conversation';
 import { EventType, MessageTemplateType } from '../constants/enum';
-import { ConversationBotMessage, ConversationThinkingMessage, Fact, Message, SseResponse } from '../types';
+import {
+  ConversationBotMessage,
+  ConversationSubagentMessage,
+  ConversationThinkingMessage,
+  ConversationToolCallMessage,
+  Fact,
+  Message,
+  SseResponse,
+} from '../types';
 
 function makeMessage(messageId: string, text: string): Message {
   return {
@@ -25,6 +33,8 @@ const nullFact = {
   toolCallStart: null,
   toolCallComplete: null,
   toolCallConsent: null,
+  subagentStart: null,
+  subagentComplete: null,
 };
 
 function start(messageId: string, text = ''): SseResponse<EventType.MESSAGE_START> {
@@ -267,5 +277,157 @@ describe('Conversation thinking stream assembly (F-001, F-011 contract)', () => 
     expect(conv.messages?.size).toBe(2);
     expect(thinkingMessage(conv, 't1').text).toBe('reasoning');
     expect(botMessage(conv, 'm1').message.text).toBe('answer');
+  });
+});
+
+// ---- F-012 subagent stream builders ----
+
+function subagentStartEvt(
+  parentToolUseId: string,
+  opts: { agentId?: string; subagentType?: string; description?: string } = {},
+): SseResponse<EventType.SUBAGENT_START> {
+  const fact: Fact<EventType.SUBAGENT_START> = {
+    ...nullFact,
+    subagentStart: {
+      agentId: opts.agentId ?? 'agent-1',
+      parentToolUseId,
+      subagentType: opts.subagentType,
+      description: opts.description,
+    },
+  };
+
+  return {
+    eventType: EventType.SUBAGENT_START,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
+function subagentCompleteEvt(
+  parentToolUseId: string,
+  status: 'completed' | 'failed' | 'cancelled',
+  opts: { agentId?: string; subagentType?: string; description?: string; summary?: string } = {},
+): SseResponse<EventType.SUBAGENT_COMPLETE> {
+  const fact: Fact<EventType.SUBAGENT_COMPLETE> = {
+    ...nullFact,
+    subagentComplete: {
+      agentId: opts.agentId ?? 'agent-1',
+      parentToolUseId,
+      subagentType: opts.subagentType,
+      description: opts.description,
+      status,
+      summary: opts.summary,
+    },
+  };
+
+  return {
+    eventType: EventType.SUBAGENT_COMPLETE,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
+function toolCallStartEvt(
+  processId: string,
+  callSeq: number,
+  toolName: string,
+  opts: {
+    toolsetName?: string;
+    toolUseId?: string;
+    parentToolUseId?: string;
+    parameter?: Record<string, unknown>;
+  } = {},
+): SseResponse<EventType.TOOL_CALL_START> {
+  const fact: Fact<EventType.TOOL_CALL_START> = {
+    ...nullFact,
+    toolCallStart: {
+      processId,
+      callSeq,
+      toolUseId: opts.toolUseId,
+      parentToolUseId: opts.parentToolUseId,
+      toolCall: { toolsetName: opts.toolsetName ?? '', toolName, parameter: opts.parameter ?? {} },
+    },
+  };
+
+  return {
+    eventType: EventType.TOOL_CALL_START,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
+function subagentMessage(conv: Conversation, key: string): ConversationSubagentMessage {
+  const message = conv.messages?.get(key);
+  expect(message?.type).toBe('subagent');
+
+  return message as ConversationSubagentMessage;
+}
+
+describe('Conversation subagent stream assembly (F-012)', () => {
+  it('normal flow: start → running, complete → terminal status with merged meta', () => {
+    const conv = emptyConversation()
+      .onSubagentStart(subagentStartEvt('X', { subagentType: 'general-purpose', description: 'do work' }))
+      .onSubagentComplete(subagentCompleteEvt('X', 'completed', { summary: 'done' }));
+    const sa = subagentMessage(conv, 'X');
+    expect(sa.status).toBe('completed');
+    expect(sa.subagentType).toBe('general-purpose');
+    expect(sa.description).toBe('do work');
+    expect(sa.summary).toBe('done');
+  });
+
+  it('start-after-complete: terminal status preserved (replay-safe, R2)', () => {
+    const conv = emptyConversation()
+      .onSubagentComplete(subagentCompleteEvt('X', 'completed'))
+      .onSubagentStart(subagentStartEvt('X'));
+    const sa = subagentMessage(conv, 'X');
+    expect(sa.status).toBe('completed');
+    expect(sa.eventType).toBe(EventType.SUBAGENT_COMPLETE);
+  });
+
+  it('complete-only (out of order): materializes terminal from its own fields', () => {
+    const conv = emptyConversation().onSubagentComplete(
+      subagentCompleteEvt('X', 'failed', { subagentType: 'general-purpose', description: 'task' }),
+    );
+    const sa = subagentMessage(conv, 'X');
+    expect(sa.status).toBe('failed');
+    expect(sa.description).toBe('task');
+  });
+
+  it('start alone: running, keyed by parentToolUseId', () => {
+    const conv = emptyConversation().onSubagentStart(subagentStartEvt('X', { agentId: 'ag', description: 'd' }));
+    const sa = subagentMessage(conv, 'X');
+    expect(sa.status).toBe('running');
+    expect(sa.agentId).toBe('ag');
+    expect(sa.parentToolUseId).toBe('X');
+  });
+
+  it('tool_call.start carries toolUseId / parentToolUseId onto the message', () => {
+    const conv = emptyConversation().onToolCallStart(
+      toolCallStartEvt('p', 0, 'Read', { toolUseId: 't1', parentToolUseId: 'X', parameter: { file_path: '/a' } }),
+    );
+    const msg = conv.messages?.get('p-0') as ConversationToolCallMessage;
+    expect(msg.type).toBe('tool-call');
+    expect(msg.toolUseId).toBe('t1');
+    expect(msg.parentToolUseId).toBe('X');
+  });
+
+  it('Agent tool call stays main-line (no parentToolUseId); child carries the parent key', () => {
+    const conv = emptyConversation()
+      .onToolCallStart(toolCallStartEvt('p', 0, 'Agent', { toolUseId: 'X', parameter: { description: 'spawn' } }))
+      .onToolCallStart(toolCallStartEvt('p', 1, 'Read', { toolUseId: 't1', parentToolUseId: 'X' }));
+    const agent = conv.messages?.get('p-0') as ConversationToolCallMessage;
+    const child = conv.messages?.get('p-1') as ConversationToolCallMessage;
+    expect(agent.parentToolUseId).toBeUndefined();
+    expect(agent.toolUseId).toBe('X');
+    expect(child.parentToolUseId).toBe('X');
   });
 });

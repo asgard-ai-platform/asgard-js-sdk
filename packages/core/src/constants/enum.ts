@@ -20,6 +20,12 @@ export enum EventType {
   TOOL_CALL_START = 'asgard.tool_call.start',
   TOOL_CALL_COMPLETE = 'asgard.tool_call.complete',
   TOOL_CALL_CONSENT = 'asgard.tool_call.consent',
+  // Subagent lifecycle (F-012). A spawned subagent emits `subagent.start` → `subagent.complete`
+  // around its own child tool calls; status is driven by `.complete`, never by the spawning
+  // `Agent` tool call's `tool_call.complete` (which returns `async_launched` early). Event names
+  // inferred from prototype@f73545c pending `asgard-sdk-go/pkg/models/sse_event.go` (EXT-003).
+  SUBAGENT_START = 'asgard.subagent.start',
+  SUBAGENT_COMPLETE = 'asgard.subagent.complete',
   DONE = 'asgard.run.done',
   ERROR = 'asgard.run.error',
 }

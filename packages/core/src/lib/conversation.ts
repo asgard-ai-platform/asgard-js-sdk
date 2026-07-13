@@ -20,6 +20,12 @@ function isTerminalThinkingMessage(message: ConversationMessage | undefined): bo
   return message?.type === 'thinking' && message.eventType === EventType.MESSAGE_THINKING_COMPLETE;
 }
 
+// Same terminal anti-rollback contract for the subagent family (F-012). Once subagent.complete
+// has landed, a late/replayed subagent.start must not roll the subagent back to running.
+function isTerminalSubagentMessage(message: ConversationMessage | undefined): boolean {
+  return message?.type === 'subagent' && message.eventType === EventType.SUBAGENT_COMPLETE;
+}
+
 export default class Conversation implements IConversation {
   public messages: Map<string, ConversationMessage> | null = null;
   public pendingConsent: ToolCallConsentEventData | null = null;
@@ -62,6 +68,10 @@ export default class Conversation implements IConversation {
         return this.onToolCallComplete(response as SseResponse<EventType.TOOL_CALL_COMPLETE>);
       case EventType.TOOL_CALL_CONSENT:
         return this.onToolCallConsent(response as SseResponse<EventType.TOOL_CALL_CONSENT>);
+      case EventType.SUBAGENT_START:
+        return this.onSubagentStart(response as SseResponse<EventType.SUBAGENT_START>);
+      case EventType.SUBAGENT_COMPLETE:
+        return this.onSubagentComplete(response as SseResponse<EventType.SUBAGENT_COMPLETE>);
       case EventType.ERROR:
         return this.onMessageError(response as SseResponse<EventType.ERROR>);
       default:
@@ -247,6 +257,9 @@ export default class Conversation implements IConversation {
       toolsetName: toolCallStart.toolCall.toolsetName,
       parameter: toolCallStart.toolCall.parameter,
       isComplete: false,
+      // Subagent association keys (F-012); absent on main-line tool calls.
+      toolUseId: toolCallStart.toolUseId,
+      parentToolUseId: toolCallStart.parentToolUseId,
       time: new Date(),
       traceId: response.traceId,
     };
@@ -282,5 +295,56 @@ export default class Conversation implements IConversation {
     const consent = response.fact.toolCallConsent;
 
     return new Conversation({ messages: this.messages, pendingConsent: consent });
+  }
+
+  onSubagentStart(response: SseResponse<EventType.SUBAGENT_START>): Conversation {
+    const subagentStart = response.fact.subagentStart;
+    const messages = new Map(this.messages);
+    const key = subagentStart.parentToolUseId;
+    const currentMessage = messages.get(key);
+
+    // Terminal anti-rollback guard (F-011/F-012): ignore a late `start` once `.complete` landed.
+    if (isTerminalSubagentMessage(currentMessage)) return this;
+
+    messages.set(key, {
+      type: 'subagent',
+      eventType: EventType.SUBAGENT_START,
+      messageId: key,
+      parentToolUseId: key,
+      agentId: subagentStart.agentId,
+      subagentType: subagentStart.subagentType,
+      description: subagentStart.description,
+      status: 'running',
+      time: currentMessage?.type === 'subagent' ? currentMessage.time : new Date(),
+      traceId: response.traceId,
+    });
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  onSubagentComplete(response: SseResponse<EventType.SUBAGENT_COMPLETE>): Conversation {
+    const subagentComplete = response.fact.subagentComplete;
+    const messages = new Map(this.messages);
+    const key = subagentComplete.parentToolUseId;
+    const currentMessage = messages.get(key);
+    const previous = currentMessage?.type === 'subagent' ? currentMessage : undefined;
+
+    // `complete` is self-sufficient: materialize the terminal subagent from this frame, falling
+    // back to the prior `start` meta for any omitempty-absent field.
+    messages.set(key, {
+      type: 'subagent',
+      eventType: EventType.SUBAGENT_COMPLETE,
+      messageId: key,
+      parentToolUseId: key,
+      agentId: subagentComplete.agentId ?? previous?.agentId,
+      subagentType: subagentComplete.subagentType ?? previous?.subagentType,
+      description: subagentComplete.description ?? previous?.description,
+      status: subagentComplete.status,
+      summary: subagentComplete.summary,
+      time: previous?.time ?? new Date(),
+      traceId: response.traceId ?? previous?.traceId,
+    });
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
   }
 }

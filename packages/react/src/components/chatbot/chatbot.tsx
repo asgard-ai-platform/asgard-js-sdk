@@ -28,6 +28,7 @@ import { ChatbotHeader } from './chatbot-header';
 import { ChatbotBody } from './chatbot-body';
 import { ChatbotFooter } from './chatbot-footer';
 import { RunningIndicator } from './running-indicator';
+import { SubagentList } from './subagent-list';
 import { TaskList } from './task-list';
 import { ChatbotContainer } from './chatbot-container/chatbot-container';
 import { ServiceErrorState } from './service-error-state';
@@ -355,6 +356,9 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
       default:
         return (
           <>
+            {/* The docked run-layer panels (SubagentList / TaskList) localize via the template
+                context, so they must sit inside the provider — not as siblings after it. The
+                provider renders no DOM node, so ordering / layout are unchanged. */}
             <AsgardTemplateContextProvider
               onErrorClick={onErrorClick}
               errorMessageRenderer={errorMessageRenderer}
@@ -367,9 +371,10 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               locale={locale}
             >
               <ChatbotBody />
+              {renderMenu?.()}
+              <SubagentList />
+              <TaskList />
             </AsgardTemplateContextProvider>
-            {renderMenu?.()}
-            <TaskList />
             <RunningIndicator />
             {renderFooter ? renderFooter() : <ChatbotFooter footerEndActions={footerEndActions} />}
             <ToolCallConsentGate />
