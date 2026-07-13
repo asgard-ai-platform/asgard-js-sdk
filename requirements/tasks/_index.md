@@ -29,7 +29,7 @@ None yet.
 
 ## ▶ Next Task
 
-Batch 1 done — F-011 (BUILD-001/REVIEW-001) + F-002 (BUILD-002/REVIEW-002) all `done`, uncommitted on `fix/f-011-message-stream-robustness`. Next: **Batch 2 → F-001** (thinking message 顯示) — awaiting go.
+Autonomous full-batch run on `feat/stream-robustness-and-resume` (one branch, PR #280). Done: F-011, F-002, **F-001** (thinking). Next: **F-003** (run indicator) → F-004/005/006/009/007/008 (tool-call) → F-010/012/013 (panels + store).
 
 ## Task Queue
 
@@ -39,3 +39,5 @@ Batch 1 done — F-011 (BUILD-001/REVIEW-001) + F-002 (BUILD-002/REVIEW-002) all
 | `REVIEW-001` | Review: Message Stream Assembly Robustness     | —        | done   | [REVIEW-001-message-stream-robustness.md](./REVIEW-001-message-stream-robustness.md) |
 | `BUILD-002`  | Last-Event-ID Resume — core enablement (F-002) | High     | done   | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)             |
 | `REVIEW-002` | Review: Last-Event-ID Resume                   | —        | done   | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)           |
+| `BUILD-003`  | Thinking Message Display (F-001)               | High     | done   | [BUILD-003-thinking-message-display.md](./BUILD-003-thinking-message-display.md)     |
+| `REVIEW-003` | Review: Thinking Message Display               | —        | done   | [REVIEW-003-thinking-message-display.md](./REVIEW-003-thinking-message-display.md)   |

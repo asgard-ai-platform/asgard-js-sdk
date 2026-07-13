@@ -51,6 +51,17 @@ export type ConversationErrorMessage = {
   traceId?: string;
 };
 
+export type ConversationThinkingMessage = {
+  type: 'thinking';
+  messageId: string;
+  eventType: EventType;
+  // Streaming while `thinking.delta`s arrive; false once `thinking.complete` materializes the terminal block.
+  isStreaming: boolean;
+  text: string;
+  time: Date;
+  traceId?: string;
+};
+
 export type ConversationToolCallMessage = {
   type: 'tool-call';
   messageId: string; // `${processId}-${callSeq}`

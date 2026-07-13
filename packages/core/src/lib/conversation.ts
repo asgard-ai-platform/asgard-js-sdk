@@ -14,6 +14,12 @@ function isTerminalBotMessage(message: ConversationMessage | undefined): boolean
   return message?.type === 'bot' && message.eventType === EventType.MESSAGE_COMPLETE;
 }
 
+// Same terminal anti-rollback contract as isTerminalBotMessage, for the thinking family
+// (F-001). Once thinking.complete has landed, late/replayed start/delta must be ignored.
+function isTerminalThinkingMessage(message: ConversationMessage | undefined): boolean {
+  return message?.type === 'thinking' && message.eventType === EventType.MESSAGE_THINKING_COMPLETE;
+}
+
 export default class Conversation implements IConversation {
   public messages: Map<string, ConversationMessage> | null = null;
   public pendingConsent: ToolCallConsentEventData | null = null;
@@ -44,6 +50,12 @@ export default class Conversation implements IConversation {
         return this.onMessageDelta(response as SseResponse<EventType.MESSAGE_DELTA>);
       case EventType.MESSAGE_COMPLETE:
         return this.onMessageComplete(response as SseResponse<EventType.MESSAGE_COMPLETE>);
+      case EventType.MESSAGE_THINKING_START:
+        return this.onMessageThinkingStart(response as SseResponse<EventType.MESSAGE_THINKING_START>);
+      case EventType.MESSAGE_THINKING_DELTA:
+        return this.onMessageThinkingDelta(response as SseResponse<EventType.MESSAGE_THINKING_DELTA>);
+      case EventType.MESSAGE_THINKING_COMPLETE:
+        return this.onMessageThinkingComplete(response as SseResponse<EventType.MESSAGE_THINKING_COMPLETE>);
       case EventType.TOOL_CALL_START:
         return this.onToolCallStart(response as SseResponse<EventType.TOOL_CALL_START>);
       case EventType.TOOL_CALL_COMPLETE:
@@ -129,6 +141,73 @@ export default class Conversation implements IConversation {
       time: new Date(),
       traceId: response.traceId ?? (currentMessage?.type === 'bot' ? currentMessage.traceId : undefined),
       raw: JSON.stringify(response),
+    });
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  onMessageThinkingStart(response: SseResponse<EventType.MESSAGE_THINKING_START>): Conversation {
+    const message = response.fact.messageThinkingStart.message;
+    const messages = new Map(this.messages);
+
+    // Terminal anti-rollback guard (same F-011 contract as the message family).
+    if (isTerminalThinkingMessage(messages.get(message.messageId))) return this;
+
+    messages.set(message.messageId, {
+      type: 'thinking',
+      eventType: EventType.MESSAGE_THINKING_START,
+      isStreaming: true,
+      text: message.text,
+      messageId: message.messageId,
+      time: new Date(),
+      traceId: response.traceId,
+    });
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  onMessageThinkingDelta(response: SseResponse<EventType.MESSAGE_THINKING_DELTA>): Conversation {
+    const message = response.fact.messageThinkingDelta.message;
+    const messages = new Map(this.messages);
+    const currentMessage = messages.get(message.messageId);
+
+    // Ignore a late `delta` once complete; don't clobber a non-thinking entry sharing this id.
+    if (isTerminalThinkingMessage(currentMessage)) return this;
+
+    if (currentMessage && currentMessage.type !== 'thinking') return this;
+
+    // Lazy-init when no prior thinking entry (skipped `start` / mid-stream resume): accumulate, never drop.
+    const text = `${currentMessage?.text ?? ''}${message.text}`;
+
+    messages.set(message.messageId, {
+      type: 'thinking',
+      eventType: EventType.MESSAGE_THINKING_DELTA,
+      isStreaming: true,
+      text,
+      messageId: message.messageId,
+      time: currentMessage?.time ?? new Date(),
+      traceId: response.traceId ?? currentMessage?.traceId,
+    });
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  onMessageThinkingComplete(response: SseResponse<EventType.MESSAGE_THINKING_COMPLETE>): Conversation {
+    const message = response.fact.messageThinkingComplete.message;
+    const messages = new Map(this.messages);
+    const currentMessage = messages.get(message.messageId);
+    const previousText = currentMessage?.type === 'thinking' ? currentMessage.text : '';
+
+    // `complete` is self-sufficient: materialize the terminal thinking block from this frame
+    // alone (prefer the frame's full text, fall back to what was accumulated).
+    messages.set(message.messageId, {
+      type: 'thinking',
+      eventType: EventType.MESSAGE_THINKING_COMPLETE,
+      isStreaming: false,
+      text: message.text || previousText,
+      messageId: message.messageId,
+      time: currentMessage?.type === 'thinking' ? currentMessage.time : new Date(),
+      traceId: response.traceId ?? (currentMessage?.type === 'thinking' ? currentMessage.traceId : undefined),
     });
 
     return new Conversation({ messages, pendingConsent: this.pendingConsent });

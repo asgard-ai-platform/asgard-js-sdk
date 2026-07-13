@@ -16,6 +16,7 @@ import {
   AttachmentTemplate,
   TemplateBox,
   TemplateBoxContent,
+  ThinkingBlock,
 } from '../../templates';
 import { Avatar } from '../../templates/avatar';
 import { useAsgardTemplateContext, useAsgardContext, MessageContainerProps } from '../../../context';
@@ -74,6 +75,11 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
     // tool-call messages are not rendered in the message flow for now
     if (message.type === 'tool-call') {
       return null;
+    }
+
+    // thinking messages render as a standalone collapsible block (F-001)
+    if (message.type === 'thinking') {
+      return <ThinkingBlock message={message} />;
     }
 
     if (message.isTyping) {

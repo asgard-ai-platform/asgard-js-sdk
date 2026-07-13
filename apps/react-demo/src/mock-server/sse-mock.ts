@@ -100,11 +100,25 @@ function emptyFact(): Record<string, unknown> {
     messageStart: null,
     messageDelta: null,
     messageComplete: null,
+    messageThinkingStart: null,
+    messageThinkingDelta: null,
+    messageThinkingComplete: null,
     toolCallStart: null,
     toolCallComplete: null,
     toolCallConsent: null,
   };
 }
+
+// Reasoning text streamed as a thinking block before the visible answer (F-001).
+const THINKING_CHUNKS = [
+  '讓我想一下：',
+  '先確認使用者這則訊息想問什麼，',
+  '把它拆成幾個小步驟，',
+  '評估手上有哪些工具可用、',
+  '哪一個最省成本，',
+  '再決定回覆的結構，',
+  '最後組出完整、好讀的答案。',
+];
 
 const SSE_HEADERS = {
   'Content-Type': 'text/event-stream',
@@ -208,6 +222,41 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   res.writeHead(200, SSE_HEADERS);
   writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
   await sleep(40);
+
+  // Thinking phase (F-001): reasoning streams as its own message before the visible answer.
+  // No `id:` on these — the Last-Event-ID resume cursor should track the answer, not thinking.
+  const thinkingId = randomUUID();
+  const thinkingMessage = (txt: string): object => ({
+    messageId: thinkingId,
+    replyToCustomMessageId,
+    text: txt,
+    payload: null,
+    isDebug: false,
+    idx: null,
+    template: null,
+  });
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.thinking.start',
+    fact: { ...emptyFact(), messageThinkingStart: { message: thinkingMessage('') } },
+  });
+  for (const chunk of THINKING_CHUNKS) {
+    await sleep(55);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.message.thinking.delta',
+      fact: { ...emptyFact(), messageThinkingDelta: { message: thinkingMessage(chunk) } },
+    });
+  }
+
+  await sleep(40);
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.thinking.complete',
+    fact: { ...emptyFact(), messageThinkingComplete: { message: thinkingMessage(THINKING_CHUNKS.join('')) } },
+  });
+  await sleep(40);
+
   writeEvent(res, {
     ...header,
     eventType: 'asgard.message.start',

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import Conversation from './conversation';
 import { EventType, MessageTemplateType } from '../constants/enum';
-import { ConversationBotMessage, Fact, Message, SseResponse } from '../types';
+import { ConversationBotMessage, ConversationThinkingMessage, Fact, Message, SseResponse } from '../types';
 
 function makeMessage(messageId: string, text: string): Message {
   return {
@@ -69,6 +69,54 @@ function complete(messageId: string, text: string): SseResponse<EventType.MESSAG
   };
 }
 
+function thinkingStart(messageId: string, text = ''): SseResponse<EventType.MESSAGE_THINKING_START> {
+  const fact: Fact<EventType.MESSAGE_THINKING_START> = {
+    ...nullFact,
+    messageThinkingStart: { message: makeMessage(messageId, text) },
+  };
+
+  return {
+    eventType: EventType.MESSAGE_THINKING_START,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
+function thinkingDelta(messageId: string, text: string): SseResponse<EventType.MESSAGE_THINKING_DELTA> {
+  const fact: Fact<EventType.MESSAGE_THINKING_DELTA> = {
+    ...nullFact,
+    messageThinkingDelta: { message: makeMessage(messageId, text) },
+  };
+
+  return {
+    eventType: EventType.MESSAGE_THINKING_DELTA,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
+function thinkingComplete(messageId: string, text: string): SseResponse<EventType.MESSAGE_THINKING_COMPLETE> {
+  const fact: Fact<EventType.MESSAGE_THINKING_COMPLETE> = {
+    ...nullFact,
+    messageThinkingComplete: { message: makeMessage(messageId, text) },
+  };
+
+  return {
+    eventType: EventType.MESSAGE_THINKING_COMPLETE,
+    requestId: 'req',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact,
+  };
+}
+
 function emptyConversation(): Conversation {
   return new Conversation({ messages: new Map() });
 }
@@ -78,6 +126,13 @@ function botMessage(conv: Conversation, messageId: string): ConversationBotMessa
   expect(message?.type).toBe('bot');
 
   return message as ConversationBotMessage;
+}
+
+function thinkingMessage(conv: Conversation, messageId: string): ConversationThinkingMessage {
+  const message = conv.messages?.get(messageId);
+  expect(message?.type).toBe('thinking');
+
+  return message as ConversationThinkingMessage;
 }
 
 describe('Conversation message stream assembly (F-011)', () => {
@@ -150,5 +205,67 @@ describe('Conversation message stream assembly (F-011)', () => {
       expect(msg.isTyping).toBe(false);
       expect(msg.message.text).toBe('done');
     }).not.toThrow();
+  });
+});
+
+describe('Conversation thinking stream assembly (F-001, F-011 contract)', () => {
+  it('normal flow: start → delta → delta accumulates streaming text', () => {
+    const conv = emptyConversation()
+      .onMessageThinkingStart(thinkingStart('t1'))
+      .onMessageThinkingDelta(thinkingDelta('t1', 'Rea'))
+      .onMessageThinkingDelta(thinkingDelta('t1', 'soning'));
+    const msg = thinkingMessage(conv, 't1');
+    expect(msg.isStreaming).toBe(true);
+    expect(msg.text).toBe('Reasoning');
+  });
+
+  it('complete-only: materializes terminal thinking block with no prior start/delta', () => {
+    const conv = emptyConversation().onMessageThinkingComplete(thinkingComplete('t1', 'final reasoning'));
+    const msg = thinkingMessage(conv, 't1');
+    expect(msg.isStreaming).toBe(false);
+    expect(msg.eventType).toBe(EventType.MESSAGE_THINKING_COMPLETE);
+    expect(msg.text).toBe('final reasoning');
+  });
+
+  it('delta-before-start: lazily creates the entry and keeps the text', () => {
+    const conv = emptyConversation().onMessageThinkingDelta(thinkingDelta('t1', 'partial'));
+    const msg = thinkingMessage(conv, 't1');
+    expect(msg.isStreaming).toBe(true);
+    expect(msg.text).toBe('partial');
+  });
+
+  it('start-after-complete: terminal state preserved (no reset to streaming)', () => {
+    const conv = emptyConversation()
+      .onMessageThinkingComplete(thinkingComplete('t1', 'final'))
+      .onMessageThinkingStart(thinkingStart('t1'));
+    const msg = thinkingMessage(conv, 't1');
+    expect(msg.isStreaming).toBe(false);
+    expect(msg.text).toBe('final');
+  });
+
+  it('delta-after-complete: terminal state preserved (no rollback, no null concat)', () => {
+    const conv = emptyConversation()
+      .onMessageThinkingComplete(thinkingComplete('t1', 'final'))
+      .onMessageThinkingDelta(thinkingDelta('t1', 'x'));
+    const msg = thinkingMessage(conv, 't1');
+    expect(msg.isStreaming).toBe(false);
+    expect(msg.text).toBe('final');
+  });
+
+  it('duplicate-complete: stays terminal, single message', () => {
+    const conv = emptyConversation()
+      .onMessageThinkingComplete(thinkingComplete('t1', 'a'))
+      .onMessageThinkingComplete(thinkingComplete('t1', 'a'));
+    expect(conv.messages?.size).toBe(1);
+    expect(thinkingMessage(conv, 't1').isStreaming).toBe(false);
+  });
+
+  it('thinking and answer messages coexist as separate entries', () => {
+    const conv = emptyConversation()
+      .onMessageThinkingComplete(thinkingComplete('t1', 'reasoning'))
+      .onMessageComplete(complete('m1', 'answer'));
+    expect(conv.messages?.size).toBe(2);
+    expect(thinkingMessage(conv, 't1').text).toBe('reasoning');
+    expect(botMessage(conv, 'm1').message.text).toBe('answer');
   });
 });
