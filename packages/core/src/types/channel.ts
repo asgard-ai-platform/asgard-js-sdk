@@ -74,6 +74,8 @@ export type ConversationToolCallMessage = {
   parameter: Record<string, unknown>;
   result?: Record<string, unknown>;
   isComplete: boolean;
+  // Backend-authoritative failure flag (F-009); populated from `toolCallComplete.isError`.
+  isError?: boolean;
   time: Date;
   traceId?: string;
 };

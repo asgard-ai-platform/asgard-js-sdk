@@ -269,6 +269,7 @@ export default class Conversation implements IConversation {
         eventType: EventType.TOOL_CALL_COMPLETE,
         result: toolCallComplete.toolCallResult,
         isComplete: true,
+        isError: toolCallComplete.isError,
         traceId: response.traceId ?? existingMessage.traceId,
       };
       messages.set(toolCallKey, updatedMessage);

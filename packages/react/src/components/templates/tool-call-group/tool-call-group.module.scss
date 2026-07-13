@@ -87,9 +87,8 @@
 .tool_call_item__status {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+  justify-content: flex-end;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -98,17 +97,28 @@
   height: 20px;
 }
 
-.tool_call_item__status_icon--completed {
-  color: #52c41a;
-}
-
 .tool_call_item__status_icon--error {
-  color: #ff4d4f;
+  color: var(--asg-color-error, #ff4d4f);
 }
 
-.tool_call_item__status_icon--pending {
-  color: #faad14;
+.tool_call_item__status_icon--running {
+  color: var(--asg-color-warning, #faad14);
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.tool_call_item__diff {
+  display: inline-flex;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.tool_call_item__diff--added {
+  color: var(--asg-color-success, #52c41a);
+}
+
+.tool_call_item__diff--removed {
+  color: var(--asg-color-error, #ff4d4f);
 }
 
 @keyframes pulse {

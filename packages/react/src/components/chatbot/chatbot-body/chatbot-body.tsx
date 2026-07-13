@@ -4,7 +4,7 @@ import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
 import { ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
-import { DEFAULT_LOCALE, groupSummary, isNativeBuiltin, Locale, toolLabel } from '../../../i18n';
+import { DEFAULT_LOCALE, groupSummary, isNativeBuiltin, Locale, toolDiff, toolLabel } from '../../../i18n';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
@@ -44,9 +44,12 @@ function groupMessages(messages: ConversationMessage[]): MessageGroup[] {
 
 // Convert tool-call message to ToolCallItemData
 function toolCallToItemData(toolCall: ConversationToolCallMessage, locale: Locale): ToolCallItemData {
-  let status: ToolCallStatus = 'pending';
+  // Unified status (F-007): running → completed / error. Failure is backend-authoritative via
+  // `isError` (F-009), with the legacy `result.error` heuristic as a fallback for old data.
+  let status: ToolCallStatus = 'running';
   if (toolCall.isComplete) {
-    status = toolCall.result?.error ? 'error' : 'completed';
+    const failed = toolCall.isError ?? Boolean(toolCall.result?.error);
+    status = failed ? 'error' : 'completed';
   }
 
   return {
@@ -55,6 +58,8 @@ function toolCallToItemData(toolCall: ConversationToolCallMessage, locale: Local
     label: toolLabel(toolCall, locale),
     // Native built-in tool name drives the per-variant icon; undefined → generic (F-004).
     variant: isNativeBuiltin(toolCall) ? toolCall.toolName : undefined,
+    // Write/Edit line diff shown on the right (F-007).
+    diff: toolDiff(toolCall) ?? undefined,
     status,
     initial: {
       toolsetName: toolCall.toolsetName,
@@ -181,7 +186,12 @@ export function ChatbotBody(): ReactNode {
               const summary = groupSummary(group.toolCalls, locale);
 
               const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
-                <ToolCallGroupTemplate items={items} time={firstToolCall?.time} title={overrides?.title ?? summary} />
+                <ToolCallGroupTemplate
+                  items={items}
+                  time={firstToolCall?.time}
+                  title={overrides?.title ?? summary}
+                  locale={locale}
+                />
               );
 
               if (renderToolCallGroup) {

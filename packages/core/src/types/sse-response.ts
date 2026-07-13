@@ -190,6 +190,9 @@ export interface ToolCallBaseEventData {
 
 export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
   toolCallResult: Record<string, unknown>;
+  // Backend-authoritative failure flag (F-009). `omitempty` ⇒ absent means success.
+  // Valid for native tools whose result is plain text (where `result.error` is not meaningful).
+  isError?: boolean;
 }
 
 export interface ToolCallConsentPendingCall {
