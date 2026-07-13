@@ -1,20 +1,13 @@
 import { ReactNode, useState, useCallback, useEffect } from 'react';
 import clsx from 'clsx';
 import styles from './tool-call-group.module.scss';
+import { DEFAULT_LOCALE, Locale, t } from '../../../i18n';
 
 // Icons
 function ChevronRightIcon({ className }: { className?: string }): ReactNode {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
-}
-
-function CheckCircleIcon({ className }: { className?: string }): ReactNode {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
     </svg>
   );
 }
@@ -73,13 +66,49 @@ export function CloseIcon({ className }: { className?: string }): ReactNode {
   );
 }
 
+// Per-variant icons for the seven native built-in tools; anything else → generic wrench (F-004).
+const VARIANT_PATHS: Record<string, string> = {
+  Bash: 'M4 17l6-5-6-5M12 19h8',
+  Read: 'M6 2h9l5 5v15H6zM14 2v6h6',
+  Write: 'M6 2h9l5 5v15H6zM14 2v6h6M12 12v6M9 15h6',
+  Edit: 'M4 20h4L18 8l-4-4L4 16zM14 4l4 4',
+  Skill: 'M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z',
+  WebFetch: 'M12 2a10 10 0 100 20 10 10 0 000-20M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20',
+  WebSearch: 'M11 4a7 7 0 100 14 7 7 0 000-14M20 20l-4-4',
+  generic: 'M14 6a3.5 3.5 0 01-4.6 4.6L5 15v4h4l4.4-4.4A3.5 3.5 0 0118 10l-4-4z',
+};
+
+function ToolVariantIcon({ variant, className }: { variant?: string; className?: string }): ReactNode {
+  const path = (variant && VARIANT_PATHS[variant]) || VARIANT_PATHS.generic;
+
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 // Types
-export type ToolCallStatus = 'pending' | 'completed' | 'error';
+export type ToolCallStatus = 'running' | 'completed' | 'error';
 
 export interface ToolCallItemData {
   id: string;
   label: string;
   status: ToolCallStatus;
+  /** Native built-in tool name (Bash/Read/Write/Edit/Skill/WebFetch/WebSearch) → per-variant icon; undefined → generic. */
+  variant?: string;
+  /** Write/Edit line diff shown on the right (F-007). */
+  diff?: { added: number; removed: number };
   initial?: Record<string, unknown>;
   result?: Record<string, unknown>;
 }
@@ -89,6 +118,8 @@ export interface ToolCallGroupProps {
   items: ToolCallItemData[];
   defaultExpanded?: boolean;
   className?: string;
+  /** UI locale for expand titles (F-005/F-008); default `en-US`. */
+  locale?: Locale;
 }
 
 // JSON Syntax Highlighting
@@ -305,29 +336,34 @@ export function JsonViewer({ title, data }: JsonViewerProps): ReactNode {
   );
 }
 
-// StatusIcon Component
+// StatusIcon Component — only the noteworthy states get a marker (F-007): running = amber spinner,
+// error = red alert. `completed` is the resting state → no marker (the variant icon already carries
+// identity; a per-row green check would be redundant noise).
 function StatusIcon({ status }: { status: ToolCallStatus }): ReactNode {
   const iconClass = styles.tool_call_item__status_icon;
 
   switch (status) {
-    case 'completed':
-      return <CheckCircleIcon className={clsx(iconClass, styles['tool_call_item__status_icon--completed'])} />;
     case 'error':
       return <ErrorCircleIcon className={clsx(iconClass, styles['tool_call_item__status_icon--error'])} />;
-    case 'pending':
+    case 'running':
+      return <LoadingIcon className={clsx(iconClass, styles['tool_call_item__status_icon--running'])} />;
+    case 'completed':
     default:
-      return <LoadingIcon className={clsx(iconClass, styles['tool_call_item__status_icon--pending'])} />;
+      return null;
   }
 }
 
 // ToolCallItem Component
 interface ToolCallItemProps {
   item: ToolCallItemData;
+  locale: Locale;
 }
 
-function ToolCallItem({ item }: ToolCallItemProps): ReactNode {
+function ToolCallItem({ item, locale }: ToolCallItemProps): ReactNode {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasContent = item.initial || item.result;
+  const diff = item.diff;
+  const hasDiff = !!diff && (diff.added > 0 || diff.removed > 0);
 
   const handleToggle = useCallback((): void => {
     if (hasContent) {
@@ -347,16 +383,23 @@ function ToolCallItem({ item }: ToolCallItemProps): ReactNode {
               )}
             />
           )}
+          <ToolVariantIcon variant={item.variant} className={styles.tool_call_item__variant_icon} />
           <span className={styles.tool_call_item__label}>{item.label}</span>
         </div>
         <div className={styles.tool_call_item__status}>
+          {hasDiff && (
+            <span className={styles.tool_call_item__diff}>
+              {diff.added > 0 && <span className={styles['tool_call_item__diff--added']}>+{diff.added}</span>}
+              {diff.removed > 0 && <span className={styles['tool_call_item__diff--removed']}>-{diff.removed}</span>}
+            </span>
+          )}
           <StatusIcon status={item.status} />
         </div>
       </div>
       {isExpanded && hasContent && (
         <div className={styles.tool_call_item__content}>
-          {item.initial && <JsonViewer title="Initial" data={item.initial} />}
-          {item.result && <JsonViewer title="Result" data={item.result} />}
+          {item.initial && <JsonViewer title={t(locale, 'expand.initial')} data={item.initial} />}
+          {item.result && <JsonViewer title={t(locale, 'expand.result')} data={item.result} />}
         </div>
       )}
     </div>
@@ -369,6 +412,7 @@ export function ToolCallGroup({
   items,
   defaultExpanded = true,
   className,
+  locale = DEFAULT_LOCALE,
 }: ToolCallGroupProps): ReactNode {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -387,7 +431,7 @@ export function ToolCallGroup({
       {isExpanded && (
         <div className={styles.tool_call_group__content}>
           {items.map(item => (
-            <ToolCallItem key={item.id} item={item} />
+            <ToolCallItem key={item.id} item={item} locale={locale} />
           ))}
         </div>
       )}

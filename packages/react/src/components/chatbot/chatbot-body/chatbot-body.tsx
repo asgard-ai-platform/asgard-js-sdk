@@ -1,9 +1,10 @@
 import { Fragment, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/core';
+import { ConversationMessage, ConversationToolCallMessage, isSubagentRelated, isTaskTool } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
-import { BotTypingPlaceholder, ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
+import { ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
+import { DEFAULT_LOCALE, groupSummary, isNativeBuiltin, Locale, toolDiff, toolLabel } from '../../../i18n';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
@@ -42,15 +43,23 @@ function groupMessages(messages: ConversationMessage[]): MessageGroup[] {
 }
 
 // Convert tool-call message to ToolCallItemData
-function toolCallToItemData(toolCall: ConversationToolCallMessage): ToolCallItemData {
-  let status: ToolCallStatus = 'pending';
+function toolCallToItemData(toolCall: ConversationToolCallMessage, locale: Locale): ToolCallItemData {
+  // Unified status (F-007): running → completed / error. Failure is backend-authoritative via
+  // `isError` (F-009), with the legacy `result.error` heuristic as a fallback for old data.
+  let status: ToolCallStatus = 'running';
   if (toolCall.isComplete) {
-    status = toolCall.result?.error ? 'error' : 'completed';
+    const failed = toolCall.isError ?? Boolean(toolCall.result?.error);
+    status = failed ? 'error' : 'completed';
   }
 
   return {
     id: toolCall.messageId,
-    label: toolCall.reason || toolCall.toolName,
+    // Label priority: reason → synthesized (native built-in) → toolName (F-004).
+    label: toolLabel(toolCall, locale),
+    // Native built-in tool name drives the per-variant icon; undefined → generic (F-004).
+    variant: isNativeBuiltin(toolCall) ? toolCall.toolName : undefined,
+    // Write/Edit line diff shown on the right (F-007).
+    diff: toolDiff(toolCall) ?? undefined,
     status,
     initial: {
       toolsetName: toolCall.toolsetName,
@@ -66,12 +75,11 @@ const BOTTOM_THRESHOLD = 50;
 
 export function ChatbotBody(): ReactNode {
   const { chatbot } = useAsgardThemeContext();
-  const { renderToolCallGroup } = useAsgardTemplateContext();
+  const { renderToolCallGroup, locale = DEFAULT_LOCALE } = useAsgardTemplateContext();
 
   const {
     messages,
     messageBoxBottomRef,
-    botTypingPlaceholder,
     scrollContainerRef,
     isFollowingLatest,
     setFollowingLatest,
@@ -170,14 +178,22 @@ export function ChatbotBody(): ReactNode {
         data-scrollable="true"
       >
         <div ref={contentRef} className={styles.chatbot_body__content} style={contentStyles}>
-          {groupMessages(Array.from(messages?.values() ?? [])).map((group, index) => {
+          {groupMessages(
+            Array.from(messages?.values() ?? []).filter(message => !isTaskTool(message) && !isSubagentRelated(message)),
+          ).map((group, index) => {
             if (group.type === 'tool-call-group') {
-              const items = group.toolCalls.map(toolCallToItemData);
+              const items = group.toolCalls.map(toolCall => toolCallToItemData(toolCall, locale));
               const firstToolCall = group.toolCalls[0];
               const key = `tool-call-group-${firstToolCall?.processId || index}`;
+              const summary = groupSummary(group.toolCalls, locale);
 
               const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
-                <ToolCallGroupTemplate items={items} time={firstToolCall?.time} title={overrides?.title} />
+                <ToolCallGroupTemplate
+                  items={items}
+                  time={firstToolCall?.time}
+                  title={overrides?.title ?? summary}
+                  locale={locale}
+                />
               );
 
               if (renderToolCallGroup) {
@@ -201,7 +217,6 @@ export function ChatbotBody(): ReactNode {
               />
             );
           })}
-          <BotTypingPlaceholder placeholder={botTypingPlaceholder ?? '正在輸入訊息'} />
           <div ref={messageBoxBottomRef} />
         </div>
       </div>

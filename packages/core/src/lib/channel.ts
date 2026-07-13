@@ -1,17 +1,38 @@
-import { BehaviorSubject, combineLatest, map, Subscription } from 'rxjs';
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map, skip, Subscription } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import {
   ChannelConfig,
   ChannelStates,
+  ConversationMessage,
   FetchSseOptions,
   FetchSsePayload,
   IAsgardServiceClient,
   ObserverOrNext,
+  ReactiveStore,
   SseResponse,
   ToolCallConsentAnswer,
 } from '../types';
 import { FetchSseAction, EventType } from '../constants/enum';
 import Conversation from './conversation';
+import { deepEqual, reduceSubagents, reduceTasks, Subagent, Task } from './derived-state';
+
+const messagesOf = (conversation: Conversation): ConversationMessage[] =>
+  Array.from(conversation.messages?.values() ?? []);
+
+// Wrap a BehaviorSubject as the framework-agnostic ReactiveStore (F-013). `getSnapshot` reads the
+// current value; `subscribe` notifies on *changes only* (skip the synchronous replay of the current
+// value — getSnapshot already provides it).
+function toReactiveStore<T>(subject: BehaviorSubject<T>): ReactiveStore<T> {
+  return {
+    getSnapshot: () => subject.getValue(),
+    subscribe: (listener: () => void): (() => void) => {
+      const sub = subject.pipe(skip(1)).subscribe(() => listener());
+
+      return () => sub.unsubscribe();
+    },
+    observable: subject.asObservable(),
+  };
+}
 
 export default class Channel {
   private client: IAsgardServiceClient;
@@ -21,8 +42,16 @@ export default class Channel {
 
   private isConnecting$: BehaviorSubject<boolean>;
   private conversation$: BehaviorSubject<Conversation>;
+  private tasks$: BehaviorSubject<Task[]>;
+  private subagents$: BehaviorSubject<Subagent[]>;
+
+  /** Framework-agnostic derived-state stores (F-013): current-list snapshot + change notification. */
+  public readonly tasks: ReactiveStore<Task[]>;
+  public readonly subagents: ReactiveStore<Subagent[]>;
+
   private statesObserver?: ObserverOrNext<ChannelStates>;
   private statesSubscription?: Subscription;
+  private derivedSubscription?: Subscription;
   private currentUserMessageId?: string;
   // The most-recently-sent user message id. Unlike currentUserMessageId (which
   // is cleared once a traceId is attached), this is kept across the SSE
@@ -45,6 +74,15 @@ export default class Channel {
 
     this.isConnecting$ = new BehaviorSubject(false);
     this.conversation$ = new BehaviorSubject(config.conversation);
+
+    // Seed the derived slices from the initial conversation so a snapshot is valid before the first
+    // SSE event; `subscribe()` keeps them folded from `conversation$` thereafter (F-013).
+    const initialMessages = messagesOf(config.conversation);
+    this.tasks$ = new BehaviorSubject<Task[]>(reduceTasks(initialMessages));
+    this.subagents$ = new BehaviorSubject<Subagent[]>(reduceSubagents(initialMessages));
+    this.tasks = toReactiveStore(this.tasks$);
+    this.subagents = toReactiveStore(this.subagents$);
+
     this.statesObserver = config.statesObserver;
   }
 
@@ -83,11 +121,34 @@ export default class Channel {
   }
 
   private subscribe(): void {
-    this.statesSubscription = combineLatest([this.isConnecting$, this.conversation$])
+    // Fold the conversation into each derived slice; `distinctUntilChanged` (structural) makes a
+    // slice re-emit only when its content actually changes, so a high-frequency `message.delta`
+    // that leaves tasks/subagents untouched does not push a new list (F-013).
+    this.derivedSubscription = new Subscription();
+    this.derivedSubscription.add(
+      this.conversation$
+        .pipe(
+          map(conversation => reduceTasks(messagesOf(conversation))),
+          distinctUntilChanged<Task[]>(deepEqual),
+        )
+        .subscribe(this.tasks$),
+    );
+    this.derivedSubscription.add(
+      this.conversation$
+        .pipe(
+          map(conversation => reduceSubagents(messagesOf(conversation))),
+          distinctUntilChanged<Subagent[]>(deepEqual),
+        )
+        .subscribe(this.subagents$),
+    );
+
+    this.statesSubscription = combineLatest([this.isConnecting$, this.conversation$, this.tasks$, this.subagents$])
       .pipe(
-        map(([isConnecting, conversation]) => ({
+        map(([isConnecting, conversation, tasks, subagents]) => ({
           isConnecting,
           conversation,
+          tasks,
+          subagents,
         })),
       )
       .subscribe(this.statesObserver);
@@ -228,6 +289,9 @@ export default class Channel {
   public close(): void {
     this.isConnecting$.complete();
     this.conversation$.complete();
+    this.tasks$.complete();
+    this.subagents$.complete();
+    this.derivedSubscription?.unsubscribe();
     this.statesSubscription?.unsubscribe();
   }
 }

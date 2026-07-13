@@ -1,5 +1,6 @@
 export * from './use-asgard-service-client';
 export * from './use-channel';
+export * from './use-derived-stores';
 export * from './use-debounce';
 export * from './use-resize-observer';
 export * from './use-deep-compare-memo';

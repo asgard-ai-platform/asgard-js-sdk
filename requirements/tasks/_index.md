@@ -29,11 +29,27 @@ None yet.
 
 ## ▶ Next Task
 
-None — awaiting task selection.
+None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**. F-001/002/003, the tool-call series F-004–009, F-010 (Task panel), F-011 (stream robustness), F-012 (Subagent panel), F-013 (framework-agnostic derived-state store) all `done` with BUILD/REVIEW pairs. **EXT-003 closed** — the F-012 subagent event contract is confirmed field-for-field against `asgard-core@dev-1.16.19` (`internal/models/edgeserver.go`; the SSE backend is `asgard-core`, not `asgard-sdk-go`). Awaiting the user's review + push/merge (+ `done`-authorization per feature-workflow Stage 5). Remaining follow-up: **EXT-002** (F-010 tasks should read `taskId`/`statusChange` sidecar instead of the `parameter` fallback).
 
 ## Task Queue
 
-| Task ID | Title | Priority | Status | Spec |
-| ------- | ----- | -------- | ------ | ---- |
-
-尚無任務 / none yet.
+| Task ID      | Title                                                    | Priority | Status | Spec                                                                                             |
+| ------------ | -------------------------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `BUILD-001`  | Message Stream Assembly Robustness (F-011)               | High     | done   | [BUILD-001-message-stream-robustness.md](./BUILD-001-message-stream-robustness.md)               |
+| `REVIEW-001` | Review: Message Stream Assembly Robustness               | —        | done   | [REVIEW-001-message-stream-robustness.md](./REVIEW-001-message-stream-robustness.md)             |
+| `BUILD-002`  | Last-Event-ID Resume — core enablement (F-002)           | High     | done   | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)                         |
+| `REVIEW-002` | Review: Last-Event-ID Resume                             | —        | done   | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)                       |
+| `BUILD-003`  | Thinking Message Display (F-001)                         | High     | done   | [BUILD-003-thinking-message-display.md](./BUILD-003-thinking-message-display.md)                 |
+| `REVIEW-003` | Review: Thinking Message Display                         | —        | done   | [REVIEW-003-thinking-message-display.md](./REVIEW-003-thinking-message-display.md)               |
+| `BUILD-004`  | Run Indicator Bound to Connection (F-003)                | High     | done   | [BUILD-004-run-indicator-at-seam.md](./BUILD-004-run-indicator-at-seam.md)                       |
+| `REVIEW-004` | Review: Run Indicator at Seam                            | —        | done   | [REVIEW-004-run-indicator-at-seam.md](./REVIEW-004-run-indicator-at-seam.md)                     |
+| `BUILD-005`  | Tool-call i18n + Variants + Summary (F-005/004/006)      | High     | done   | [BUILD-005-tool-call-i18n-variants-summary.md](./BUILD-005-tool-call-i18n-variants-summary.md)   |
+| `REVIEW-005` | Review: Tool-call i18n + Variants + Summary              | —        | done   | [REVIEW-005-tool-call-i18n-variants-summary.md](./REVIEW-005-tool-call-i18n-variants-summary.md) |
+| `BUILD-006`  | Tool-call isError + Diff/Status + Expand (F-009/007/008) | High     | done   | [BUILD-006-tool-call-iserror-diff-expand.md](./BUILD-006-tool-call-iserror-diff-expand.md)       |
+| `REVIEW-006` | Review: Tool-call isError + Diff/Status + Expand         | —        | done   | [REVIEW-006-tool-call-iserror-diff-expand.md](./REVIEW-006-tool-call-iserror-diff-expand.md)     |
+| `BUILD-007`  | Task Check List Panel (F-010)                            | High     | done   | [BUILD-007-task-check-list-panel.md](./BUILD-007-task-check-list-panel.md)                       |
+| `REVIEW-007` | Review: Task Check List Panel                            | —        | done   | [REVIEW-007-task-check-list-panel.md](./REVIEW-007-task-check-list-panel.md)                     |
+| `BUILD-008`  | Subagent List Panel (F-012)                              | High     | done   | [BUILD-008-subagent-list-panel.md](./BUILD-008-subagent-list-panel.md)                           |
+| `REVIEW-008` | Review: Subagent List Panel                              | —        | done   | [REVIEW-008-subagent-list-panel.md](./REVIEW-008-subagent-list-panel.md)                         |
+| `BUILD-009`  | Framework-agnostic derived-state store (F-013)           | High     | done   | [BUILD-009-derived-state-store.md](./BUILD-009-derived-state-store.md)                           |
+| `REVIEW-009` | Review: Derived-state store                              | —        | done   | [REVIEW-009-derived-state-store.md](./REVIEW-009-derived-state-store.md)                         |

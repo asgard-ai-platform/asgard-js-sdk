@@ -1,0 +1,100 @@
+.thinking_block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--asg-color-border, #303030);
+  background-color: var(--asg-color-surface, #1f1f1f);
+  border-radius: var(--asg-radius-md, 8px);
+}
+
+.thinking_block__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.thinking_block__chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.thinking_block__chevron--open {
+  transform: rotate(90deg);
+}
+
+.thinking_block__label--streaming {
+  color: var(--asg-color-primary, #00aeef);
+  animation: asgard-thinking-pulse 1.4s ease-in-out infinite;
+}
+
+.thinking_block__stream {
+  max-height: 120px;
+  overflow-y: auto;
+  padding-left: 10px;
+  border-left: 2px solid var(--asg-color-border, #303030);
+  // Top fade mask — signals "more above" as the window follows the latest reasoning.
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 24px);
+}
+
+.thinking_block__body {
+  padding-left: 10px;
+  border-left: 2px solid var(--asg-color-border, #303030);
+}
+
+.thinking_block__text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.thinking_block__more {
+  margin-top: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--asg-color-primary, #00aeef);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@keyframes asgard-thinking-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking_block__label--streaming {
+    animation: none;
+  }
+
+  .thinking_block__stream {
+    scroll-behavior: auto;
+  }
+}

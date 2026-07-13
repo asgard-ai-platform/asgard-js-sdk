@@ -180,6 +180,12 @@ export interface ErrorEventData {
 export interface ToolCallBaseEventData {
   processId: string;
   callSeq: number;
+  // Subagent association keys (F-012). `omitempty`: absent ⇒ a main-line tool call.
+  // `toolUseId` identifies this call; a child call sets `parentToolUseId` to the spawning
+  // `Agent` call's `toolUseId`. Confirmed against asgard-core@dev-1.16.19
+  // (`internal/models/edgeserver.go`; EXT-003 closed).
+  toolUseId?: string;
+  parentToolUseId?: string;
   toolCall: {
     toolsetName: string;
     toolName: string;
@@ -190,6 +196,33 @@ export interface ToolCallBaseEventData {
 
 export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
   toolCallResult: Record<string, unknown>;
+  // Backend-authoritative failure flag (F-009). `omitempty` ⇒ absent means success.
+  // Valid for native tools whose result is plain text (where `result.error` is not meaningful).
+  isError?: boolean;
+}
+
+// Terminal status of a subagent, from `subagent.complete.status` (F-012). A subagent stays
+// running until `subagent.complete` lands. Confirmed against asgard-core@dev-1.16.19
+// (`GenericBotSseEventFactSubagentComplete.status`; EXT-003 closed).
+export type SubagentCompleteStatus = 'completed' | 'failed' | 'cancelled';
+
+// Full subagent status incl. the in-flight `running` state (F-012/F-013).
+export type SubagentStatus = 'running' | SubagentCompleteStatus;
+
+// Shapes mirror asgard-core@dev-1.16.19 `internal/models/edgeserver.go`
+// (`GenericBotSseEventFactSubagent{Start,Complete}`; EXT-003 closed).
+export interface SubagentStartEventData {
+  agentId: string;
+  // Association key = the spawning `Agent` tool call's `toolUseId`; shared by every child event.
+  parentToolUseId: string;
+  subagentType?: string;
+  description?: string;
+}
+
+// The backend's `SubagentComplete` carries no `description` (only `SubagentStart` does), so drop it.
+export interface SubagentCompleteEventData extends Omit<SubagentStartEventData, 'description'> {
+  status: SubagentCompleteStatus;
+  summary?: string;
 }
 
 export interface ToolCallConsentPendingCall {
@@ -219,9 +252,14 @@ export interface Fact<Type extends EventType> {
   messageStart: IsEqual<Type, EventType.MESSAGE_START, MessageEventData>;
   messageDelta: IsEqual<Type, EventType.MESSAGE_DELTA, MessageEventData>;
   messageComplete: IsEqual<Type, EventType.MESSAGE_COMPLETE, MessageEventData>;
+  messageThinkingStart: IsEqual<Type, EventType.MESSAGE_THINKING_START, MessageEventData>;
+  messageThinkingDelta: IsEqual<Type, EventType.MESSAGE_THINKING_DELTA, MessageEventData>;
+  messageThinkingComplete: IsEqual<Type, EventType.MESSAGE_THINKING_COMPLETE, MessageEventData>;
   toolCallStart: IsEqual<Type, EventType.TOOL_CALL_START, ToolCallBaseEventData>;
   toolCallComplete: IsEqual<Type, EventType.TOOL_CALL_COMPLETE, ToolCallCompleteEventData>;
   toolCallConsent: IsEqual<Type, EventType.TOOL_CALL_CONSENT, ToolCallConsentEventData>;
+  subagentStart: IsEqual<Type, EventType.SUBAGENT_START, SubagentStartEventData>;
+  subagentComplete: IsEqual<Type, EventType.SUBAGENT_COMPLETE, SubagentCompleteEventData>;
 }
 
 export interface SseResponse<Type extends EventType> {

@@ -1,6 +1,7 @@
 import { createContext, FC, PropsWithChildren, ReactNode, useContext, useMemo } from 'react';
 import { ConversationBotMessage, ConversationErrorMessage, ConversationMessage } from '@asgard-js/core';
 import { ToolCallItemData } from '../components/templates';
+import { Locale } from '../i18n';
 
 /**
  * Configuration for a message action button
@@ -56,6 +57,8 @@ export interface AsgardTemplateContextValue {
   renderMessageContent?: (props: MessageContentRendererProps) => ReactNode;
   /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
   renderToolCallGroup?: (props: ToolCallGroupRendererProps) => ReactNode;
+  /** UI locale for synthesized tool-call labels, group summaries, and expand titles. Default `en-US`. */
+  locale?: Locale;
 }
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
@@ -78,6 +81,7 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   onMessageAction?: (actionId: string, message: ConversationBotMessage) => void;
   renderMessageContent?: (props: MessageContentRendererProps) => ReactNode;
   renderToolCallGroup?: (props: ToolCallGroupRendererProps) => ReactNode;
+  locale?: Locale;
 }
 
 export function AsgardTemplateContextProvider(props: AsgardTemplateContextProviderProps): ReactNode {
@@ -91,6 +95,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
     onMessageAction,
     renderMessageContent,
     renderToolCallGroup,
+    locale,
   } = props;
 
   const contextValue = useMemo(
@@ -103,6 +108,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       onMessageAction,
       renderMessageContent,
       renderToolCallGroup,
+      locale,
     }),
     [
       errorMessageRenderer,
@@ -113,6 +119,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       onMessageAction,
       renderMessageContent,
       renderToolCallGroup,
+      locale,
     ],
   );
 

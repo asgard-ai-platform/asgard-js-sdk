@@ -36,6 +36,9 @@ export interface AsgardServiceContextValue {
   resetChannel?: UseChannelReturn['resetChannel'];
   closeChannel?: UseChannelReturn['closeChannel'];
   replyToolCallConsents?: UseChannelReturn['replyToolCallConsents'];
+  /** Framework-agnostic derived-state stores (F-013); absent in preview mode. Read via `useTaskList()` / `useSubagents()`. */
+  taskStore?: UseChannelReturn['taskStore'];
+  subagentStore?: UseChannelReturn['subagentStore'];
   pendingConsent: ToolCallConsentEventData | null;
   botTypingPlaceholder?: string;
   inputPlaceholder?: string;
@@ -213,6 +216,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     resetChannel,
     closeChannel,
     replyToolCallConsents,
+    taskStore,
+    subagentStore,
   } = useChannel({
     client,
     customChannelId,
@@ -286,6 +291,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       closeChannel,
       replyToolCallConsents: wrappedReplyToolCallConsents,
       pendingConsent: conversation?.pendingConsent ?? null,
+      taskStore,
+      subagentStore,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,
@@ -316,6 +323,8 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       resetChannel,
       closeChannel,
       wrappedReplyToolCallConsents,
+      taskStore,
+      subagentStore,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,
