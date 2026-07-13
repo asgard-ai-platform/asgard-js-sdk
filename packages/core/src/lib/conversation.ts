@@ -283,6 +283,8 @@ export default class Conversation implements IConversation {
         result: toolCallComplete.toolCallResult,
         isComplete: true,
         isError: toolCallComplete.isError,
+        // Structured result sidecar (F-010 / EXT-002) — authoritative Task id + status.
+        toolUseResultSidecar: toolCallComplete.toolUseResultSidecar,
         traceId: response.traceId ?? existingMessage.traceId,
       };
       messages.set(toolCallKey, updatedMessage);

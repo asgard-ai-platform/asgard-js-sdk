@@ -7,7 +7,13 @@ function toolCall(
   key: string,
   toolName: string,
   parameter: Record<string, unknown>,
-  opts: { toolUseId?: string; parentToolUseId?: string; isError?: boolean; isComplete?: boolean } = {},
+  opts: {
+    toolUseId?: string;
+    parentToolUseId?: string;
+    isError?: boolean;
+    isComplete?: boolean;
+    sidecar?: Record<string, unknown>;
+  } = {},
 ): ConversationMessage {
   return {
     type: 'tool-call',
@@ -22,6 +28,7 @@ function toolCall(
     isError: opts.isError,
     toolUseId: opts.toolUseId,
     parentToolUseId: opts.parentToolUseId,
+    toolUseResultSidecar: opts.sidecar,
     time: new Date(0),
   };
 }
@@ -72,6 +79,66 @@ describe('reduceTasks (F-010, relocated to core in F-013)', () => {
 
   it('ignores non-task tool calls', () => {
     expect(reduceTasks([toolCall('r', 'Read', { file_path: '/a' })])).toEqual([]);
+  });
+
+  // EXT-002: the authoritative id + status come from the tool-result sidecar, not `parameter`.
+  it('reads id + subject from the TaskCreate sidecar (sidecar-first)', () => {
+    const tasks = reduceTasks([
+      toolCall(
+        'c1',
+        'TaskCreate',
+        { activeForm: 'doing A', description: 'desc A' },
+        { sidecar: { task: { id: 't1', subject: 'A' } } },
+      ),
+    ]);
+    expect(tasks).toEqual([
+      { id: 't1', subject: 'A', activeForm: 'doing A', description: 'desc A', status: 'pending' },
+    ]);
+  });
+
+  it('takes TaskUpdate status from sidecar.statusChange.to, keyed by sidecar.taskId', () => {
+    const tasks = reduceTasks([
+      toolCall('c1', 'TaskCreate', {}, { sidecar: { task: { id: 't1', subject: 'A' } } }),
+      toolCall(
+        'c2',
+        'TaskUpdate',
+        {},
+        { sidecar: { taskId: 't1', statusChange: { from: 'pending', to: 'completed' } } },
+      ),
+    ]);
+    expect(tasks).toEqual([
+      { id: 't1', subject: 'A', activeForm: undefined, description: undefined, status: 'completed' },
+    ]);
+  });
+
+  it('prefers the sidecar over parameter when both disagree', () => {
+    const tasks = reduceTasks([
+      toolCall(
+        'c1',
+        'TaskCreate',
+        { id: 'stale', subject: 'stale' },
+        { sidecar: { task: { id: 't1', subject: 'real' } } },
+      ),
+      toolCall(
+        'c2',
+        'TaskUpdate',
+        { id: 'stale', status: 'pending' },
+        { sidecar: { taskId: 't1', statusChange: { to: 'in_progress' } } },
+      ),
+    ]);
+    expect(tasks).toEqual([
+      { id: 't1', subject: 'real', activeForm: undefined, description: undefined, status: 'in_progress' },
+    ]);
+  });
+
+  it('falls back to parameter when no sidecar is present (older frames)', () => {
+    const tasks = reduceTasks([
+      toolCall('c1', 'TaskCreate', { id: 't1', subject: 'A', status: 'pending' }),
+      toolCall('c2', 'TaskUpdate', { id: 't1', status: 'completed' }),
+    ]);
+    expect(tasks).toEqual([
+      { id: 't1', subject: 'A', activeForm: undefined, description: undefined, status: 'completed' },
+    ]);
   });
 });
 

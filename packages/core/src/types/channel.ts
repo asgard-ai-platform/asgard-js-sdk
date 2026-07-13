@@ -3,7 +3,7 @@ import { EventType } from '../constants/enum';
 import Conversation from '../lib/conversation';
 import type { Subagent, Task } from '../lib/derived-state';
 import { IAsgardServiceClient } from './client';
-import { ErrorMessage, Message, SubagentStatus } from './sse-response';
+import { ErrorMessage, Message, SubagentStatus, ToolUseResultSidecar } from './sse-response';
 
 export type ObserverOrNext<T> = Partial<Observer<T>> | ((value: T) => void);
 
@@ -96,6 +96,9 @@ export type ConversationToolCallMessage = {
   isComplete: boolean;
   // Backend-authoritative failure flag (F-009); populated from `toolCallComplete.isError`.
   isError?: boolean;
+  // Structured tool-result sidecar (F-010 / EXT-002); populated from `toolCallComplete.toolUseResultSidecar`.
+  // Authoritative source for Task id + status; `reduceTasks` reads it before falling back to `parameter`.
+  toolUseResultSidecar?: ToolUseResultSidecar;
   // Subagent association keys (F-012). `parentToolUseId` non-empty ⇒ a child of that subagent;
   // an `Agent` call carries its own `toolUseId` (= children's `parentToolUseId`).
   toolUseId?: string;

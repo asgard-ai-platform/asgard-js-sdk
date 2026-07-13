@@ -296,26 +296,28 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   }
 
   // Task Check List phase (F-010): TaskCreate/TaskUpdate native tool calls fold into one task list
-  // (rendered in the docked Task tray, NOT as tool-call rows). Task fields live on `parameter`
-  // (inferred contract — see reduceTasks).
+  // (rendered in the docked Task tray, NOT as tool-call rows). The authoritative id + status live on
+  // `toolUseResultSidecar` (TaskCreate → task.{id,subject}, TaskUpdate → taskId + statusChange.to),
+  // matching asgard-core; `parameter` (the tool input) carries activeForm / description. reduceTasks
+  // reads the sidecar first, parameter as fallback (EXT-002).
   const taskProcessId = randomUUID();
-  const taskCalls: { toolName: string; parameter: Record<string, unknown> }[] = [
+  const taskCalls: { toolName: string; parameter: Record<string, unknown>; sidecar: Record<string, unknown> }[] = [
     {
       toolName: 'TaskCreate',
-      parameter: {
-        id: 'task-1',
-        subject: '讀取並分析訂單資料',
-        activeForm: '正在讀取訂單資料',
-        status: 'pending',
-        description: '從 data warehouse 拉出上週各通路訂單數與金額',
-      },
+      parameter: { activeForm: '正在讀取訂單資料', description: '從 data warehouse 拉出上週各通路訂單數與金額' },
+      sidecar: { task: { id: 'task-1', subject: '讀取並分析訂單資料' } },
     },
-    { toolName: 'TaskCreate', parameter: { id: 'task-2', subject: '依通路彙總並排序前 5 名', status: 'pending' } },
-    { toolName: 'TaskCreate', parameter: { id: 'task-3', subject: '產生報表並輸出', status: 'pending' } },
-    { toolName: 'TaskUpdate', parameter: { id: 'task-1', status: 'completed' } },
+    { toolName: 'TaskCreate', parameter: {}, sidecar: { task: { id: 'task-2', subject: '依通路彙總並排序前 5 名' } } },
+    { toolName: 'TaskCreate', parameter: {}, sidecar: { task: { id: 'task-3', subject: '產生報表並輸出' } } },
     {
       toolName: 'TaskUpdate',
-      parameter: { id: 'task-2', status: 'in_progress', activeForm: '正在依通路彙總並排序前 5 名' },
+      parameter: {},
+      sidecar: { taskId: 'task-1', statusChange: { from: 'pending', to: 'completed' } },
+    },
+    {
+      toolName: 'TaskUpdate',
+      parameter: { activeForm: '正在依通路彙總並排序前 5 名' },
+      sidecar: { taskId: 'task-2', statusChange: { from: 'pending', to: 'in_progress' } },
     },
   ];
   for (let seq = 0; seq < taskCalls.length; seq++) {
@@ -332,7 +334,13 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
       eventType: 'asgard.tool_call.complete',
       fact: {
         ...emptyFact(),
-        toolCallComplete: { processId: taskProcessId, callSeq: seq, toolCall, toolCallResult: { ok: true } },
+        toolCallComplete: {
+          processId: taskProcessId,
+          callSeq: seq,
+          toolCall,
+          toolCallResult: { ok: true },
+          toolUseResultSidecar: tc.sidecar,
+        },
       },
     });
   }

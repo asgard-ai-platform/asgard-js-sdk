@@ -194,11 +194,25 @@ export interface ToolCallBaseEventData {
   };
 }
 
+// The CLI's structured tool-result sidecar (asgard-core `toolUseResultSidecar`, the `tool_use_result`
+// sibling on a user frame). Generic across tools; F-010 reads the Task shape so a UI can track a task
+// list by a clean backend id instead of parsing the flattened result string:
+//   TaskCreate → { task: { id, subject } }   TaskUpdate → { taskId, statusChange: { to } }
+// Confirmed against asgard-core@dev-1.16.19 (`internal/models/edgeserver.go`; EXT-002).
+export interface ToolUseResultSidecar {
+  task?: { id?: string; subject?: string };
+  taskId?: string;
+  statusChange?: { from?: string; to?: string };
+  [key: string]: unknown;
+}
+
 export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
   toolCallResult: Record<string, unknown>;
   // Backend-authoritative failure flag (F-009). `omitempty` ⇒ absent means success.
   // Valid for native tools whose result is plain text (where `result.error` is not meaningful).
   isError?: boolean;
+  // Structured tool-result sidecar (F-010 / EXT-002). Authoritative for Task ids + status changes.
+  toolUseResultSidecar?: ToolUseResultSidecar;
 }
 
 // Terminal status of a subagent, from `subagent.complete.status` (F-012). A subagent stays
