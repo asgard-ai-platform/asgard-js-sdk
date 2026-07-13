@@ -19,6 +19,17 @@ function asgardSseMockPlugin(): Plugin {
           next(err as Error);
         }
       });
+
+      // F-015: GET channel metadata probe (restore vs. reset/empty decision).
+      server.middlewares.use('/mock-asgard/channel/metadata', async (req, res, next) => {
+        try {
+          const { handleMockChannelMetadata } = await import('./src/mock-server/sse-mock');
+
+          await handleMockChannelMetadata(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
     },
   };
 }

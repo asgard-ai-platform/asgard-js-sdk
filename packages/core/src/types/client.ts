@@ -8,8 +8,34 @@ export interface CwdDownloadResult {
   filename: string;
 }
 
+/**
+ * Server-reported run state of a channel (F-015). Mirrors the backend
+ * `ChannelRunState` enum returned by `GET /channel/metadata`.
+ * - `IDLE`: no run in flight — a rejoin catches up to the collapsed history and closes immediately.
+ * - `RUNNING`: a background run is streaming — a rejoin tails it to its terminal.
+ * - `ERROR`: the last run ended in error.
+ */
+export type ChannelRunState = 'IDLE' | 'RUNNING' | 'ERROR';
+
+/**
+ * Result of `getChannelMetadata` (F-015). `exists` is the decision axis for the
+ * mount lifecycle: an existing channel is restored (GET rejoin, never reset); a
+ * missing one is either seeded (RESET_CHANNEL) or started empty.
+ */
+export interface ChannelMetadata {
+  exists: boolean;
+  customChannelId?: string;
+  title?: string;
+  runState?: ChannelRunState;
+  lastActivityAt?: string;
+}
+
 export interface IAsgardServiceClient {
   fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void;
+  /** GET rejoin (F-015): replay an existing channel's collapsed history, then tail to terminal. No body. */
+  rejoinSse?(customChannelId: string, options?: FetchSseOptions): void;
+  /** GET channel metadata (F-015): probe whether a channel exists and its run state, without mutating it. */
+  getChannelMetadata?(customChannelId: string): Promise<ChannelMetadata>;
   uploadFile?(file: File, customChannelId: string): Promise<BlobUploadResponse>;
   downloadCwdFile?(relativePath: string, customChannelId: string): Promise<CwdDownloadResult>;
 }

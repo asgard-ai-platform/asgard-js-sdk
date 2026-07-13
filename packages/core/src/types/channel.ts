@@ -46,6 +46,9 @@ export type ConversationUserMessage = {
   blobIds?: string[];
   filePreviewUrls?: string[];
   documentNames?: string[];
+  // Populated when the user turn comes from a transcript rejoin `asgard.message.user` (F-014).
+  customMessageId?: string;
+  identityHint?: string;
   time: Date;
   traceId?: string;
 };

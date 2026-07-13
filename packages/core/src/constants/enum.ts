@@ -13,6 +13,10 @@ export enum EventType {
   MESSAGE_START = 'asgard.message.start',
   MESSAGE_DELTA = 'asgard.message.delta',
   MESSAGE_COMPLETE = 'asgard.message.complete',
+  // The user's own turn, replayed on a transcript rejoin so a client can render the user side of the
+  // history (F-014). `persist-only` — never echoed on the live POST path; only GET replay carries it.
+  // Confirmed against asgard-core@dev-1.16.19 `internal/constants.go`.
+  MESSAGE_USER = 'asgard.message.user',
   MESSAGE_THINKING_START = 'asgard.message.thinking.start',
   MESSAGE_THINKING_DELTA = 'asgard.message.thinking.delta',
   MESSAGE_THINKING_COMPLETE = 'asgard.message.thinking.complete',
@@ -26,6 +30,10 @@ export enum EventType {
   // confirmed against asgard-core@dev-1.16.19 `internal/constants.go` (EXT-003 closed).
   SUBAGENT_START = 'asgard.subagent.start',
   SUBAGENT_COMPLETE = 'asgard.subagent.complete',
+  // The agent updated the channel's human-readable title (F-016 consumes it; added here for enum
+  // parity per F-014). Ephemeral — not persisted, so a rejoin seeds the title from channel metadata
+  // instead. Confirmed against asgard-core@dev-1.16.19.
+  CHANNEL_TITLE_UPDATE = 'asgard.channel.title.update',
   DONE = 'asgard.run.done',
   ERROR = 'asgard.run.error',
 }

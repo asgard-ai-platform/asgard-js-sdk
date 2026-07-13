@@ -108,7 +108,26 @@ function emptyFact(): Record<string, unknown> {
     toolCallConsent: null,
     subagentStart: null,
     subagentComplete: null,
+    messageUser: null,
+    channelTitleUpdate: null,
   };
+}
+
+// F-015 restore demo: a channel is treated as "existing" (has a transcript to
+// replay on GET rejoin, metadata → exists) purely by an `existing-` id prefix,
+// so both branches (restore vs. fresh) are deterministic without server state.
+function channelExists(customChannelId: string): boolean {
+  return customChannelId.startsWith('existing-');
+}
+
+function parseChannelId(req: IncomingMessage): string {
+  try {
+    const url = new URL(req.url ?? '', 'http://localhost');
+
+    return url.searchParams.get('custom_channel_id') ?? '';
+  } catch {
+    return '';
+  }
 }
 
 // Reasoning text streamed as a thinking block before the visible answer (F-001).
@@ -129,6 +148,14 @@ const SSE_HEADERS = {
 } as const;
 
 export async function handleMockSse(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  // GET side of the channel (F-015): rejoin — replay the collapsed transcript,
+  // then a terminal. The POST side below dispatches a run.
+  if (req.method === 'GET') {
+    await handleMockRejoin(req, res);
+
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.statusCode = 405;
     res.end();
@@ -486,4 +513,110 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   writeEvent(res, completeEvent(messageId));
   writeEvent(res, runDoneEvent());
   res.end();
+}
+
+// F-015 — GET rejoin: replay an existing channel's collapsed history, then a
+// terminal so `isConnecting` releases (idle channel). Faithful to asgard-core:
+// the snapshot is collapsed to ONE persisted frame per message (user turns via
+// `message.user`, bot answers as `message.complete`). `tool_call.*` / thinking
+// deltas are EPHEMERAL — never in PG history — so a cold restore rehydrates
+// messages only, NOT the derived task/subagent/tool-call activity. A
+// non-existing channel just gets an immediate terminal.
+async function handleMockRejoin(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const customChannelId = parseChannelId(req) || 'mock-channel';
+  const header: CommonHeader = {
+    requestId: '', // a rejoin is not tied to one turn
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+
+  res.writeHead(200, SSE_HEADERS);
+
+  if (!channelExists(customChannelId)) {
+    // Nothing to replay — synthesize the terminal so the client releases input.
+    writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+    res.end();
+
+    return;
+  }
+
+  // 1) User side — `message.user` is persist-only, so it only surfaces on rejoin.
+  const priorUserId = 'restored-user-1';
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.user',
+    fact: {
+      ...emptyFact(),
+      messageUser: { messageId: priorUserId, customMessageId: priorUserId, text: '上週各通路的訂單狀況如何？' },
+    },
+  });
+  await sleep(60);
+
+  // 2) Bot answer — collapsed to a single `message.complete` (rejoin does not re-stream deltas).
+  const priorBotId = 'restored-bot-1';
+  const restoredAnswer = '上週四個通路合計 1,240 筆訂單、營收約 NT$3.8M。東區退貨率偏高（12%），已在報表中標記待追蹤。';
+  writeEvent(
+    res,
+    {
+      ...header,
+      eventType: 'asgard.message.complete',
+      fact: {
+        ...emptyFact(),
+        messageComplete: {
+          message: {
+            messageId: priorBotId,
+            replyToCustomMessageId: priorUserId,
+            text: restoredAnswer,
+            payload: null,
+            isDebug: false,
+            idx: null,
+            template: { type: 'TEXT', text: restoredAnswer },
+          },
+        },
+      },
+    },
+    `${priorBotId}:0`,
+  );
+  await sleep(60);
+
+  // 3) Terminal — idle channel, so input releases immediately after the replay.
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+  res.end();
+}
+
+// F-015 — GET channel metadata: an `existing-` channel returns its metadata
+// (SuccessResp envelope); anything else is 404 (ChannelNotFound), which the SDK
+// reads as "does not exist" to decide reset vs. empty.
+export async function handleMockChannelMetadata(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== 'GET') {
+    res.statusCode = 405;
+    res.end();
+
+    return;
+  }
+
+  const customChannelId = parseChannelId(req);
+
+  if (!customChannelId) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ isSuccess: false }));
+
+    return;
+  }
+
+  if (!channelExists(customChannelId)) {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ isSuccess: false }));
+
+    return;
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(
+    JSON.stringify({
+      isSuccess: true,
+      data: { customChannelId, title: '還原的頻道', runState: 'IDLE', lastActivityAt: new Date().toISOString() },
+    }),
+  );
 }

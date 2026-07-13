@@ -22,6 +22,7 @@ const navItems = [
   { to: '/before-send-message', label: 'Before Send Message' },
   { to: '/custom-header', label: 'Custom Header' },
   { to: '/auto-reset-channel', label: 'Auto Reset Channel' },
+  { to: '/channel-restore', label: 'Channel Restore (F-015)' },
   { to: '/render-menu', label: 'Render Menu' },
   { to: '/footer-end-actions', label: 'Footer End Actions' },
   { to: '/render-footer', label: 'Render Footer' },

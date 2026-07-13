@@ -29,11 +29,15 @@ None yet.
 
 ## ▶ Next Task
 
-None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**, and re-verified against the PM acceptance criteria on `main` (2026-07-14; report + evidence in `.github/verification/f001-f013/`).
+`main` is **complete: 13/13** (F-001~F-013), re-verified against the PM acceptance criteria (2026-07-14; report + evidence in `.github/verification/f001-f013/`).
 
 - **EXT-003 closed** — F-012 subagent contract confirmed field-for-field against `asgard-core@dev-1.16.19`.
-- **EXT-002 closed** — F-010 now reads the authoritative `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId`+`statusChange.to`), parameter fallback (PR #281, merged to `main`).
+- **EXT-002 closed** — F-010 reads the authoritative `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId`+`statusChange.to`), parameter fallback (PR #281, merged to `main`).
 - **Open follow-up** — [FOLLOWUP-f002-background-tab-detach](./FOLLOWUP-f002-background-tab-detach.md): F-002's background-tab `openWhenHidden` return + `detach`→cursor-rejoin (2 of 6 criteria), deferred pending real-backend regression.
+
+**On this branch (PR-B):** F-014 (BUILD-010, transcript replay kernel) + F-015 (BUILD-011, transcript-first init lifecycle, **breaking** `autoResetChannel`) both `done`. Next: **F-016** (channel title 動態狀態 + `channel.title.update` → `channelTitle$` store; `ChannelMetadata.title` already available from F-015), then F-017 (title UI, deferred).
+
+**PR split (user decision):** shared-provider + multi-panel demo merged via **PR #283**; PR-B (this branch, F-014 + F-015) stacks on it. No tag / no npm release.
 
 ## Task Queue
 
@@ -57,3 +61,7 @@ None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is 
 | `REVIEW-008` | Review: Subagent List Panel                              | —        | done   | [REVIEW-008-subagent-list-panel.md](./REVIEW-008-subagent-list-panel.md)                         |
 | `BUILD-009`  | Framework-agnostic derived-state store (F-013)           | High     | done   | [BUILD-009-derived-state-store.md](./BUILD-009-derived-state-store.md)                           |
 | `REVIEW-009` | Review: Derived-state store                              | —        | done   | [REVIEW-009-derived-state-store.md](./REVIEW-009-derived-state-store.md)                         |
+| `BUILD-010`  | Transcript replay kernel + message.user (F-014)          | High     | done   | [BUILD-010-transcript-user-replay-kernel.md](./BUILD-010-transcript-user-replay-kernel.md)       |
+| `REVIEW-010` | Review: Transcript replay kernel                         | —        | done   | [REVIEW-010-transcript-user-replay-kernel.md](./REVIEW-010-transcript-user-replay-kernel.md)     |
+| `BUILD-011`  | Channel init lifecycle — metadata gate (F-015)           | High     | done   | [BUILD-011-channel-init-lifecycle.md](./BUILD-011-channel-init-lifecycle.md)                     |
+| `REVIEW-011` | Review: Channel init lifecycle                           | —        | done   | [REVIEW-011-channel-init-lifecycle.md](./REVIEW-011-channel-init-lifecycle.md)                   |

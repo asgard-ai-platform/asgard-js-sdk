@@ -8,12 +8,16 @@ interface CreateSseObservableOptions {
   endpoint: string;
   apiKey?: string;
   debugMode?: boolean;
-  payload: FetchSsePayload;
+  payload?: FetchSsePayload;
   customHeaders?: Record<string, string>;
+  // HTTP method (F-015). POST = dispatch a run (body = payload); GET = transcript rejoin/replay of an
+  // existing channel (no body; `queryParams` carry the channel id). Defaults to POST.
+  method?: 'GET' | 'POST';
+  queryParams?: Record<string, string>;
 }
 
 export function createSseObservable(options: CreateSseObservableOptions): Observable<SseResponse<EventType>> {
-  const { endpoint, apiKey, payload, debugMode, customHeaders } = options;
+  const { endpoint, apiKey, payload, debugMode, customHeaders, method = 'POST', queryParams } = options;
 
   return new Observable<SseResponse<EventType>>(subscriber => {
     const controller = new AbortController();
@@ -38,6 +42,12 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
       searchParams.set('is_debug', 'true');
     }
 
+    if (queryParams) {
+      for (const [key, value] of Object.entries(queryParams)) {
+        searchParams.set(key, value);
+      }
+    }
+
     const url = new URL(endpoint);
 
     if (searchParams.toString()) {
@@ -45,9 +55,11 @@ export function createSseObservable(options: CreateSseObservableOptions): Observ
     }
 
     fetchEventSource(url.toString(), {
-      method: 'POST',
+      method,
       headers,
-      body: payload ? JSON.stringify(payload) : undefined,
+      // GET rejoin carries no body; the channel id travels in `queryParams`. Only POST dispatches
+      // a run with a JSON payload.
+      body: method === 'POST' && payload ? JSON.stringify(payload) : undefined,
       signal: controller.signal,
       /**
        * Allow SSE to work when the page is hidden.

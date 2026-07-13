@@ -56,6 +56,8 @@ export default class Conversation implements IConversation {
         return this.onMessageDelta(response as SseResponse<EventType.MESSAGE_DELTA>);
       case EventType.MESSAGE_COMPLETE:
         return this.onMessageComplete(response as SseResponse<EventType.MESSAGE_COMPLETE>);
+      case EventType.MESSAGE_USER:
+        return this.onMessageUser(response as SseResponse<EventType.MESSAGE_USER>);
       case EventType.MESSAGE_THINKING_START:
         return this.onMessageThinkingStart(response as SseResponse<EventType.MESSAGE_THINKING_START>);
       case EventType.MESSAGE_THINKING_DELTA:
@@ -218,6 +220,31 @@ export default class Conversation implements IConversation {
       messageId: message.messageId,
       time: currentMessage?.type === 'thinking' ? currentMessage.time : new Date(),
       traceId: response.traceId ?? (currentMessage?.type === 'thinking' ? currentMessage.traceId : undefined),
+    });
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+  }
+
+  // Assemble a user turn replayed from the transcript (F-014). `message.user` is persist-only — the
+  // live POST path never echoes it — so it only arrives on a GET rejoin. Dedupe against the optimistic
+  // bubble (keyed by `customMessageId`) and any prior replay (keyed by the backend `messageId`), so a
+  // rejoin never duplicates a turn the client already rendered.
+  onMessageUser(response: SseResponse<EventType.MESSAGE_USER>): Conversation {
+    const user = response.fact.messageUser;
+    const messages = new Map(this.messages);
+    const key = user.customMessageId || user.messageId;
+
+    if (messages.has(key) || messages.has(user.messageId)) return this;
+
+    messages.set(key, {
+      type: 'user',
+      messageId: key,
+      text: user.text,
+      blobIds: user.blobIds,
+      customMessageId: user.customMessageId,
+      identityHint: user.identityHint,
+      time: new Date(),
+      traceId: response.traceId,
     });
 
     return new Conversation({ messages, pendingConsent: this.pendingConsent });
