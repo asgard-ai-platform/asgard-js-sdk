@@ -171,3 +171,32 @@
   font-size: 11px;
   color: var(--asg-color-text-placeholder, #6b6b6b);
 }
+
+// F-016 channel title bar (rendered outside the Chatbot, from useChannelTitle()).
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+
+  &__icon {
+    color: #94a3b8;
+    font-weight: 700;
+  }
+
+  &__text {
+    font-weight: 600;
+    font-size: 14px;
+    color: #0f172a;
+  }
+
+  &__src {
+    margin-left: auto;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+}

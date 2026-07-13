@@ -1,6 +1,23 @@
 import { ReactNode } from 'react';
-import { useSubagents, useTaskList } from '@asgard-js/react';
+import { useChannelTitle, useSubagents, useTaskList } from '@asgard-js/react';
 import styles from './multi-panel.module.scss';
+
+/**
+ * Channel title bar (F-016) — rendered OUTSIDE the <Chatbot>, reading `useChannelTitle()` from the
+ * shared provider. Seeded from `GET /channel/metadata` on entry, then updated live by the
+ * `channel.title.update` event. Not redrawn by high-frequency message deltas.
+ */
+export function ChannelTitleBar(): ReactNode {
+  const title = useChannelTitle();
+
+  return (
+    <div className={styles.titlebar}>
+      <span className={styles.titlebar__icon}>#</span>
+      <span className={styles.titlebar__text}>{title ?? '未命名頻道'}</span>
+      <span className={styles.titlebar__src}>useChannelTitle()（框外渲染）</span>
+    </div>
+  );
+}
 
 // Each panel is an INDEPENDENT component that reads the shared conversation via a hook (F-013/F-014).
 // They are siblings of <Chatbot> under one <AsgardConversationProvider> — the SDK contributes the
