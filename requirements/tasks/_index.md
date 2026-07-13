@@ -29,17 +29,19 @@ None yet.
 
 ## ▶ Next Task
 
-Autonomous full-batch run on `feat/stream-robustness-and-resume` (one branch, PR #280). Done: F-011, F-002, F-001 (thinking), **F-003** (run indicator). Next: **F-005** (i18n infra) → F-004/006/009/007/008 (tool-call) → F-010/012/013 (panels + store).
+Autonomous full-batch run on `feat/stream-robustness-and-resume` (one branch, PR #280). Done: F-011, F-002, F-001, F-003, **F-005 + F-004 + F-006** (tool-call i18n / variants / summary). Next: **F-009** (isError) → F-007 (diff + unified status) → F-008 (expand align) → F-010/012/013 (panels + store).
 
 ## Task Queue
 
-| Task ID      | Title                                          | Priority | Status | Spec                                                                                 |
-| ------------ | ---------------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------ |
-| `BUILD-001`  | Message Stream Assembly Robustness (F-011)     | High     | done   | [BUILD-001-message-stream-robustness.md](./BUILD-001-message-stream-robustness.md)   |
-| `REVIEW-001` | Review: Message Stream Assembly Robustness     | —        | done   | [REVIEW-001-message-stream-robustness.md](./REVIEW-001-message-stream-robustness.md) |
-| `BUILD-002`  | Last-Event-ID Resume — core enablement (F-002) | High     | done   | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)             |
-| `REVIEW-002` | Review: Last-Event-ID Resume                   | —        | done   | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)           |
-| `BUILD-003`  | Thinking Message Display (F-001)               | High     | done   | [BUILD-003-thinking-message-display.md](./BUILD-003-thinking-message-display.md)     |
-| `REVIEW-003` | Review: Thinking Message Display               | —        | done   | [REVIEW-003-thinking-message-display.md](./REVIEW-003-thinking-message-display.md)   |
-| `BUILD-004`  | Run Indicator Bound to Connection (F-003)      | High     | done   | [BUILD-004-run-indicator-at-seam.md](./BUILD-004-run-indicator-at-seam.md)           |
-| `REVIEW-004` | Review: Run Indicator at Seam                  | —        | done   | [REVIEW-004-run-indicator-at-seam.md](./REVIEW-004-run-indicator-at-seam.md)         |
+| Task ID      | Title                                               | Priority | Status | Spec                                                                                             |
+| ------------ | --------------------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `BUILD-001`  | Message Stream Assembly Robustness (F-011)          | High     | done   | [BUILD-001-message-stream-robustness.md](./BUILD-001-message-stream-robustness.md)               |
+| `REVIEW-001` | Review: Message Stream Assembly Robustness          | —        | done   | [REVIEW-001-message-stream-robustness.md](./REVIEW-001-message-stream-robustness.md)             |
+| `BUILD-002`  | Last-Event-ID Resume — core enablement (F-002)      | High     | done   | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)                         |
+| `REVIEW-002` | Review: Last-Event-ID Resume                        | —        | done   | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)                       |
+| `BUILD-003`  | Thinking Message Display (F-001)                    | High     | done   | [BUILD-003-thinking-message-display.md](./BUILD-003-thinking-message-display.md)                 |
+| `REVIEW-003` | Review: Thinking Message Display                    | —        | done   | [REVIEW-003-thinking-message-display.md](./REVIEW-003-thinking-message-display.md)               |
+| `BUILD-004`  | Run Indicator Bound to Connection (F-003)           | High     | done   | [BUILD-004-run-indicator-at-seam.md](./BUILD-004-run-indicator-at-seam.md)                       |
+| `REVIEW-004` | Review: Run Indicator at Seam                       | —        | done   | [REVIEW-004-run-indicator-at-seam.md](./REVIEW-004-run-indicator-at-seam.md)                     |
+| `BUILD-005`  | Tool-call i18n + Variants + Summary (F-005/004/006) | High     | done   | [BUILD-005-tool-call-i18n-variants-summary.md](./BUILD-005-tool-call-i18n-variants-summary.md)   |
+| `REVIEW-005` | Review: Tool-call i18n + Variants + Summary         | —        | done   | [REVIEW-005-tool-call-i18n-variants-summary.md](./REVIEW-005-tool-call-i18n-variants-summary.md) |

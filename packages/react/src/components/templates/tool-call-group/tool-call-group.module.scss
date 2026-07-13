@@ -307,3 +307,9 @@
     line-height: 1.6;
   }
 }
+
+// Per-variant native tool icon (F-004)
+.tool_call_item__variant_icon {
+  flex-shrink: 0;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+}

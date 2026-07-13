@@ -225,6 +225,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     footerEndActions,
     renderFooter,
     renderToolCallGroup,
+    locale,
     autoResetChannel,
     keepConnectionOnUnmount = false,
     userIdentityHint,
@@ -362,6 +363,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               onMessageAction={onMessageAction}
               renderMessageContent={renderMessageContent}
               renderToolCallGroup={renderToolCallGroup}
+              locale={locale}
             >
               <ChatbotBody />
             </AsgardTemplateContextProvider>

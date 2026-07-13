@@ -73,6 +73,38 @@ export function CloseIcon({ className }: { className?: string }): ReactNode {
   );
 }
 
+// Per-variant icons for the seven native built-in tools; anything else → generic wrench (F-004).
+const VARIANT_PATHS: Record<string, string> = {
+  Bash: 'M4 17l6-5-6-5M12 19h8',
+  Read: 'M6 2h9l5 5v15H6zM14 2v6h6',
+  Write: 'M6 2h9l5 5v15H6zM14 2v6h6M12 12v6M9 15h6',
+  Edit: 'M4 20h4L18 8l-4-4L4 16zM14 4l4 4',
+  Skill: 'M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z',
+  WebFetch: 'M12 2a10 10 0 100 20 10 10 0 000-20M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20',
+  WebSearch: 'M11 4a7 7 0 100 14 7 7 0 000-14M20 20l-4-4',
+  generic: 'M14 6a3.5 3.5 0 01-4.6 4.6L5 15v4h4l4.4-4.4A3.5 3.5 0 0118 10l-4-4z',
+};
+
+function ToolVariantIcon({ variant, className }: { variant?: string; className?: string }): ReactNode {
+  const path = (variant && VARIANT_PATHS[variant]) || VARIANT_PATHS.generic;
+
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 // Types
 export type ToolCallStatus = 'pending' | 'completed' | 'error';
 
@@ -80,6 +112,8 @@ export interface ToolCallItemData {
   id: string;
   label: string;
   status: ToolCallStatus;
+  /** Native built-in tool name (Bash/Read/Write/Edit/Skill/WebFetch/WebSearch) → per-variant icon; undefined → generic. */
+  variant?: string;
   initial?: Record<string, unknown>;
   result?: Record<string, unknown>;
 }
@@ -347,6 +381,7 @@ function ToolCallItem({ item }: ToolCallItemProps): ReactNode {
               )}
             />
           )}
+          <ToolVariantIcon variant={item.variant} className={styles.tool_call_item__variant_icon} />
           <span className={styles.tool_call_item__label}>{item.label}</span>
         </div>
         <div className={styles.tool_call_item__status}>

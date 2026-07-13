@@ -257,6 +257,34 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   });
   await sleep(40);
 
+  // Tool-call phase (F-004/F-006): a few native built-in tool calls before the answer, so the
+  // demo shows synthesized labels, per-variant icons, and the localized group summary.
+  const processId = randomUUID();
+  const demoToolCalls: { toolName: string; parameter: Record<string, unknown> }[] = [
+    { toolName: 'Read', parameter: { file_path: '/repo/packages/core/src/index.ts' } },
+    { toolName: 'WebSearch', parameter: { query: 'asgard sdk streaming resume' } },
+    { toolName: 'Skill', parameter: { skill: 'code-review' } },
+    { toolName: 'Write', parameter: { file_path: '/repo/report.md', content: 'line1\nline2\nline3\nline4\nline5' } },
+    { toolName: 'Edit', parameter: { file_path: '/repo/plan.md', old_string: 'a\nb\nc', new_string: 'a\nB\nc\nd' } },
+  ];
+  for (let seq = 0; seq < demoToolCalls.length; seq++) {
+    const tc = demoToolCalls[seq];
+    const toolCall = { toolsetName: '', toolName: tc.toolName, parameter: tc.parameter };
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.start',
+      fact: { ...emptyFact(), toolCallStart: { processId, callSeq: seq, toolCall } },
+    });
+    await sleep(130);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.complete',
+      fact: { ...emptyFact(), toolCallComplete: { processId, callSeq: seq, toolCall, toolCallResult: { ok: true } } },
+    });
+  }
+
+  await sleep(40);
+
   writeEvent(res, {
     ...header,
     eventType: 'asgard.message.start',

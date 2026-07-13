@@ -4,6 +4,7 @@ import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
 import { ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
+import { DEFAULT_LOCALE, groupSummary, isNativeBuiltin, Locale, toolLabel } from '../../../i18n';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
@@ -42,7 +43,7 @@ function groupMessages(messages: ConversationMessage[]): MessageGroup[] {
 }
 
 // Convert tool-call message to ToolCallItemData
-function toolCallToItemData(toolCall: ConversationToolCallMessage): ToolCallItemData {
+function toolCallToItemData(toolCall: ConversationToolCallMessage, locale: Locale): ToolCallItemData {
   let status: ToolCallStatus = 'pending';
   if (toolCall.isComplete) {
     status = toolCall.result?.error ? 'error' : 'completed';
@@ -50,7 +51,10 @@ function toolCallToItemData(toolCall: ConversationToolCallMessage): ToolCallItem
 
   return {
     id: toolCall.messageId,
-    label: toolCall.reason || toolCall.toolName,
+    // Label priority: reason → synthesized (native built-in) → toolName (F-004).
+    label: toolLabel(toolCall, locale),
+    // Native built-in tool name drives the per-variant icon; undefined → generic (F-004).
+    variant: isNativeBuiltin(toolCall) ? toolCall.toolName : undefined,
     status,
     initial: {
       toolsetName: toolCall.toolsetName,
@@ -66,7 +70,7 @@ const BOTTOM_THRESHOLD = 50;
 
 export function ChatbotBody(): ReactNode {
   const { chatbot } = useAsgardThemeContext();
-  const { renderToolCallGroup } = useAsgardTemplateContext();
+  const { renderToolCallGroup, locale = DEFAULT_LOCALE } = useAsgardTemplateContext();
 
   const {
     messages,
@@ -171,12 +175,13 @@ export function ChatbotBody(): ReactNode {
         <div ref={contentRef} className={styles.chatbot_body__content} style={contentStyles}>
           {groupMessages(Array.from(messages?.values() ?? [])).map((group, index) => {
             if (group.type === 'tool-call-group') {
-              const items = group.toolCalls.map(toolCallToItemData);
+              const items = group.toolCalls.map(toolCall => toolCallToItemData(toolCall, locale));
               const firstToolCall = group.toolCalls[0];
               const key = `tool-call-group-${firstToolCall?.processId || index}`;
+              const summary = groupSummary(group.toolCalls, locale);
 
               const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
-                <ToolCallGroupTemplate items={items} time={firstToolCall?.time} title={overrides?.title} />
+                <ToolCallGroupTemplate items={items} time={firstToolCall?.time} title={overrides?.title ?? summary} />
               );
 
               if (renderToolCallGroup) {
