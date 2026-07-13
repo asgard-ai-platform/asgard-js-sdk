@@ -49,3 +49,4 @@ Verification: lint:packages ✅ · build:core + build:react ✅ · Playwright �
 ## Execution Log
 
 - 2026-07-13: react `task-list` (isTaskTool + reduceTasks + docked tray, 3-state glyphs, activeForm, description expand); chatbot-body filter; chatbot render; `task.*` i18n; demo task phase. Documented INFERRED CONTRACT (parameter until `sidecar`; EXT-002). Verified lint/build + Playwright + 2 screenshots. (Status: `in-progress → done`).
+- 2026-07-13: **EXT-002 resolved** (`fix/f010-task-sidecar`). Confirmed `asgard-core@dev-1.16.19` carries `toolUseResultSidecar` (TaskCreate → `task.{id,subject}`, TaskUpdate → `taskId` + `statusChange.to`); `reduceTasks` now reads the sidecar first with `parameter` fallback (+ type on `ToolCallCompleteEventData`/`ConversationToolCallMessage`, `onToolCallComplete` passthrough, mock sidecar, +4 unit tests). Consumer-facing behavior unchanged.

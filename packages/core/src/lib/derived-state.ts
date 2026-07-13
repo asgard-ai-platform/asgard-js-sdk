@@ -27,9 +27,11 @@ export function isTaskTool(message: ConversationMessage): boolean {
   return message.type === 'tool-call' && message.toolsetName === '' && TASK_TOOLS.has(message.toolName);
 }
 
-// INFERRED BACKEND CONTRACT (F-010): the spec keys off `sidecar.task.id` / `sidecar.statusChange.to`,
-// not yet on the SDK event type (EXT-002). Until then id/status/subject/activeForm/description are
-// read from `parameter` (the spec's documented fallback). Pure + replay-safe (fold over arrival order).
+// BACKEND CONTRACT (F-010 / EXT-002, confirmed against asgard-core@dev-1.16.19): the authoritative
+// Task id + status live on the tool-result sidecar — TaskCreate → `sidecar.task.{id,subject}`,
+// TaskUpdate → `sidecar.taskId` + `sidecar.statusChange.to`. `reduceTasks` reads the sidecar first and
+// falls back to `parameter` (the tool input) for older frames / fields the sidecar omits
+// (`activeForm` / `description`). Pure + replay-safe (fold over arrival order).
 export function reduceTasks(messages: ConversationMessage[]): Task[] {
   const byId = new Map<string, Task>();
   const order: string[] = [];
@@ -41,26 +43,29 @@ export function reduceTasks(messages: ConversationMessage[]): Task[] {
     if (!call.isComplete) continue; // fold the `.complete` events
 
     const p = call.parameter ?? {};
-    const id = str(p.id) ?? str(p.taskId) ?? call.messageId;
+    const sc = call.toolUseResultSidecar;
+    // Sidecar id is authoritative (TaskCreate → task.id, TaskUpdate → taskId); parameter is the fallback.
+    const id = sc?.task?.id ?? sc?.taskId ?? str(p.id) ?? str(p.taskId) ?? call.messageId;
 
     if (!byId.has(id)) order.push(id);
 
     if (call.toolName === 'TaskCreate') {
       byId.set(id, {
         id,
-        subject: str(p.subject) ?? str(p.content) ?? '',
+        subject: sc?.task?.subject ?? str(p.subject) ?? str(p.content) ?? '',
         activeForm: str(p.activeForm),
         description: str(p.description),
-        status: str(p.status) ?? 'pending',
+        status: sc?.statusChange?.to ?? str(p.status) ?? 'pending',
       });
     } else {
       const existing = byId.get(id);
       byId.set(id, {
         id,
-        subject: existing?.subject ?? str(p.subject) ?? '',
+        subject: sc?.task?.subject ?? existing?.subject ?? str(p.subject) ?? '',
         activeForm: str(p.activeForm) ?? existing?.activeForm,
         description: str(p.description) ?? existing?.description,
-        status: str(p.status) ?? existing?.status ?? 'pending',
+        // `sidecar.statusChange.to` is authoritative for the transition; parameter/existing are fallbacks.
+        status: sc?.statusChange?.to ?? str(p.status) ?? existing?.status ?? 'pending',
       });
     }
   }
