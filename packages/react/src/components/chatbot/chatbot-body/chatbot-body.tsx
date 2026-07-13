@@ -3,7 +3,7 @@ import { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/cor
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
-import { BotTypingPlaceholder, ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
+import { ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
@@ -71,7 +71,6 @@ export function ChatbotBody(): ReactNode {
   const {
     messages,
     messageBoxBottomRef,
-    botTypingPlaceholder,
     scrollContainerRef,
     isFollowingLatest,
     setFollowingLatest,
@@ -201,7 +200,6 @@ export function ChatbotBody(): ReactNode {
               />
             );
           })}
-          <BotTypingPlaceholder placeholder={botTypingPlaceholder ?? '正在輸入訊息'} />
           <div ref={messageBoxBottomRef} />
         </div>
       </div>

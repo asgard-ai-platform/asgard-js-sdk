@@ -27,6 +27,7 @@ import { ApiKeyInput } from './api-key-input';
 import { ChatbotHeader } from './chatbot-header';
 import { ChatbotBody } from './chatbot-body';
 import { ChatbotFooter } from './chatbot-footer';
+import { RunningIndicator } from './running-indicator';
 import { ChatbotContainer } from './chatbot-container/chatbot-container';
 import { ServiceErrorState } from './service-error-state';
 import { DropZoneOverlay } from './drop-zone-overlay/drop-zone-overlay';
@@ -365,6 +366,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               <ChatbotBody />
             </AsgardTemplateContextProvider>
             {renderMenu?.()}
+            <RunningIndicator />
             {renderFooter ? renderFooter() : <ChatbotFooter footerEndActions={footerEndActions} />}
             <ToolCallConsentGate />
           </>

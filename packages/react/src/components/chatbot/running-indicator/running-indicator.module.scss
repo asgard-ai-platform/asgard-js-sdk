@@ -1,0 +1,41 @@
+.running_indicator {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.running_indicator__seam {
+  position: absolute;
+  inset: 0;
+  background-color: var(--asg-color-border, #303030);
+  opacity: 0.6;
+}
+
+.running_indicator__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 33%;
+  background: linear-gradient(90deg, transparent, var(--asg-color-primary, #00aeef), transparent);
+  animation: asgard-run-indeterminate 1.15s linear infinite;
+}
+
+@keyframes asgard-run-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running_indicator__bar {
+    width: 100%;
+    transform: none;
+    opacity: 0.5;
+    animation: none;
+  }
+}
