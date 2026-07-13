@@ -22,6 +22,8 @@ import { HttpErrorOnSendDemo } from './routes/http-error-on-send';
 import { ToolCallDemo } from './routes/tool-call';
 import { ToolCallConsentDemo } from './routes/tool-call-consent';
 import { SubagentDemo } from './routes/subagent';
+import { SharedProviderDemo } from './routes/shared-provider';
+import { MultiPanelDemo } from './routes/multi-panel';
 import { UserIdentityHint } from './routes/user-identity-hint';
 import { OnChannelReady } from './routes/on-channel-ready';
 import { FooterEndActions } from './routes/footer-end-actions';
@@ -57,6 +59,8 @@ export function App(): React.ReactElement {
         <Route path="/tool-call" element={<ToolCallDemo />} />
         <Route path="/tool-call-consent" element={<ToolCallConsentDemo />} />
         <Route path="/subagent" element={<SubagentDemo />} />
+        <Route path="/shared-provider" element={<SharedProviderDemo />} />
+        <Route path="/multi-panel" element={<MultiPanelDemo />} />
         <Route path="/user-identity-hint" element={<UserIdentityHint />} />
         <Route path="/on-channel-ready" element={<OnChannelReady />} />
         <Route path="/footer-end-actions" element={<FooterEndActions />} />

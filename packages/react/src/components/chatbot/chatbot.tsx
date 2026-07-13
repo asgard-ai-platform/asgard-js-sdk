@@ -19,6 +19,7 @@ import {
   AsgardServiceContextProviderProps,
   FileDropContextProvider,
   useFileDropContext,
+  useIsAsgardChannelProvided,
   SendMessageParams,
 } from '../../context';
 import { AuthState } from '@asgard-js/core';
@@ -42,8 +43,10 @@ interface ChatbotProps extends AsgardTemplateContextValue {
   title?: string;
   customActions?: ReactNode[];
   theme?: Partial<AsgardThemeContextValue>;
-  config: ClientConfig;
-  customChannelId: string;
+  /** Required for a standalone `<Chatbot>`. Optional (ignored) under a shared `<AsgardConversationProvider>`, which owns the channel (F-014). */
+  config?: ClientConfig;
+  /** Required for a standalone `<Chatbot>`. Optional (ignored) under a shared `<AsgardConversationProvider>` (F-014). */
+  customChannelId?: string;
   initMessages?: ConversationMessage[];
   onSseMessage?: AsgardServiceContextProviderProps['onSseMessage'];
   fullScreen?: boolean;
@@ -233,7 +236,10 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     userIdentityHint,
   } = props;
 
-  const effectiveConfig = userIdentityHint ? { ...config, userIdentityHint } : config;
+  const effectiveConfig = config && userIdentityHint ? { ...config, userIdentityHint } : config;
+  // True when a shared <AsgardConversationProvider> already owns the channel above (F-014); then the
+  // Chatbot renders without its own channel provider and consumes the ambient one.
+  const channelProvided = useIsAsgardChannelProvided();
 
   const dragCounterRef = useRef(0);
   const fileDropRef = useRef<{
@@ -391,65 +397,75 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     authState !== 'subscriptionExpired' &&
     authState !== 'botNotFound'
   ) {
+    const chatbotShell = (
+      <AsgardThemeContextProvider theme={theme}>
+        <FileDropContextProvider>
+          <FileDropRefConnector fileDropRef={fileDropRef} />
+          <ChatbotContainer
+            fullScreen={fullScreen}
+            className={className}
+            style={style}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {renderHeader ? (
+              renderHeader()
+            ) : (
+              <ChatbotHeader
+                title={title}
+                onReset={onReset}
+                onClose={onClose}
+                customActions={customActions}
+                maintainConnectionWhenClosed={maintainConnectionWhenClosed}
+              />
+            )}
+            {renderContent()}
+            <DropZoneOverlay />
+          </ChatbotContainer>
+        </FileDropContextProvider>
+      </AsgardThemeContextProvider>
+    );
+
+    // Under a shared <AsgardConversationProvider>, consume the ambient channel: render the chat UI
+    // without opening its own channel, so `config` / `customChannelId` aren't required here (F-014).
+    if (channelProvided) {
+      return chatbotShell;
+    }
+
     return (
       <AsgardAppInitializationContextProvider
         enabled={enableLoadConfigFromService}
-        config={effectiveConfig}
+        config={effectiveConfig as ClientConfig}
         asyncInitializers={asyncInitializers}
         loadingComponent={loadingComponent}
       >
-        <AsgardThemeContextProvider theme={theme}>
-          <AsgardServiceContextProvider
-            parentRef={ref}
-            avatar={avatar}
-            title={title}
-            config={effectiveConfig}
-            customChannelId={customChannelId}
-            initMessages={initMessages}
-            onSseMessage={onSseMessage}
-            onAuthError={onAuthError}
-            onSseError={onSseError}
-            onBeforeSendMessage={onBeforeSendMessage}
-            onMessageSent={onMessageSent}
-            onChannelReady={onChannelReady}
-            botTypingPlaceholder={botTypingPlaceholder}
-            inputPlaceholder={inputPlaceholder}
-            enableUpload={enableUpload}
-            enableExport={enableExport}
-            enableDocumentUpload={enableDocumentUpload}
-            allowedImageMimeTypes={allowedImageMimeTypes}
-            allowedDocumentMimeTypes={allowedDocumentMimeTypes}
-            autoResetChannel={autoResetChannel}
-            keepConnectionOnUnmount={keepConnectionOnUnmount}
-          >
-            <FileDropContextProvider>
-              <FileDropRefConnector fileDropRef={fileDropRef} />
-              <ChatbotContainer
-                fullScreen={fullScreen}
-                className={className}
-                style={style}
-                onDragEnter={handleDragEnter}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {renderHeader ? (
-                  renderHeader()
-                ) : (
-                  <ChatbotHeader
-                    title={title}
-                    onReset={onReset}
-                    onClose={onClose}
-                    customActions={customActions}
-                    maintainConnectionWhenClosed={maintainConnectionWhenClosed}
-                  />
-                )}
-                {renderContent()}
-                <DropZoneOverlay />
-              </ChatbotContainer>
-            </FileDropContextProvider>
-          </AsgardServiceContextProvider>
-        </AsgardThemeContextProvider>
+        <AsgardServiceContextProvider
+          parentRef={ref}
+          avatar={avatar}
+          title={title}
+          config={effectiveConfig as ClientConfig}
+          customChannelId={customChannelId ?? ''}
+          initMessages={initMessages}
+          onSseMessage={onSseMessage}
+          onAuthError={onAuthError}
+          onSseError={onSseError}
+          onBeforeSendMessage={onBeforeSendMessage}
+          onMessageSent={onMessageSent}
+          onChannelReady={onChannelReady}
+          botTypingPlaceholder={botTypingPlaceholder}
+          inputPlaceholder={inputPlaceholder}
+          enableUpload={enableUpload}
+          enableExport={enableExport}
+          enableDocumentUpload={enableDocumentUpload}
+          allowedImageMimeTypes={allowedImageMimeTypes}
+          allowedDocumentMimeTypes={allowedDocumentMimeTypes}
+          autoResetChannel={autoResetChannel}
+          keepConnectionOnUnmount={keepConnectionOnUnmount}
+        >
+          {chatbotShell}
+        </AsgardServiceContextProvider>
       </AsgardAppInitializationContextProvider>
     );
   }
