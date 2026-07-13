@@ -16,6 +16,7 @@ import { CustomRenderer } from './routes/custom-renderer';
 import { BeforeSendMessage } from './routes/before-send-message';
 import { CustomHeaderDemo } from './routes/custom-header';
 import { AutoResetChannel } from './routes/auto-reset-channel';
+import { ChannelRestore } from './routes/channel-restore';
 import { RenderMenu } from './routes/render-menu';
 import { HttpErrorDemo } from './routes/http-error';
 import { HttpErrorOnSendDemo } from './routes/http-error-on-send';
@@ -53,6 +54,7 @@ export function App(): React.ReactElement {
         <Route path="/before-send-message" element={<BeforeSendMessage />} />
         <Route path="/custom-header" element={<CustomHeaderDemo />} />
         <Route path="/auto-reset-channel" element={<AutoResetChannel />} />
+        <Route path="/channel-restore" element={<ChannelRestore />} />
         <Route path="/render-menu" element={<RenderMenu />} />
         <Route path="/http-error" element={<HttpErrorDemo />} />
         <Route path="/http-error-on-send" element={<HttpErrorOnSendDemo />} />
