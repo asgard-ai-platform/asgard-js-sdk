@@ -1,72 +1,14 @@
 import { ReactNode, useMemo, useState } from 'react';
 import clsx from 'clsx';
-import type { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/core';
+import { reduceTasks, Task } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import { DEFAULT_LOCALE, t } from '../../../i18n';
 import styles from './task-list.module.scss';
 
-const TASK_TOOLS = new Set(['TaskCreate', 'TaskUpdate']);
-
-// TaskCreate/TaskUpdate are native tool calls (toolsetName === '') but semantically increment a
-// single task list — route them OUT of the tool-call group and fold them here (F-010).
-export function isTaskTool(message: ConversationMessage): boolean {
-  return message.type === 'tool-call' && message.toolsetName === '' && TASK_TOOLS.has(message.toolName);
-}
-
-export interface Task {
-  id: string;
-  subject: string;
-  activeForm?: string;
-  description?: string;
-  // pending | in_progress | completed | (unknown status kept as-is, rendered neutrally — F-010)
-  status: string;
-}
-
-const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
-
-// INFERRED BACKEND CONTRACT (F-010): the spec keys off `sidecar.task.id` / `sidecar.statusChange.to`,
-// which are not yet on the SDK event type. Until the backend contract lands we read the task id,
-// status, subject, activeForm, and description from `parameter` (documented assumption; the
-// react-demo mock matches this shape). `reduceTasks` is pure + replay-safe (fold over arrival order).
-export function reduceTasks(messages: ConversationMessage[]): Task[] {
-  const byId = new Map<string, Task>();
-  const order: string[] = [];
-
-  for (const message of messages) {
-    if (!isTaskTool(message)) continue;
-
-    const call = message as ConversationToolCallMessage;
-    if (!call.isComplete) continue; // fold the `.complete` events
-
-    const p = call.parameter ?? {};
-    const id = str(p.id) ?? str(p.taskId) ?? call.messageId;
-
-    if (!byId.has(id)) order.push(id);
-
-    if (call.toolName === 'TaskCreate') {
-      byId.set(id, {
-        id,
-        subject: str(p.subject) ?? str(p.content) ?? '',
-        activeForm: str(p.activeForm),
-        description: str(p.description),
-        status: str(p.status) ?? 'pending',
-      });
-    } else {
-      // TaskUpdate — status authoritative from parameter.status
-      const existing = byId.get(id);
-      byId.set(id, {
-        id,
-        subject: existing?.subject ?? str(p.subject) ?? '',
-        activeForm: str(p.activeForm) ?? existing?.activeForm,
-        description: str(p.description) ?? existing?.description,
-        status: str(p.status) ?? existing?.status ?? 'pending',
-      });
-    }
-  }
-
-  return order.map(id => byId.get(id)).filter((task): task is Task => Boolean(task));
-}
+// `isTaskTool` / `reduceTasks` / `Task` now live in `@asgard-js/core` (F-013). The in-chatbot panel
+// folds the current `messages` (works in live + preview mode); external consumers rendering their
+// own list use the `useTaskList()` hook / the `channel.tasks` store instead.
 
 function StatusGlyph({ status }: { status: string }): ReactNode {
   if (status === 'in_progress') {

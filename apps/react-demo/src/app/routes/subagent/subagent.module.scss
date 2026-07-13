@@ -10,3 +10,11 @@
     height: 600px;
   }
 }
+
+.mirror {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+  border-top: 1px dashed var(--asg-color-border, #303030);
+}

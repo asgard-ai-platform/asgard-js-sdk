@@ -204,6 +204,9 @@ export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
 // running until `subagent.complete` lands. Inferred from prototype@f73545c pending asgard-sdk-go (EXT-003).
 export type SubagentCompleteStatus = 'completed' | 'failed' | 'cancelled';
 
+// Full subagent status incl. the in-flight `running` state (F-012/F-013).
+export type SubagentStatus = 'running' | SubagentCompleteStatus;
+
 export interface SubagentStartEventData {
   agentId: string;
   // Association key = the spawning `Agent` tool call's `toolUseId`; shared by every child event.

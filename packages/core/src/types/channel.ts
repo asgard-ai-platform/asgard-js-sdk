@@ -1,14 +1,34 @@
-import { Observer } from 'rxjs';
+import { Observable, Observer } from 'rxjs';
 import { EventType } from '../constants/enum';
 import Conversation from '../lib/conversation';
+import type { Subagent, Task } from '../lib/derived-state';
 import { IAsgardServiceClient } from './client';
-import { ErrorMessage, Message } from './sse-response';
+import { ErrorMessage, Message, SubagentStatus } from './sse-response';
 
 export type ObserverOrNext<T> = Partial<Observer<T>> | ((value: T) => void);
 
 export interface ChannelStates {
   isConnecting: boolean;
   conversation: Conversation;
+  // Derived slices (F-013), folded from the same SSE stream. Existing consumers can ignore them;
+  // each keeps a stable reference until its content changes.
+  tasks: Task[];
+  subagents: Subagent[];
+}
+
+/**
+ * Framework-agnostic reactive store (F-013): a current immutable snapshot plus change notification.
+ * Bridge it from any framework — React `useSyncExternalStore(subscribe, getSnapshot)`, Vue
+ * `shallowRef` + subscribe, Svelte via the `observable`, Angular/RxJS via the `observable`, or a
+ * vanilla `subscribe(() => render(getSnapshot()))`.
+ */
+export interface ReactiveStore<T> {
+  /** The current, immutable value (a new reference whenever it changes). */
+  getSnapshot(): T;
+  /** Register a change listener (called on subsequent changes only); returns an unsubscribe fn. */
+  subscribe(listener: () => void): () => void;
+  /** The underlying RxJS stream, for consumers that prefer an `Observable` (Angular async pipe, Svelte). */
+  observable: Observable<T>;
 }
 
 export interface ChannelConfig {
@@ -96,7 +116,7 @@ export type ConversationSubagentMessage = {
   agentId?: string;
   subagentType?: string;
   description?: string;
-  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  status: SubagentStatus;
   summary?: string;
   time: Date;
   traceId?: string;

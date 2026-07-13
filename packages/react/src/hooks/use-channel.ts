@@ -6,7 +6,10 @@ import {
   ConversationMessage,
   EventType,
   FetchSsePayload,
+  ReactiveStore,
   SseResponse,
+  Subagent,
+  Task,
   ToolCallConsentAnswer,
 } from '@asgard-js/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -55,6 +58,9 @@ export interface UseChannelReturn {
   resetChannel?: (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
   closeChannel?: () => void;
   replyToolCallConsents?: (answers: ToolCallConsentAnswer[], payload?: FetchSsePayload['payload']) => Promise<void>;
+  /** Framework-agnostic derived-state stores from the active channel (F-013); absent in preview mode. */
+  taskStore?: ReactiveStore<Task[]>;
+  subagentStore?: ReactiveStore<Subagent[]>;
 }
 
 export function useChannel(props: UseChannelProps): UseChannelReturn {
@@ -307,6 +313,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             resetChannel,
             closeChannel,
             replyToolCallConsents,
+            taskStore: channel?.tasks,
+            subagentStore: channel?.subagents,
           },
     [
       isPreviewMode,
@@ -319,6 +327,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       resetChannel,
       closeChannel,
       replyToolCallConsents,
+      channel,
     ],
   );
 }

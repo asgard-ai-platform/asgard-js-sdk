@@ -1,131 +1,15 @@
 import { ReactNode, useMemo, useState } from 'react';
 import clsx from 'clsx';
-import type { ConversationMessage, ConversationSubagentMessage, ConversationToolCallMessage } from '@asgard-js/core';
+import { reduceSubagents, Subagent, SubagentStatus, SubagentToolCall } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import { DEFAULT_LOCALE, Locale, t, toolLabel } from '../../../i18n';
 import styles from './subagent-list.module.scss';
 
-// A subagent is spawned by an `Agent` tool call (native builtin); its lifecycle rides on the
-// `asgard.subagent.{start,complete}` events, and its own child tool calls carry `parentToolUseId`
-// pointing back at the `Agent` call's `toolUseId`. The `Agent` call and all child tool calls are
-// routed OUT of the main tool-call group (F-012); the subagent list is accumulated instead.
-
-// The `Agent` tool call = spawn marker (native builtin `toolsetName === '' && toolName === 'Agent'`).
-export function isAgentTool(message: ConversationMessage): boolean {
-  return message.type === 'tool-call' && message.toolsetName === '' && message.toolName === 'Agent';
-}
-
-// A tool call that belongs to a subagent (child): `parentToolUseId` is non-empty.
-export function isSubagentChildTool(message: ConversationMessage): boolean {
-  return message.type === 'tool-call' && !!message.parentToolUseId;
-}
-
-// Everything the subagent list owns — routed out of the message thread and the main tool-call group.
-export function isSubagentRelated(message: ConversationMessage): boolean {
-  return message.type === 'subagent' || isAgentTool(message) || isSubagentChildTool(message);
-}
-
-// Reuse the core-authoritative status literals so the view model never drifts from the event type.
-export type SubagentStatus = ConversationSubagentMessage['status'];
-
-export interface SubagentToolCall {
-  toolsetName: string;
-  toolName: string;
-  parameter: Record<string, unknown>;
-  reason?: string;
-  status: 'running' | 'completed' | 'error';
-}
-
-export interface Subagent {
-  /** Association key = the spawning `Agent` tool call's `toolUseId` (all child events carry it). */
-  parentToolUseId: string;
-  agentId?: string;
-  subagentType?: string;
-  description?: string;
-  /** Driven by `subagent.complete` (core keeps it replay-safe); never by the `Agent` tool_call.complete. */
-  status: SubagentStatus;
-  summary?: string;
-  tools: SubagentToolCall[];
-}
-
-interface SubagentMeta {
-  agentId?: string;
-  subagentType?: string;
-  description?: string;
-  status: SubagentStatus;
-  summary?: string;
-}
-
-const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
-
-// Unified status (F-007/F-009), same rule as the main tool-call group: running → completed / error.
-function toolStatus(call: ConversationToolCallMessage): SubagentToolCall['status'] {
-  if (!call.isComplete) return 'running';
-
-  return call.isError ?? Boolean(call.result?.error) ? 'error' : 'completed';
-}
-
-// Fold the conversation into the current subagent list, keyed by `parentToolUseId` in first-seen
-// order. Pure + replay-safe: subagent status comes straight off the (core-computed) `subagent`
-// message; the `Agent` tool call only seeds the entry and its description.
-export function reduceSubagents(messages: ConversationMessage[]): Subagent[] {
-  const order: string[] = [];
-  const meta = new Map<string, SubagentMeta>();
-  const tools = new Map<string, Map<string, SubagentToolCall>>();
-
-  const ensure = (id: string): SubagentMeta => {
-    if (!meta.has(id)) {
-      order.push(id);
-      meta.set(id, { status: 'running' });
-      tools.set(id, new Map());
-    }
-
-    return meta.get(id) as SubagentMeta;
-  };
-
-  for (const message of messages) {
-    if (message.type === 'subagent') {
-      const m = ensure(message.parentToolUseId);
-      m.agentId = message.agentId ?? m.agentId;
-      m.subagentType = message.subagentType ?? m.subagentType;
-      m.description = message.description ?? m.description;
-      m.status = message.status; // core-authoritative (replay-safe)
-      m.summary = message.summary ?? m.summary;
-      continue;
-    }
-
-    if (message.type !== 'tool-call') continue;
-
-    if (isAgentTool(message)) {
-      if (!message.toolUseId) continue;
-
-      const m = ensure(message.toolUseId);
-      const description = str(message.parameter?.description);
-      if (description && !m.description) m.description = description;
-
-      continue;
-    }
-
-    if (isSubagentChildTool(message) && message.parentToolUseId) {
-      ensure(message.parentToolUseId);
-      const toolMap = tools.get(message.parentToolUseId) as Map<string, SubagentToolCall>;
-      toolMap.set(message.toolUseId ?? message.messageId, {
-        toolsetName: message.toolsetName,
-        toolName: message.toolName,
-        parameter: message.parameter,
-        reason: message.reason,
-        status: toolStatus(message),
-      });
-    }
-  }
-
-  return order.map(id => ({
-    parentToolUseId: id,
-    ...(meta.get(id) as SubagentMeta),
-    tools: Array.from((tools.get(id) as Map<string, SubagentToolCall>).values()),
-  }));
-}
+// `reduceSubagents` + the routing predicates (`isAgentTool` / `isSubagentChildTool` /
+// `isSubagentRelated`) + the `Subagent` / `SubagentToolCall` types now live in `@asgard-js/core`
+// (F-013). The in-chatbot panel folds the current `messages`; external consumers rendering their own
+// list use the `useSubagents()` hook / the `channel.subagents` store.
 
 // The current (last running, else last) child tool — what a collapsed running subagent shows.
 function currentTool(tools: SubagentToolCall[]): SubagentToolCall | undefined {

@@ -29,7 +29,7 @@ None yet.
 
 ## ▶ Next Task
 
-`BUILD-008` — Subagent List Panel (F-012), in-progress on `feat/stream-robustness-and-resume` (one branch, PR #280). Done: F-011, F-002, F-001, F-003, the full **tool-call series** F-004/005/006/007/008/009 (i18n, variants, summary, isError, diff+status, expand), and F-010 (Task panel). **11/13.** Remaining: F-012 (Subagent panel — new core `asgard.subagent.{start,complete}` events + `parentToolUseId`/`toolUseId` on tool calls; grounded on prototype@f73545c, event shapes inferred pending `asgard-sdk-go` = EXT-003), F-013 (framework-agnostic store — move reducers into core, `tasks$`/`subagents$`, `useSyncExternalStore` hooks).
+None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**. F-001/002/003, the tool-call series F-004–009, F-010 (Task panel), F-011 (stream robustness), F-012 (Subagent panel), F-013 (framework-agnostic derived-state store) all `done` with BUILD/REVIEW pairs. Awaiting the user's review + push/merge (and `done`-authorization per the feature-workflow Stage 5). Open follow-ups: EXT-002 (backend `sidecar.task.*`), EXT-003 (confirm subagent event shapes against `asgard-sdk-go`).
 
 ## Task Queue
 
@@ -51,3 +51,5 @@ None yet.
 | `REVIEW-007` | Review: Task Check List Panel                            | —        | done   | [REVIEW-007-task-check-list-panel.md](./REVIEW-007-task-check-list-panel.md)                     |
 | `BUILD-008`  | Subagent List Panel (F-012)                              | High     | done   | [BUILD-008-subagent-list-panel.md](./BUILD-008-subagent-list-panel.md)                           |
 | `REVIEW-008` | Review: Subagent List Panel                              | —        | done   | [REVIEW-008-subagent-list-panel.md](./REVIEW-008-subagent-list-panel.md)                         |
+| `BUILD-009`  | Framework-agnostic derived-state store (F-013)           | High     | done   | [BUILD-009-derived-state-store.md](./BUILD-009-derived-state-store.md)                           |
+| `REVIEW-009` | Review: Derived-state store                              | —        | done   | [REVIEW-009-derived-state-store.md](./REVIEW-009-derived-state-store.md)                         |

@@ -1,12 +1,10 @@
 import { Fragment, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { ConversationMessage, ConversationToolCallMessage } from '@asgard-js/core';
+import { ConversationMessage, ConversationToolCallMessage, isSubagentRelated, isTaskTool } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import styles from './chatbot-body.module.scss';
 import { ConversationMessageRenderer } from './conversation-message-renderer';
 import { ToolCallGroupTemplate, ToolCallItemData, ToolCallStatus } from '../../templates';
 import { DEFAULT_LOCALE, groupSummary, isNativeBuiltin, Locale, toolDiff, toolLabel } from '../../../i18n';
-import { isTaskTool } from '../task-list';
-import { isSubagentRelated } from '../subagent-list';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import clsx from 'clsx';
