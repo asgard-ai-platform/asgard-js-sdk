@@ -182,7 +182,8 @@ export interface ToolCallBaseEventData {
   callSeq: number;
   // Subagent association keys (F-012). `omitempty`: absent ⇒ a main-line tool call.
   // `toolUseId` identifies this call; a child call sets `parentToolUseId` to the spawning
-  // `Agent` call's `toolUseId`. Inferred from prototype@f73545c pending asgard-sdk-go (EXT-003).
+  // `Agent` call's `toolUseId`. Confirmed against asgard-core@dev-1.16.19
+  // (`internal/models/edgeserver.go`; EXT-003 closed).
   toolUseId?: string;
   parentToolUseId?: string;
   toolCall: {
@@ -201,12 +202,15 @@ export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
 }
 
 // Terminal status of a subagent, from `subagent.complete.status` (F-012). A subagent stays
-// running until `subagent.complete` lands. Inferred from prototype@f73545c pending asgard-sdk-go (EXT-003).
+// running until `subagent.complete` lands. Confirmed against asgard-core@dev-1.16.19
+// (`GenericBotSseEventFactSubagentComplete.status`; EXT-003 closed).
 export type SubagentCompleteStatus = 'completed' | 'failed' | 'cancelled';
 
 // Full subagent status incl. the in-flight `running` state (F-012/F-013).
 export type SubagentStatus = 'running' | SubagentCompleteStatus;
 
+// Shapes mirror asgard-core@dev-1.16.19 `internal/models/edgeserver.go`
+// (`GenericBotSseEventFactSubagent{Start,Complete}`; EXT-003 closed).
 export interface SubagentStartEventData {
   agentId: string;
   // Association key = the spawning `Agent` tool call's `toolUseId`; shared by every child event.
@@ -215,7 +219,8 @@ export interface SubagentStartEventData {
   description?: string;
 }
 
-export interface SubagentCompleteEventData extends SubagentStartEventData {
+// The backend's `SubagentComplete` carries no `description` (only `SubagentStart` does), so drop it.
+export interface SubagentCompleteEventData extends Omit<SubagentStartEventData, 'description'> {
   status: SubagentCompleteStatus;
   summary?: string;
 }

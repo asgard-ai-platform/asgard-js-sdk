@@ -338,7 +338,8 @@ export default class Conversation implements IConversation {
       parentToolUseId: key,
       agentId: subagentComplete.agentId ?? previous?.agentId,
       subagentType: subagentComplete.subagentType ?? previous?.subagentType,
-      description: subagentComplete.description ?? previous?.description,
+      // `subagent.complete` carries no `description`; keep the one from `subagent.start`.
+      description: previous?.description,
       status: subagentComplete.status,
       summary: subagentComplete.summary,
       time: previous?.time ?? new Date(),

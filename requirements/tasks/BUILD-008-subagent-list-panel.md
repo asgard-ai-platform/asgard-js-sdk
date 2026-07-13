@@ -18,15 +18,17 @@ Spawning a subagent surfaces as an `Agent` tool call (`toolsetName === "" && too
 
 **Already exists:** `packages/react/src/components/chatbot/task-list/` (closest precedent — `isTaskTool`, `reduceTasks`, docked tray), `tool-call-i18n.ts` (`t`, `toolLabel`, `subagent.title`), `conversation.ts` (event → message pipeline with F-011 anti-rollback guards), `sse-mock.ts` (tool-call + task phases).
 
-### INFERRED BACKEND CONTRACT
+### BACKEND CONTRACT — confirmed (EXT-003 closed)
 
-The F-012 spec's authoritative event shapes come from `asgard-sdk-go/pkg/models/sse_event.go`, which is **not available in this repo's submodules** (tracked as EXT-003). The event contract is implemented from the pinned prototype reference (`asgard-chat-kit-prototype@f73545c` — `subagentReducer.ts` + `docs/superpowers/specs/2026-07-11-subagent-list-design.md`), which the prototype author validated against the Go source and the `new-example11.sse.txt` dump:
+Implemented from the pinned prototype reference (`asgard-chat-kit-prototype@f73545c`), then **verified field-for-field against the authoritative backend `asgard-core@dev-1.16.19`** (`internal/models/edgeserver.go` `GenericBotSseEventFactSubagent{Start,Complete}` + `internal/constants.go` `SseEventTypeSubagent{Start,Complete}`). The spec's `asgard-sdk-go` path was wrong — the SSE backend is `asgard-core` (Edge Server). Match:
 
-- `asgard.subagent.start` fact `subagentStart`: `agentId`, `parentToolUseId`, `subagentType?`, `description?`.
-- `asgard.subagent.complete` fact `subagentComplete`: the same fields **plus** `status` (`completed` | `failed` | `cancelled`) and `summary?`.
-- `asgard.tool_call.{start,complete}` facts gain `toolUseId?` / `parentToolUseId?` (sibling to `processId` / `callSeq`, same level as the existing `isError`).
+- `asgard.subagent.start` / `asgard.subagent.complete` — exact event names ✅.
+- `subagentStart`: `agentId`, `parentToolUseId`, `subagentType?`, `description?` ✅.
+- `subagentComplete`: `agentId`, `parentToolUseId`, `subagentType?`, `status` (`completed`/`failed`/`cancelled`), `summary?` ✅ — **no `description`** (tightened the SDK type to `Omit<…, 'description'>` to match).
+- `tool_call.{start,complete}`: `toolUseId?` / `parentToolUseId?` + complete `isError?` ✅.
+- Spawn marker = the built-in **`Agent`** tool (backend comment; the earlier Swagger "(Task)" was misleading) ✅.
 
-New core event types are marked provisional in-code (`@see EXT-003`) and confirmed against `asgard-sdk-go` before release. The react-demo mock matches this shape.
+Related follow-up (out of scope here): **EXT-002** — F-010 tasks: `asgard-core` tool-call carries `taskId` / `statusChange` sidecar fields (edgeserver.go); F-010 currently reads from `parameter` as a documented fallback.
 
 ## Acceptance Criteria
 

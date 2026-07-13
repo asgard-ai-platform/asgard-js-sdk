@@ -309,7 +309,7 @@ function subagentStartEvt(
 function subagentCompleteEvt(
   parentToolUseId: string,
   status: 'completed' | 'failed' | 'cancelled',
-  opts: { agentId?: string; subagentType?: string; description?: string; summary?: string } = {},
+  opts: { agentId?: string; subagentType?: string; summary?: string } = {},
 ): SseResponse<EventType.SUBAGENT_COMPLETE> {
   const fact: Fact<EventType.SUBAGENT_COMPLETE> = {
     ...nullFact,
@@ -317,7 +317,6 @@ function subagentCompleteEvt(
       agentId: opts.agentId ?? 'agent-1',
       parentToolUseId,
       subagentType: opts.subagentType,
-      description: opts.description,
       status,
       summary: opts.summary,
     },
@@ -395,11 +394,14 @@ describe('Conversation subagent stream assembly (F-012)', () => {
 
   it('complete-only (out of order): materializes terminal from its own fields', () => {
     const conv = emptyConversation().onSubagentComplete(
-      subagentCompleteEvt('X', 'failed', { subagentType: 'general-purpose', description: 'task' }),
+      subagentCompleteEvt('X', 'failed', { subagentType: 'general-purpose', summary: 'gave up' }),
     );
     const sa = subagentMessage(conv, 'X');
     expect(sa.status).toBe('failed');
-    expect(sa.description).toBe('task');
+    expect(sa.subagentType).toBe('general-purpose');
+    expect(sa.summary).toBe('gave up');
+    // `subagent.complete` carries no `description`; with no prior `start`, it stays undefined.
+    expect(sa.description).toBeUndefined();
   });
 
   it('start alone: running, keyed by parentToolUseId', () => {

@@ -29,7 +29,7 @@ None yet.
 
 ## ▶ Next Task
 
-None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**. F-001/002/003, the tool-call series F-004–009, F-010 (Task panel), F-011 (stream robustness), F-012 (Subagent panel), F-013 (framework-agnostic derived-state store) all `done` with BUILD/REVIEW pairs. Awaiting the user's review + push/merge (and `done`-authorization per the feature-workflow Stage 5). Open follow-ups: EXT-002 (backend `sidecar.task.*`), EXT-003 (confirm subagent event shapes against `asgard-sdk-go`).
+None — the full-batch run on `feat/stream-robustness-and-resume` (PR #280) is **complete: 13/13**. F-001/002/003, the tool-call series F-004–009, F-010 (Task panel), F-011 (stream robustness), F-012 (Subagent panel), F-013 (framework-agnostic derived-state store) all `done` with BUILD/REVIEW pairs. **EXT-003 closed** — the F-012 subagent event contract is confirmed field-for-field against `asgard-core@dev-1.16.19` (`internal/models/edgeserver.go`; the SSE backend is `asgard-core`, not `asgard-sdk-go`). Awaiting the user's review + push/merge (+ `done`-authorization per feature-workflow Stage 5). Remaining follow-up: **EXT-002** (F-010 tasks should read `taskId`/`statusChange` sidecar instead of the `parameter` fallback).
 
 ## Task Queue
 
