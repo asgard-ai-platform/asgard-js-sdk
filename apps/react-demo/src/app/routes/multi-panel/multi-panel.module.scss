@@ -37,19 +37,37 @@
   color: var(--asg-color-text-primary, #f0f0f0);
 }
 
-.workspace {
+.split {
   flex: 1;
   display: flex;
-  gap: 16px;
   align-items: stretch;
   min-height: 0;
   height: 620px;
 }
 
-.chat {
-  width: 100%;
-  max-width: 400px;
+.split__pane {
   flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.split__handle {
+  width: 6px;
+  flex-shrink: 0;
+  margin: 0 6px;
+  border-radius: 3px;
+  cursor: col-resize;
+  background: var(--asg-color-border, #303030);
+}
+
+.split__handle:hover {
+  background: var(--asg-color-primary, #00aeef);
+}
+
+.split__grow {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
 }
 
 .dock {
