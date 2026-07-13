@@ -62,6 +62,8 @@ export interface UseChannelReturn {
   /** Framework-agnostic derived-state stores from the active channel (F-013); absent in preview mode. */
   taskStore?: ReactiveStore<Task[]>;
   subagentStore?: ReactiveStore<Subagent[]>;
+  /** Channel-title store (F-016); seeded from `GET /channel/metadata` then updated live. Absent in preview mode. */
+  channelTitleStore?: ReactiveStore<string | null>;
 }
 
 export function useChannel(props: UseChannelProps): UseChannelReturn {
@@ -88,6 +90,11 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   const [isResetting, setIsResetting] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [conversation, setConversation] = useState<Conversation | null>(null);
+
+  // Title seed (F-016): the metadata probe learns the channel title; each channel factory reads it
+  // via this ref for `initialTitle` (avoids threading it through every callback signature). `null`
+  // = unnamed / not-yet-probed.
+  const titleSeedRef = useRef<string | null>(null);
 
   // Preview mode: static conversation from initMessages
   const previewConversation = useMemo(
@@ -117,6 +124,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           customChannelId,
           customMessageId,
           conversation,
+          initialTitle: titleSeedRef.current,
           statesObserver: (states: ChannelStates): void => {
             setIsConnecting(states.isConnecting);
             setConversation(states.conversation);
@@ -194,6 +202,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         customChannelId,
         customMessageId,
         conversation,
+        initialTitle: titleSeedRef.current,
         statesObserver: (states: ChannelStates): void => {
           setIsConnecting(states.isConnecting);
           setConversation(states.conversation);
@@ -242,6 +251,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       customChannelId,
       customMessageId,
       conversation,
+      initialTitle: titleSeedRef.current,
       statesObserver: (states: ChannelStates): void => {
         setIsConnecting(states.isConnecting);
         setConversation(states.conversation);
@@ -289,6 +299,9 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
       return;
     }
+
+    // Seed the channel title from metadata (F-016); live `channel.title.update` refines it after.
+    titleSeedRef.current = metadata?.title ?? null;
 
     if (metadata?.exists) {
       // Existing channel: replay its history. If the client cannot rejoin, fall
@@ -431,6 +444,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             replyToolCallConsents,
             taskStore: channel?.tasks,
             subagentStore: channel?.subagents,
+            channelTitleStore: channel?.channelTitle,
           },
     [
       isPreviewMode,
