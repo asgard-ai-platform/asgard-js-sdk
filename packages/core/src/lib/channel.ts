@@ -120,6 +120,34 @@ export default class Channel {
     }
   }
 
+  /**
+   * Restore an existing channel (F-015): subscribe, then GET-rejoin to replay
+   * its collapsed history and tail any in-flight run to terminal — without
+   * re-dispatching a run (an existing transcript is never wiped). The channel is
+   * exposed early (like `reset`) so a consent emitted during the restore tail
+   * can be replied to against a non-null channel.
+   */
+  public static async rejoin(
+    config: ChannelConfig,
+    options?: FetchSseOptions,
+    onChannelCreated?: (channel: Channel) => void,
+  ): Promise<Channel> {
+    const channel = new Channel(config);
+
+    try {
+      channel.subscribe();
+      onChannelCreated?.(channel);
+
+      await channel.rejoinChannel(options);
+
+      return channel;
+    } catch (error) {
+      channel.close();
+
+      throw error;
+    }
+  }
+
   private subscribe(): void {
     // Fold the conversation into each derived slice; `distinctUntilChanged` (structural) makes a
     // slice re-emit only when its content actually changes, so a high-frequency `message.delta`
@@ -174,10 +202,21 @@ export default class Channel {
   }
 
   private fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): Promise<void> {
+    return this.streamSse(handlers => this.client.fetchSse(payload, handlers), options);
+  }
+
+  /**
+   * Shared SSE-stream plumbing for both the POST send-and-stream turns and the
+   * GET rejoin (F-015): flip `isConnecting`, fold every frame into the
+   * conversation (attaching the trace id to the just-sent user message when
+   * present), and settle the promise on complete/error. `start` opens the
+   * concrete stream (POST `fetchSse` or GET `rejoinSse`).
+   */
+  private streamSse(start: (handlers: FetchSseOptions) => void, options?: FetchSseOptions): Promise<void> {
     return new Promise((resolve, reject) => {
       this.isConnecting$.next(true);
 
-      this.client.fetchSse(payload, {
+      start({
         onSseStart: options?.onSseStart,
         onSseMessage: (response: SseResponse<EventType>) => {
           options?.onSseMessage?.(response);
@@ -213,6 +252,21 @@ export default class Channel {
         },
       });
     });
+  }
+
+  /**
+   * GET rejoin (F-015): restore an existing channel by replaying its collapsed
+   * history over the wire (never re-dispatching a run), then tailing an
+   * in-flight run to its terminal. `isConnecting` stays true until that terminal
+   * arrives — for an idle channel the backend synthesizes one immediately, so
+   * input is released right away.
+   */
+  private rejoinChannel(options?: FetchSseOptions): Promise<void> {
+    if (!this.client.rejoinSse) {
+      return Promise.reject(new Error('client does not support rejoinSse (GET rejoin)'));
+    }
+
+    return this.streamSse(handlers => this.client.rejoinSse?.(this.customChannelId, handlers), options);
   }
 
   private resetChannel(payload?: Pick<FetchSsePayload, 'text' | 'payload'>, options?: FetchSseOptions): Promise<void> {

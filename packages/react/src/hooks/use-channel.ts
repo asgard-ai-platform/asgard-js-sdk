@@ -1,6 +1,7 @@
 import {
   AsgardServiceClient,
   Channel,
+  ChannelMetadata,
   ChannelStates,
   Conversation,
   ConversationMessage,
@@ -174,6 +175,59 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     ],
   );
 
+  // Restore an existing channel via GET rejoin (F-015). Unlike reset, the
+  // conversation starts EMPTY — its history comes from the server replay, not
+  // from initMessages — and no run is dispatched (an existing transcript is
+  // never wiped). Input stays disabled (isConnecting) until the replay tails to
+  // its terminal; for an idle channel the backend synthesizes one immediately.
+  const restoreChannel = useCallback(async () => {
+    if (isPreviewMode || !client) return;
+
+    const conversation = new Conversation({ messages: new Map() });
+
+    setIsConnecting(true);
+    setConversation(conversation);
+
+    const channel = await Channel.rejoin(
+      {
+        client,
+        customChannelId,
+        customMessageId,
+        conversation,
+        statesObserver: (states: ChannelStates): void => {
+          setIsConnecting(states.isConnecting);
+          setConversation(states.conversation);
+        },
+      },
+      {
+        onSseError(error) {
+          // Restore failed and Channel.rejoin closes the channel; drop it from
+          // state so a later send does not no-op against a dead channel.
+          setChannel(null);
+          if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
+            onAuthError?.(
+              error as {
+                isAuthError: boolean;
+                isBotProviderError: boolean;
+                errorDetail?: unknown;
+              },
+            );
+          }
+
+          onSseError?.(error);
+        },
+        onSseMessage(response: SseResponse<EventType>) {
+          onSseMessage?.(response, { conversation });
+        },
+      },
+      // Adopt early so a consent emitted during the restore tail can be replied to.
+      setChannel,
+    );
+
+    setIsOpen(true);
+    setChannel(channel);
+  }, [isPreviewMode, client, customChannelId, customMessageId, onSseMessage, onAuthError, onSseError]);
+
   const initChannel = useCallback(() => {
     if (isPreviewMode || !client) return;
 
@@ -197,6 +251,65 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     setIsOpen(true);
     setChannel(channel);
   }, [isPreviewMode, client, customChannelId, customMessageId, initMessages]);
+
+  // F-015 mount orchestrator: probe channel metadata, then branch —
+  //   exists               → restore (GET rejoin; an existing transcript is never reset)
+  //   missing + autoReset   → reset (RESET_CHANNEL dispatches the init run)
+  //   missing + !autoReset  → empty channel (first send uses action=NONE)
+  // A non-404 metadata error degrades gracefully to an empty channel so an
+  // existing transcript is never wiped on an ambiguous failure. A client without
+  // getChannelMetadata keeps the pre-F-015 always-reset/always-create behavior.
+  const openChannel = useCallback(async () => {
+    if (isPreviewMode || !client) return;
+
+    const probe = client.getChannelMetadata?.bind(client);
+
+    if (!probe) {
+      if (autoResetChannel !== false) resetChannel(resetPayload);
+      else initChannel();
+
+      return;
+    }
+
+    // Disable input while we determine the channel's state.
+    setIsConnecting(true);
+
+    let metadata: ChannelMetadata | undefined;
+
+    try {
+      metadata = await probe(customChannelId);
+    } catch (error) {
+      if (client.debugMode) {
+        // eslint-disable-next-line no-console
+        console.warn('[use-channel] channel metadata probe failed; starting empty channel', error);
+      }
+
+      // Ambiguous failure: do NOT reset (would wipe an existing transcript). Start empty.
+      initChannel();
+
+      return;
+    }
+
+    if (metadata?.exists) {
+      // Existing channel: replay its history. If the client cannot rejoin, fall
+      // back to an empty view rather than resetting (which would wipe history).
+      if (client.rejoinSse) restoreChannel();
+      else initChannel();
+    } else if (autoResetChannel !== false) {
+      resetChannel(resetPayload);
+    } else {
+      initChannel();
+    }
+  }, [
+    isPreviewMode,
+    client,
+    customChannelId,
+    autoResetChannel,
+    resetChannel,
+    restoreChannel,
+    initChannel,
+    resetPayload,
+  ]);
 
   const closeChannel = useCallback(() => {
     setChannel((prevChannel: Channel | null) => {
@@ -269,17 +382,20 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     [channel, client, onSseMessage, conversation],
   );
 
+  // Guards the async open (metadata probe → restore/reset/create) against
+  // re-entry: the channel stays null across the probe's await, so without this
+  // a re-render (new resetPayload identity, etc.) would kick off a second open.
+  const openingRef = useRef(false);
   useEffect(() => {
     if (isPreviewMode) return;
 
-    if (!channel && isOpen) {
-      if (autoResetChannel !== false) {
-        resetChannel(resetPayload);
-      } else {
-        initChannel();
-      }
+    if (!channel && isOpen && !openingRef.current) {
+      openingRef.current = true;
+      void openChannel().finally(() => {
+        openingRef.current = false;
+      });
     }
-  }, [isPreviewMode, channel, isOpen, autoResetChannel, resetChannel, initChannel, resetPayload]);
+  }, [isPreviewMode, channel, isOpen, openChannel]);
 
   const prevChannelRef = useRef<Channel | null>(null);
   useEffect(() => {

@@ -7,11 +7,14 @@ import {
   SseEvents,
   BlobUploadResponse,
   CwdDownloadResult,
+  ChannelMetadata,
+  ChannelRunState,
 } from '../types';
 import { createSseObservable } from './create-sse-observable';
 import { concatMap, delay, of, Subject, takeUntil } from 'rxjs';
 import { EventType } from '../constants/enum';
 import { EventEmitter } from './event-emitter';
+import { HttpError } from '../types/http-error';
 
 export default class AsgardServiceClient implements IAsgardServiceClient {
   private apiKey?: string;
@@ -109,15 +112,100 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
   }
 
   fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void {
+    this.runSse(
+      {
+        endpoint: this.endpoint,
+        method: 'POST',
+        payload: this.transformSsePayload?.(payload) ?? payload,
+      },
+      options,
+    );
+  }
+
+  /**
+   * GET rejoin (F-015): re-enter an existing channel and replay its collapsed
+   * history, then tail the in-flight run (or a synthesized terminal for an idle
+   * channel) to its terminal. No body — the channel id travels as a query
+   * param. Shares the exact stream plumbing (inFlight/detach/handleEvent/
+   * Last-Event-ID resume) as `fetchSse`.
+   */
+  rejoinSse(customChannelId: string, options?: FetchSseOptions): void {
+    this.runSse(
+      {
+        endpoint: this.endpoint,
+        method: 'GET',
+        queryParams: { custom_channel_id: customChannelId },
+      },
+      options,
+    );
+  }
+
+  /**
+   * GET channel metadata (F-015): probe whether a channel exists and its run
+   * state without mutating it. 404 → `{ exists: false }`; any other non-OK
+   * status throws so the caller can fall back without silently deleting history.
+   */
+  async getChannelMetadata(customChannelId: string): Promise<ChannelMetadata> {
+    const baseEndpoint = this.getBaseEndpoint();
+
+    if (!baseEndpoint) {
+      throw new Error('Unable to derive channel metadata endpoint. Please provide botProviderEndpoint in config.');
+    }
+
+    const url = `${baseEndpoint}/channel/metadata?custom_channel_id=${encodeURIComponent(customChannelId)}`;
+
+    const headers: HeadersInit = {
+      ...this.customHeaders,
+    };
+    if (this.apiKey) {
+      headers['X-API-KEY'] = this.apiKey;
+    }
+
+    const response = await fetch(url, { method: 'GET', headers });
+
+    if (response.status === 404) {
+      return { exists: false };
+    }
+
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, await response.text().catch(() => null));
+    }
+
+    // Success envelope: { isSuccess: true, data: ChannelMetadata }.
+    const body = (await response.json()) as {
+      data?: { customChannelId?: string; title?: string; runState?: ChannelRunState; lastActivityAt?: string };
+    };
+    const data = body?.data;
+
+    return {
+      exists: true,
+      customChannelId: data?.customChannelId,
+      title: data?.title,
+      runState: data?.runState,
+      lastActivityAt: data?.lastActivityAt,
+    };
+  }
+
+  private runSse(
+    request: {
+      endpoint: string;
+      method: 'GET' | 'POST';
+      payload?: FetchSsePayload;
+      queryParams?: Record<string, string>;
+    },
+    options?: FetchSseOptions,
+  ): void {
     options?.onSseStart?.();
     this.inFlight += 1;
 
     createSseObservable({
       apiKey: this.apiKey,
-      endpoint: this.endpoint,
+      endpoint: request.endpoint,
       debugMode: this.debugMode,
-      payload: this.transformSsePayload?.(payload) ?? payload,
+      payload: request.payload,
       customHeaders: this.customHeaders,
+      method: request.method,
+      queryParams: request.queryParams,
     })
       .pipe(
         concatMap(event => of(event).pipe(delay(options?.delayTime ?? 50))),
