@@ -293,6 +293,48 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     });
   }
 
+  // Task Check List phase (F-010): TaskCreate/TaskUpdate native tool calls fold into one task list
+  // (rendered in the docked Task tray, NOT as tool-call rows). Task fields live on `parameter`
+  // (inferred contract — see reduceTasks).
+  const taskProcessId = randomUUID();
+  const taskCalls: { toolName: string; parameter: Record<string, unknown> }[] = [
+    {
+      toolName: 'TaskCreate',
+      parameter: {
+        id: 'task-1',
+        subject: '讀取並分析訂單資料',
+        activeForm: '正在讀取訂單資料',
+        status: 'pending',
+        description: '從 data warehouse 拉出上週各通路訂單數與金額',
+      },
+    },
+    { toolName: 'TaskCreate', parameter: { id: 'task-2', subject: '依通路彙總並排序前 5 名', status: 'pending' } },
+    { toolName: 'TaskCreate', parameter: { id: 'task-3', subject: '產生報表並輸出', status: 'pending' } },
+    { toolName: 'TaskUpdate', parameter: { id: 'task-1', status: 'completed' } },
+    {
+      toolName: 'TaskUpdate',
+      parameter: { id: 'task-2', status: 'in_progress', activeForm: '正在依通路彙總並排序前 5 名' },
+    },
+  ];
+  for (let seq = 0; seq < taskCalls.length; seq++) {
+    const tc = taskCalls[seq];
+    const toolCall = { toolsetName: '', toolName: tc.toolName, parameter: tc.parameter };
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.start',
+      fact: { ...emptyFact(), toolCallStart: { processId: taskProcessId, callSeq: seq, toolCall } },
+    });
+    await sleep(90);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.complete',
+      fact: {
+        ...emptyFact(),
+        toolCallComplete: { processId: taskProcessId, callSeq: seq, toolCall, toolCallResult: { ok: true } },
+      },
+    });
+  }
+
   await sleep(40);
 
   writeEvent(res, {

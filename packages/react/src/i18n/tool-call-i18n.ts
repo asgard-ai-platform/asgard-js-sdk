@@ -21,6 +21,11 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'summary.files': ' · Processed {f} files',
     'expand.initial': 'Initial',
     'expand.result': 'Result',
+    'task.title': 'Tasks',
+    'task.pending': 'Pending',
+    'task.in_progress': 'In progress',
+    'task.completed': 'Completed',
+    'subagent.title': 'Subagents',
   },
   'ja-JP': {
     'tool.read': '{file} を読み込み',
@@ -34,6 +39,11 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'summary.files': ' · ファイル {f} 件',
     'expand.initial': '入力',
     'expand.result': '結果',
+    'task.title': 'タスク',
+    'task.pending': '待機中',
+    'task.in_progress': '進行中',
+    'task.completed': '完了',
+    'subagent.title': 'サブエージェント',
   },
   'zh-TW': {
     'tool.read': '讀取 {file}',
@@ -47,6 +57,11 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'summary.files': ' · 處理 {f} 個檔案',
     'expand.initial': '輸入',
     'expand.result': '結果',
+    'task.title': '任務清單',
+    'task.pending': '待處理',
+    'task.in_progress': '進行中',
+    'task.completed': '已完成',
+    'subagent.title': '子代理',
   },
 };
 
