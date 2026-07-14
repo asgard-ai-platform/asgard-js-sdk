@@ -124,3 +124,45 @@ describe('AsgardServiceClient.getSandboxBrowserUrl (sandbox Browser)', () => {
     await expect(client.getSandboxBrowserUrl('sbx-1')).rejects.toThrow(/openURL/);
   });
 });
+
+describe('AsgardServiceClient sandbox files (part 3)', () => {
+  const client = new AsgardServiceClient({ botProviderEndpoint: 'https://api.example.com/bp' });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('listSandboxFiles GETs /sandbox/{name}/fs/list?path and returns entries + truncated', async () => {
+    const fetchFn = stubFetch({
+      status: 200,
+      ok: true,
+      json: { isSuccess: true, data: { entries: [{ name: 'a.txt', isDir: false }], truncated: false } },
+    });
+
+    const res = await client.listSandboxFiles('sbx-1', '/outputs');
+
+    expect(res).toEqual({ entries: [{ name: 'a.txt', isDir: false }], truncated: false });
+    const [url, init] = fetchFn.mock.calls[0];
+    expect(url).toBe('https://api.example.com/bp/sandbox/sbx-1/fs/list?path=%2Foutputs');
+    expect(init.method).toBe('GET');
+  });
+
+  it('listSandboxFiles defaults entries/truncated when the envelope is sparse', async () => {
+    stubFetch({ status: 200, ok: true, json: { isSuccess: true, data: {} } });
+
+    await expect(client.listSandboxFiles('sbx-1', '/')).resolves.toEqual({ entries: [], truncated: false });
+  });
+
+  it('readSandboxFile GETs /sandbox/{name}/fs/file?path and returns the text body', async () => {
+    const fetchFn = stubFetch({ status: 200, ok: true, text: 'file body' });
+
+    const content = await client.readSandboxFile('sbx-1', '/README.md');
+
+    expect(content).toBe('file body');
+    expect(fetchFn.mock.calls[0][0]).toBe('https://api.example.com/bp/sandbox/sbx-1/fs/file?path=%2FREADME.md');
+  });
+
+  it('throws HttpError when a sandbox fs request fails', async () => {
+    stubFetch({ status: 500, ok: false, statusText: 'err', text: 'boom' });
+
+    await expect(client.listSandboxFiles('sbx-1', '/')).rejects.toBeInstanceOf(HttpError);
+  });
+});

@@ -1,0 +1,103 @@
+// Sandbox files panel (part 3, MVP): lazy directory tree + text viewer.
+.sandbox_files {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 200px;
+  // Own surface so the panel is readable regardless of the host's background.
+  background: var(--asg-color-surface, var(--asg-color-bg, #ffffff));
+  color: var(--asg-color-text-primary, #1f1f1f);
+}
+
+.sandbox_files__empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 120px;
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+}
+
+.sandbox_files__error {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--asg-color-error, #d4380d);
+}
+
+.sandbox_files__tree {
+  flex: 0 0 auto;
+  max-height: 45%;
+  overflow: auto;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--asg-color-border, #e5e7eb);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--asg-color-text-primary, #1f1f1f);
+
+  &:hover {
+    background: var(--asg-color-bg-secondary, rgba(0, 0, 0, 0.04));
+  }
+}
+
+.row--selected {
+  background: var(--asg-color-bg-secondary, rgba(0, 0, 0, 0.06));
+  font-weight: 500;
+}
+
+.row__glyph {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+}
+
+.row__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sandbox_files__viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sandbox_files__viewer_head {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+  border-bottom: 1px solid var(--asg-color-border, #e5e7eb);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sandbox_files__viewer_body {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--asg-color-text-primary, #1f1f1f);
+}

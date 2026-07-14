@@ -651,6 +651,22 @@ export async function handleMockChannelMetadata(req: IncomingMessage, res: Serve
 // Sandbox Browser (part 2) — POST /sandbox/{name}/browser/open-url → { isSuccess, data: { openURL } }.
 // Mounted at `/mock-asgard/sandbox`, so req.url is `/{name}/browser/open-url`. Returns a same-origin
 // mock frame URL (a real backend returns a one-time Neko embed URL).
+// Mock sandbox filesystem for the Files panel (part 3): a tiny tree + file contents by path.
+const MOCK_FS: Record<string, { name: string; isDir: boolean; sizeBytes?: number }[]> = {
+  '/': [
+    { name: 'README.md', isDir: false, sizeBytes: 64 },
+    { name: 'outputs', isDir: true },
+    { name: 'uploads', isDir: true },
+  ],
+  '/outputs': [{ name: '客服月報.xlsx', isDir: false, sizeBytes: 20480 }],
+  '/uploads': [{ name: 'notes.txt', isDir: false, sizeBytes: 32 }],
+};
+const MOCK_FILE: Record<string, string> = {
+  '/README.md': '# Sandbox\n\n這是 mock sandbox 的工作區。真實環境由 GET /sandbox/{name}/fs/file 讀取。\n',
+  '/outputs/客服月報.xlsx': '(binary xlsx — mock 內容)',
+  '/uploads/notes.txt': 'mock uploaded note.\n',
+};
+
 export async function handleMockSandbox(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '', 'http://localhost');
 
@@ -663,6 +679,22 @@ export async function handleMockSandbox(req: IncomingMessage, res: ServerRespons
         data: { openURL: `/mock-asgard/sandbox-frame?sbx=${encodeURIComponent(name)}` },
       }),
     );
+
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname.endsWith('/fs/list')) {
+    const path = url.searchParams.get('path') ?? '/';
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ isSuccess: true, data: { entries: MOCK_FS[path] ?? [], truncated: false } }));
+
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname.endsWith('/fs/file')) {
+    const path = url.searchParams.get('path') ?? '';
+    res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
+    res.end(MOCK_FILE[path] ?? `（找不到 ${path}）`);
 
     return;
   }

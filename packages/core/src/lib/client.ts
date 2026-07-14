@@ -9,6 +9,7 @@ import {
   CwdDownloadResult,
   ChannelMetadata,
   ChannelRunState,
+  SandboxFsListResult,
 } from '../types';
 import { createSseObservable } from './create-sse-observable';
 import { concatMap, delay, of, Subject, takeUntil } from 'rxjs';
@@ -220,6 +221,59 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     }
 
     return openURL;
+  }
+
+  /**
+   * Sandbox Files (part 3): list one directory. GET `{base}/sandbox/{name}/fs/list?path=` →
+   * `SuccessResp({ entries, truncated })`. Lazy per-directory (the tree expands on demand).
+   */
+  async listSandboxFiles(sandboxName: string, path: string): Promise<SandboxFsListResult> {
+    const headers = this.sandboxHeaders();
+    const url = `${this.sandboxBase(sandboxName)}/fs/list?path=${encodeURIComponent(path)}`;
+    const response = await fetch(url, { method: 'GET', headers });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, await response.text().catch(() => null));
+    }
+
+    const body = (await response.json()) as { data?: Partial<SandboxFsListResult> };
+
+    return { entries: body?.data?.entries ?? [], truncated: body?.data?.truncated ?? false };
+  }
+
+  /**
+   * Sandbox Files (part 3): read a file's content as text. GET `{base}/sandbox/{name}/fs/file?path=`
+   * returns raw `application/octet-stream`; decoded to text for the viewer.
+   */
+  async readSandboxFile(sandboxName: string, path: string): Promise<string> {
+    const headers = this.sandboxHeaders();
+    const url = `${this.sandboxBase(sandboxName)}/fs/file?path=${encodeURIComponent(path)}`;
+    const response = await fetch(url, { method: 'GET', headers });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, await response.text().catch(() => null));
+    }
+
+    return response.text();
+  }
+
+  private sandboxBase(sandboxName: string): string {
+    const baseEndpoint = this.getBaseEndpoint();
+
+    if (!baseEndpoint) {
+      throw new Error('Unable to derive sandbox endpoint. Please provide botProviderEndpoint in config.');
+    }
+
+    return `${baseEndpoint}/sandbox/${encodeURIComponent(sandboxName)}`;
+  }
+
+  private sandboxHeaders(): HeadersInit {
+    const headers: HeadersInit = { ...this.customHeaders };
+    if (this.apiKey) {
+      headers['X-API-KEY'] = this.apiKey;
+    }
+
+    return headers;
   }
 
   private runSse(

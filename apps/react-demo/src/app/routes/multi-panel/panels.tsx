@@ -1,5 +1,12 @@
 import { ReactNode } from 'react';
-import { SandboxBrowser, useChannelTitle, useSandboxName, useSubagents, useTaskList } from '@asgard-js/react';
+import {
+  SandboxBrowser,
+  SandboxFiles,
+  useChannelTitle,
+  useSandboxName,
+  useSubagents,
+  useTaskList,
+} from '@asgard-js/react';
 import styles from './multi-panel.module.scss';
 
 /**
@@ -97,16 +104,13 @@ export function AgentTeamsPanel(): ReactNode {
   );
 }
 
-/** Files panel — placeholder until the SDK <SandboxFiles> (part 3) lands. */
+/** Files panel — the SDK <SandboxFiles> (part 3): lazy fs/list tree + text viewer, keyed by useSandboxName(). */
 export function FilesPanel(): ReactNode {
   return (
-    <PanelShell title="Files" count="SDK 待做（part 3）">
-      <ul className={styles.list}>
-        <li className={styles.list__row}>📄 README.md</li>
-        <li className={styles.list__row}>📁 outputs / 客服月報.xlsx</li>
-        <li className={styles.list__row}>📁 uploads /</li>
-      </ul>
-      <div className={styles.panel__note}>示意；SDK &lt;SandboxFiles&gt; 尚未實作</div>
+    <PanelShell title="Files" count="SDK 元件">
+      <div className={styles.files_host}>
+        <SandboxFiles />
+      </div>
     </PanelShell>
   );
 }

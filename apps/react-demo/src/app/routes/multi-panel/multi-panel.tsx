@@ -64,7 +64,7 @@ export function MultiPanelDemo(): ReactNode {
   return (
     <DemoWrapper
       title="Sindri-style multi-panel layout (F-014)"
-      description="Sindri 四格：一個 AsgardConversationProvider 底下，中間 Chatbot（未傳 config）與右側面板同層、共享一條 channel。Plan / Agent Teams / Browser 都是 SDK 元件（useTaskList / useSubagents / <SandboxBrowser>）；Files 待做（part 3）。上方可開關面板、拖分隔線調比例——版面全由 app 掌控，不是 SDK 的職責。"
+      description="Sindri 四格：一個 AsgardConversationProvider 底下，中間 Chatbot（未傳 config）與右側面板同層、共享一條 channel。Plan / Agent Teams / Files / Browser 全是 SDK 元件（useTaskList / useSubagents / <SandboxFiles> / <SandboxBrowser>）；後兩者靠 useSandboxName() 打 sandbox API。上方可開關面板、拖分隔線調比例——版面全由 app 掌控，不是 SDK 的職責。"
     >
       <div className={styles.root}>
         <div className={styles.toolbar}>
