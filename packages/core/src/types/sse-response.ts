@@ -176,6 +176,18 @@ export interface ChannelTitleUpdateEventData {
   title: string;
 }
 
+// Sandbox lifecycle events (sandbox Files/Browser foundation). `launch` = the run's sandbox is
+// provisioning; `ready` = it can serve the fs (`/sandbox/{name}/fs/*`) + browser (`/browser/open-url`)
+// APIs. `sandboxName` keys those APIs. Confirmed against asgard-core@dev-1.16.19.
+export interface SandboxLaunchEventData {
+  sandboxName: string;
+  blueprintName?: string;
+}
+export interface SandboxReadyEventData {
+  sandboxName: string;
+  blueprintName?: string;
+}
+
 export interface ErrorMessage {
   message: string;
   code: string;
@@ -291,6 +303,8 @@ export interface Fact<Type extends EventType> {
   subagentComplete: IsEqual<Type, EventType.SUBAGENT_COMPLETE, SubagentCompleteEventData>;
   messageUser: IsEqual<Type, EventType.MESSAGE_USER, UserMessageEventData>;
   channelTitleUpdate: IsEqual<Type, EventType.CHANNEL_TITLE_UPDATE, ChannelTitleUpdateEventData>;
+  sandboxLaunch: IsEqual<Type, EventType.SANDBOX_LAUNCH, SandboxLaunchEventData>;
+  sandboxReady: IsEqual<Type, EventType.SANDBOX_READY, SandboxReadyEventData>;
 }
 
 export interface SseResponse<Type extends EventType> {

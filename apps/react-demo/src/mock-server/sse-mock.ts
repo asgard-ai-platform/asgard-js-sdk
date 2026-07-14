@@ -110,6 +110,8 @@ function emptyFact(): Record<string, unknown> {
     subagentComplete: null,
     messageUser: null,
     channelTitleUpdate: null,
+    sandboxLaunch: null,
+    sandboxReady: null,
   };
 }
 
@@ -250,6 +252,22 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
 
   res.writeHead(200, SSE_HEADERS);
   writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+  await sleep(40);
+
+  // Sandbox lifecycle (Files/Browser foundation): the run provisions a sandbox, then it's ready to
+  // serve the fs + browser APIs. Both carry `sandboxName`; the SDK folds it into `sandboxName$`.
+  const sandboxName = 'sbx-mock-0001';
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.sandbox.launch',
+    fact: { ...emptyFact(), sandboxLaunch: { sandboxName, blueprintName: 'default' } },
+  });
+  await sleep(60);
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.sandbox.ready',
+    fact: { ...emptyFact(), sandboxReady: { sandboxName, blueprintName: 'default' } },
+  });
   await sleep(40);
 
   // Thinking phase (F-001): reasoning streams as its own message before the visible answer.

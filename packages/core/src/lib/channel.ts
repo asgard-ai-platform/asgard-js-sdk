@@ -48,12 +48,18 @@ export default class Channel {
   // `channel.title.update` event. Its own subject (independent of `conversation$`), so a consumer
   // that only wants the title is not redrawn by high-frequency `message.delta`.
   private channelTitle$: BehaviorSubject<string | null>;
+  // Sandbox name for this channel (sandbox Files/Browser foundation). Derived from the ephemeral
+  // `sandbox.launch` / `sandbox.ready` events; `null` until one arrives (no metadata seed exists, so
+  // a cold rejoin lacks it until the next sandbox event). Keys the `/sandbox/{name}/…` REST APIs.
+  private sandboxName$: BehaviorSubject<string | null>;
 
   /** Framework-agnostic derived-state stores (F-013): current-list snapshot + change notification. */
   public readonly tasks: ReactiveStore<Task[]>;
   public readonly subagents: ReactiveStore<Subagent[]>;
   /** Channel-title store (F-016): current title snapshot + change notification (title-only changes). */
   public readonly channelTitle: ReactiveStore<string | null>;
+  /** Sandbox-name store: the current sandbox for this channel, folded from `sandbox.launch`/`ready`. */
+  public readonly sandboxName: ReactiveStore<string | null>;
 
   private statesObserver?: ObserverOrNext<ChannelStates>;
   private statesSubscription?: Subscription;
@@ -92,6 +98,10 @@ export default class Channel {
     // Seed the title from metadata (F-016); `channel.title.update` events refine it thereafter.
     this.channelTitle$ = new BehaviorSubject<string | null>(config.initialTitle ?? null);
     this.channelTitle = toReactiveStore(this.channelTitle$);
+
+    // Sandbox name: no seed (not on metadata); folded from `sandbox.launch`/`ready`.
+    this.sandboxName$ = new BehaviorSubject<string | null>(null);
+    this.sandboxName = toReactiveStore(this.sandboxName$);
 
     this.statesObserver = config.statesObserver;
   }
@@ -186,14 +196,16 @@ export default class Channel {
       this.tasks$,
       this.subagents$,
       this.channelTitle$,
+      this.sandboxName$,
     ])
       .pipe(
-        map(([isConnecting, conversation, tasks, subagents, title]) => ({
+        map(([isConnecting, conversation, tasks, subagents, title, sandboxName]) => ({
           isConnecting,
           conversation,
           tasks,
           subagents,
           title,
+          sandboxName,
         })),
       )
       .subscribe(this.statesObserver);
@@ -245,6 +257,16 @@ export default class Channel {
             const nextTitle = (response as SseResponse<EventType.CHANNEL_TITLE_UPDATE>).fact.channelTitleUpdate.title;
             if (nextTitle !== this.channelTitle$.value) {
               this.channelTitle$.next(nextTitle);
+            }
+          }
+
+          // Sandbox name (Files/Browser foundation): `sandbox.launch`/`ready` both carry it; take the
+          // latest and guard on change so consumers of only the sandbox name aren't re-notified.
+          if (response.eventType === EventType.SANDBOX_LAUNCH || response.eventType === EventType.SANDBOX_READY) {
+            const fact = (response as SseResponse<EventType.SANDBOX_LAUNCH | EventType.SANDBOX_READY>).fact;
+            const nextName = (fact.sandboxLaunch ?? fact.sandboxReady)?.sandboxName ?? null;
+            if (nextName && nextName !== this.sandboxName$.value) {
+              this.sandboxName$.next(nextName);
             }
           }
 
@@ -373,6 +395,7 @@ export default class Channel {
     this.tasks$.complete();
     this.subagents$.complete();
     this.channelTitle$.complete();
+    this.sandboxName$.complete();
     this.derivedSubscription?.unsubscribe();
     this.statesSubscription?.unsubscribe();
   }

@@ -41,6 +41,8 @@ export interface AsgardServiceContextValue {
   subagentStore?: UseChannelReturn['subagentStore'];
   /** Channel-title store (F-016); absent in preview mode. Read via `useChannelTitle()`. */
   channelTitleStore?: UseChannelReturn['channelTitleStore'];
+  /** Sandbox-name store (sandbox Files/Browser); absent in preview mode. Read via `useSandboxName()`. */
+  sandboxStore?: UseChannelReturn['sandboxStore'];
   pendingConsent: ToolCallConsentEventData | null;
   botTypingPlaceholder?: string;
   inputPlaceholder?: string;
@@ -234,6 +236,7 @@ function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderPr
     taskStore,
     subagentStore,
     channelTitleStore,
+    sandboxStore,
   } = useChannel({
     client,
     customChannelId,
@@ -310,6 +313,7 @@ function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderPr
       taskStore,
       subagentStore,
       channelTitleStore,
+      sandboxStore,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,
@@ -343,6 +347,7 @@ function AsgardServiceContextProviderInner(props: AsgardServiceContextProviderPr
       taskStore,
       subagentStore,
       channelTitleStore,
+      sandboxStore,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,

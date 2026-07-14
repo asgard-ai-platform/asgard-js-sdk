@@ -34,7 +34,9 @@ None yet.
 - **EXT-002 / EXT-003 closed** (F-010 sidecar via #281; F-012 subagent contract).
 - **Open follow-up** — [FOLLOWUP-f002-background-tab-detach](./FOLLOWUP-f002-background-tab-detach.md): F-002's background-tab `openWhenHidden` return + `detach`→cursor-rejoin (2 of 6 criteria), deferred pending real-backend regression.
 
-**On this branch (`feat/f017-channel-title-ui`):** F-017 (BUILD-013, channel title UI + custom renderer) `done` — UI per the pinned prototype `asgard-chat-kit@5480a67`. After this merges, the PM backlog is empty (next: whatever PM opens, or the F-002 real-backend follow-up).
+**PM backlog F-001~F-017 all `done` + merged.**
+
+**In progress (user direction 2026-07-14, not a PM ticket yet):** bring the Sindri **Files/Browser** panels into the SDK — UI authority = `asgard-sindri-prototype`, data = `asgard-core` sandbox APIs. Three parts: **BUILD-014 sandboxName store (Foundation) `done`** → BUILD-015 `<SandboxBrowser>` → BUILD-016 `<SandboxFiles>`. Real-sandbox verification needs a dev backend (follow-up). Also: ask backend to add `sandboxName` to `GET /channel/metadata` (cold-start seed).
 
 ## Task Queue
 
