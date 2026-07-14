@@ -186,6 +186,42 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     };
   }
 
+  /**
+   * Sandbox Browser (part 2): generate a one-time embed URL for the channel's sandbox browser (Neko).
+   * POST `{base}/sandbox/{sandboxName}/browser/open-url` → `SuccessResp({ openURL })`. The caller
+   * (`<SandboxBrowser>`) puts the returned URL in an iframe. `sandboxName` comes from the
+   * `sandbox.launch`/`ready`-derived store (see `useSandboxName`).
+   */
+  async getSandboxBrowserUrl(sandboxName: string): Promise<string> {
+    const baseEndpoint = this.getBaseEndpoint();
+
+    if (!baseEndpoint) {
+      throw new Error('Unable to derive sandbox endpoint. Please provide botProviderEndpoint in config.');
+    }
+
+    const url = `${baseEndpoint}/sandbox/${encodeURIComponent(sandboxName)}/browser/open-url`;
+
+    const headers: HeadersInit = { 'Content-Type': 'application/json', ...this.customHeaders };
+    if (this.apiKey) {
+      headers['X-API-KEY'] = this.apiKey;
+    }
+
+    const response = await fetch(url, { method: 'POST', headers });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, await response.text().catch(() => null));
+    }
+
+    const body = (await response.json()) as { data?: { openURL?: string } };
+    const openURL = body?.data?.openURL;
+
+    if (!openURL) {
+      throw new Error('sandbox browser open-url returned no openURL');
+    }
+
+    return openURL;
+  }
+
   private runSse(
     request: {
       endpoint: string;

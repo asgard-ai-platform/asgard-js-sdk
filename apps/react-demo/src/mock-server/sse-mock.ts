@@ -647,3 +647,40 @@ export async function handleMockChannelMetadata(req: IncomingMessage, res: Serve
     }),
   );
 }
+
+// Sandbox Browser (part 2) — POST /sandbox/{name}/browser/open-url → { isSuccess, data: { openURL } }.
+// Mounted at `/mock-asgard/sandbox`, so req.url is `/{name}/browser/open-url`. Returns a same-origin
+// mock frame URL (a real backend returns a one-time Neko embed URL).
+export async function handleMockSandbox(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? '', 'http://localhost');
+
+  if (req.method === 'POST' && url.pathname.endsWith('/browser/open-url')) {
+    const name = url.pathname.split('/').filter(Boolean)[0] ?? 'sandbox';
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        isSuccess: true,
+        data: { openURL: `/mock-asgard/sandbox-frame?sbx=${encodeURIComponent(name)}` },
+      }),
+    );
+
+    return;
+  }
+
+  res.statusCode = 404;
+  res.end();
+}
+
+// The mock "Neko" browser page embedded by <SandboxBrowser>'s iframe (same-origin so it renders).
+export async function handleMockSandboxFrame(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? '', 'http://localhost');
+  const name = url.searchParams.get('sbx') ?? 'sandbox';
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(
+    `<!doctype html><html><body style="font-family:system-ui;background:#0d0d0d;color:#e5e7eb;display:grid;place-items:center;height:100vh;margin:0">` +
+      `<div style="text-align:center"><div style="font-size:44px">🌐</div>` +
+      `<p style="margin:8px 0 2px">Mock Neko browser</p>` +
+      `<p style="margin:0;opacity:.6;font-family:monospace">${name}</p>` +
+      `<p style="margin:12px 0 0;opacity:.4;font-size:12px">（真實環境是 agent 操作的遠端瀏覽器）</p></div></body></html>`,
+  );
+}

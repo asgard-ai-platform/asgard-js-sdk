@@ -36,6 +36,8 @@ export interface IAsgardServiceClient {
   rejoinSse?(customChannelId: string, options?: FetchSseOptions): void;
   /** GET channel metadata (F-015): probe whether a channel exists and its run state, without mutating it. */
   getChannelMetadata?(customChannelId: string): Promise<ChannelMetadata>;
+  /** Sandbox Browser: generate a one-time embed URL (Neko) for the sandbox — POST `/sandbox/{name}/browser/open-url`. */
+  getSandboxBrowserUrl?(sandboxName: string): Promise<string>;
   uploadFile?(file: File, customChannelId: string): Promise<BlobUploadResponse>;
   downloadCwdFile?(relativePath: string, customChannelId: string): Promise<CwdDownloadResult>;
 }

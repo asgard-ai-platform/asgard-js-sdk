@@ -91,3 +91,36 @@ describe('AsgardServiceClient.getChannelMetadata (F-015)', () => {
     });
   });
 });
+
+describe('AsgardServiceClient.getSandboxBrowserUrl (sandbox Browser)', () => {
+  const client = new AsgardServiceClient({ botProviderEndpoint: 'https://api.example.com/bp' });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('POSTs to /sandbox/{name}/browser/open-url and returns data.openURL', async () => {
+    const fetchFn = stubFetch({
+      status: 200,
+      ok: true,
+      json: { isSuccess: true, data: { openURL: 'https://neko/x' } },
+    });
+
+    const url = await client.getSandboxBrowserUrl('sbx-1');
+
+    expect(url).toBe('https://neko/x');
+    const [reqUrl, init] = fetchFn.mock.calls[0];
+    expect(reqUrl).toBe('https://api.example.com/bp/sandbox/sbx-1/browser/open-url');
+    expect(init.method).toBe('POST');
+  });
+
+  it('throws HttpError on a non-OK response', async () => {
+    stubFetch({ status: 500, ok: false, statusText: 'err', text: 'boom' });
+
+    await expect(client.getSandboxBrowserUrl('sbx-1')).rejects.toBeInstanceOf(HttpError);
+  });
+
+  it('throws when the response has no openURL', async () => {
+    stubFetch({ status: 200, ok: true, json: { isSuccess: true, data: {} } });
+
+    await expect(client.getSandboxBrowserUrl('sbx-1')).rejects.toThrow(/openURL/);
+  });
+});

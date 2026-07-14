@@ -2,7 +2,7 @@ import { ReactNode, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { AsgardConversationProvider, Chatbot } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
-import { AgentTeamsPanel, ChannelTitleBar, FilesPanel, PlanPanel } from './panels';
+import { AgentTeamsPanel, BrowserPanel, ChannelTitleBar, FilesPanel, PlanPanel } from './panels';
 import styles from './multi-panel.module.scss';
 
 // A Sindri-style layout (F-014): ONE <AsgardConversationProvider> owns the channel; the <Chatbot> and
@@ -10,12 +10,13 @@ import styles from './multi-panel.module.scss';
 // (playing the role of the app) owns the layout: which panels show, and their placement. The SDK only
 // contributes the channel-sharing components/hooks.
 
-type PanelKey = 'plan' | 'agents' | 'files';
+type PanelKey = 'plan' | 'agents' | 'files' | 'browser';
 
 const PANELS: { key: PanelKey; label: string; render: () => ReactNode }[] = [
   { key: 'plan', label: 'Plan', render: () => <PlanPanel /> },
   { key: 'agents', label: 'Agent Teams', render: () => <AgentTeamsPanel /> },
   { key: 'files', label: 'Files', render: () => <FilesPanel /> },
+  { key: 'browser', label: 'Browser', render: () => <BrowserPanel /> },
 ];
 
 const config = { botProviderEndpoint: `${typeof window !== 'undefined' ? window.location.origin : ''}/mock-asgard` };
@@ -52,13 +53,18 @@ function ResizableSplit({ left, right }: { left: ReactNode; right: ReactNode }):
 }
 
 export function MultiPanelDemo(): ReactNode {
-  const [open, setOpen] = useState<Record<PanelKey, boolean>>({ plan: true, agents: true, files: true });
+  const [open, setOpen] = useState<Record<PanelKey, boolean>>({
+    plan: true,
+    agents: true,
+    files: true,
+    browser: true,
+  });
   const visible = PANELS.filter(p => open[p.key]);
 
   return (
     <DemoWrapper
       title="Sindri-style multi-panel layout (F-014)"
-      description="一個 AsgardConversationProvider 底下：中間 Chatbot（未傳 config），右側多個獨立面板（Plan/Agent Teams/Files）各自用 hook 讀同一條對話。上方可開關面板、拖中間分隔線可調比例——版面／尺寸全由 app（此 demo）掌控，不是 SDK 的職責；SDK 只出共用 channel 的元件。"
+      description="Sindri 四格：一個 AsgardConversationProvider 底下，中間 Chatbot（未傳 config）與右側面板同層、共享一條 channel。Plan / Agent Teams / Browser 都是 SDK 元件（useTaskList / useSubagents / <SandboxBrowser>）；Files 待做（part 3）。上方可開關面板、拖分隔線調比例——版面全由 app 掌控，不是 SDK 的職責。"
     >
       <div className={styles.root}>
         <div className={styles.toolbar}>
