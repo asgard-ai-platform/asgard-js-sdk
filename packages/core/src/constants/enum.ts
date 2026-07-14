@@ -34,6 +34,12 @@ export enum EventType {
   // parity per F-014). Ephemeral — not persisted, so a rejoin seeds the title from channel metadata
   // instead. Confirmed against asgard-core@dev-1.16.19.
   CHANNEL_TITLE_UPDATE = 'asgard.channel.title.update',
+  // Sandbox lifecycle (sandbox Files/Browser foundation): the run's sandbox is provisioning
+  // (`launch`) / ready to serve fs + browser APIs (`ready`); both carry `sandboxName`. Ephemeral —
+  // not persisted, so a cold rejoin lacks the name until the next sandbox event (no metadata seed
+  // exists yet). Confirmed against asgard-core@dev-1.16.19 (`internal/constants.go`).
+  SANDBOX_LAUNCH = 'asgard.sandbox.launch',
+  SANDBOX_READY = 'asgard.sandbox.ready',
   DONE = 'asgard.run.done',
   ERROR = 'asgard.run.error',
 }

@@ -64,6 +64,8 @@ export interface UseChannelReturn {
   subagentStore?: ReactiveStore<Subagent[]>;
   /** Channel-title store (F-016); seeded from `GET /channel/metadata` then updated live. Absent in preview mode. */
   channelTitleStore?: ReactiveStore<string | null>;
+  /** Sandbox-name store (sandbox Files/Browser); folded from `sandbox.launch`/`ready`. Absent in preview mode. */
+  sandboxStore?: ReactiveStore<string | null>;
 }
 
 export function useChannel(props: UseChannelProps): UseChannelReturn {
@@ -445,6 +447,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             taskStore: channel?.tasks,
             subagentStore: channel?.subagents,
             channelTitleStore: channel?.channelTitle,
+            sandboxStore: channel?.sandboxName,
           },
     [
       isPreviewMode,

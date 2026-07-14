@@ -1,20 +1,22 @@
 import { ReactNode } from 'react';
-import { useChannelTitle, useSubagents, useTaskList } from '@asgard-js/react';
+import { useChannelTitle, useSandboxName, useSubagents, useTaskList } from '@asgard-js/react';
 import styles from './multi-panel.module.scss';
 
 /**
  * Channel title bar (F-016) — rendered OUTSIDE the <Chatbot>, reading `useChannelTitle()` from the
- * shared provider. Seeded from `GET /channel/metadata` on entry, then updated live by the
- * `channel.title.update` event. Not redrawn by high-frequency message deltas.
+ * shared provider. Also shows the current sandbox name from `useSandboxName()` (folded from the
+ * `sandbox.launch`/`ready` events) — the key the Files/Browser sandbox panels will use.
  */
 export function ChannelTitleBar(): ReactNode {
   const title = useChannelTitle();
+  const sandboxName = useSandboxName();
 
   return (
     <div className={styles.titlebar}>
       <span className={styles.titlebar__icon}>#</span>
       <span className={styles.titlebar__text}>{title ?? '未命名頻道'}</span>
-      <span className={styles.titlebar__src}>useChannelTitle()（框外渲染）</span>
+      {sandboxName && <span className={styles.titlebar__sandbox}>sandbox: {sandboxName}</span>}
+      <span className={styles.titlebar__src}>useChannelTitle() / useSandboxName()</span>
     </div>
   );
 }

@@ -53,3 +53,18 @@ export function useChannelTitle(): string | null {
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
+
+// Current sandbox name for the channel (sandbox Files/Browser foundation): folded from the ephemeral
+// `sandbox.launch` / `sandbox.ready` events. `null` until one arrives (or in preview / no channel).
+// Keys the sandbox fs + browser APIs used by `<SandboxFiles>` / `<SandboxBrowser>`.
+export function useSandboxName(): string | null {
+  const { sandboxStore } = useAsgardContext();
+
+  const subscribe = useCallback(
+    (listener: () => void) => sandboxStore?.subscribe(listener) ?? noopUnsubscribe,
+    [sandboxStore],
+  );
+  const getSnapshot = useCallback(() => sandboxStore?.getSnapshot() ?? null, [sandboxStore]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}

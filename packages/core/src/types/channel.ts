@@ -17,6 +17,9 @@ export interface ChannelStates {
   // Channel title (F-016): seeded from `GET /channel/metadata` on entry, then updated by the
   // ephemeral `channel.title.update` event. `null` = unnamed. Also exposed as a per-slice store.
   title: string | null;
+  // Sandbox name for this channel (sandbox Files/Browser foundation): folded from the ephemeral
+  // `sandbox.launch`/`ready` events; `null` until one arrives. Keys the `/sandbox/{name}/…` APIs.
+  sandboxName: string | null;
 }
 
 /**
