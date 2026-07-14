@@ -1,56 +1,26 @@
-import { ReactNode, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { ReactNode, useState } from 'react';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { AsgardConversationProvider, Chatbot } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
-import { AgentTeamsPanel, BrowserPanel, ChannelTitleBar, FilesPanel, PlanPanel } from './panels';
+import { ChannelTitleBar } from './panels';
+import { DockPanels, type PanelKey } from './dock';
 import styles from './multi-panel.module.scss';
 
 // A Sindri-style layout (F-014): ONE <AsgardConversationProvider> owns the channel; the <Chatbot> and
 // several independent panels are all siblings under it, each reading the same conversation. The demo
-// (playing the role of the app) owns the layout: which panels show, and their placement. The SDK only
-// contributes the channel-sharing components/hooks.
+// (playing the role of the app) owns the layout, exactly the way Sindri does it: react-resizable-panels
+// for the Chatbot | panels split, and dockview for the draggable/dockable panel area. The SDK only
+// contributes the channel-sharing components/hooks — it does not own layout.
 
-type PanelKey = 'plan' | 'agents' | 'files' | 'browser';
-
-const PANELS: { key: PanelKey; label: string; render: () => ReactNode }[] = [
-  { key: 'plan', label: 'Plan', render: () => <PlanPanel /> },
-  { key: 'agents', label: 'Agent Teams', render: () => <AgentTeamsPanel /> },
-  { key: 'files', label: 'Files', render: () => <FilesPanel /> },
-  { key: 'browser', label: 'Browser', render: () => <BrowserPanel /> },
+const PANELS: { key: PanelKey; label: string }[] = [
+  { key: 'plan', label: 'Plan' },
+  { key: 'agents', label: 'Agent Teams' },
+  { key: 'files', label: 'Files' },
+  { key: 'browser', label: 'Browser' },
 ];
 
 const config = { botProviderEndpoint: `${typeof window !== 'undefined' ? window.location.origin : ''}/mock-asgard` };
-
-// Draggable split — the APP owns layout/proportions (not the SDK). The SDK components inside just fill
-// whatever width the app gives them. (Sindri uses react-resizable-panels for the same job.)
-function ResizableSplit({ left, right }: { left: ReactNode; right: ReactNode }): ReactNode {
-  const [leftWidth, setLeftWidth] = useState(400);
-
-  const startDrag = (e: ReactMouseEvent): void => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = leftWidth;
-    const onMove = (ev: MouseEvent): void =>
-      setLeftWidth(Math.min(760, Math.max(300, startWidth + ev.clientX - startX)));
-    const onUp = (): void => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  };
-
-  return (
-    <div className={styles.split}>
-      <div className={styles.split__pane} style={{ width: leftWidth }}>
-        {left}
-      </div>
-      <div className={styles.split__handle} onMouseDown={startDrag} role="separator" aria-orientation="vertical" />
-      <div className={styles.split__grow}>{right}</div>
-    </div>
-  );
-}
 
 export function MultiPanelDemo(): ReactNode {
   const [open, setOpen] = useState<Record<PanelKey, boolean>>({
@@ -59,12 +29,15 @@ export function MultiPanelDemo(): ReactNode {
     files: true,
     browser: true,
   });
-  const visible = PANELS.filter(p => open[p.key]);
+  const openPanels = PANELS.filter(p => open[p.key]).map(p => p.key);
+  const hasPanels = openPanels.length > 0;
+
+  const toggle = (key: PanelKey): void => setOpen(o => ({ ...o, [key]: !o[key] }));
 
   return (
     <DemoWrapper
       title="Sindri-style multi-panel layout (F-014)"
-      description="Sindri 四格：一個 AsgardConversationProvider 底下，中間 Chatbot（未傳 config）與右側面板同層、共享一條 channel。Plan / Agent Teams / Files / Browser 全是 SDK 元件（useTaskList / useSubagents / <SandboxFiles> / <SandboxBrowser>）；後兩者靠 useSandboxName() 打 sandbox API。上方可開關面板、拖分隔線調比例——版面全由 app 掌控，不是 SDK 的職責。"
+      description="模擬 Sindri：一個 AsgardConversationProvider 底下，中間 Chatbot 與右側面板同層、共享一條 channel。佈局用 Sindri 同一套 —— react-resizable-panels 控 Chatbot ↔ 面板區的比例（拖中間分隔線），dockview 讓面板區可拖拉重排 / 並排 / 分頁 / 面板間 resize。Plan / Agent Teams / Files / Browser 全是 SDK 元件（useTaskList / useSubagents / <SandboxFiles> / <SandboxBrowser>）；版面全由 app 掌控，不是 SDK 的職責。上方可開關面板。"
     >
       <div className={styles.root}>
         <div className={styles.toolbar}>
@@ -74,7 +47,7 @@ export function MultiPanelDemo(): ReactNode {
               key={p.key}
               type="button"
               className={open[p.key] ? styles.toggle_on : styles.toggle_off}
-              onClick={() => setOpen(o => ({ ...o, [p.key]: !o[p.key] }))}
+              onClick={() => toggle(p.key)}
             >
               {open[p.key] ? '☑' : '☐'} {p.label}
             </button>
@@ -84,19 +57,29 @@ export function MultiPanelDemo(): ReactNode {
         <AsgardConversationProvider config={config} customChannelId="multi-panel-demo">
           {/* F-016: channel title rendered OUTSIDE the Chatbot, from the shared provider. */}
           <ChannelTitleBar />
-          <ResizableSplit
-            // No config on <Chatbot> — the shared provider owns the channel; drag the divider to resize.
-            left={<Chatbot title="Agent Hub" locale="zh-TW" />}
-            right={
-              visible.length > 0 ? (
-                <div className={styles.dock}>
-                  {visible.map(p => (
-                    <div key={p.key}>{p.render()}</div>
-                  ))}
-                </div>
-              ) : null
-            }
-          />
+          <div className={styles.split}>
+            <PanelGroup direction="horizontal" className={styles.group}>
+              {/* main stays in one Panel with a stable id → toggling panels never remounts the chat. */}
+              <Panel
+                id="conversation"
+                order={1}
+                defaultSize={hasPanels ? 45 : 100}
+                minSize={30}
+                className={styles.pane}
+              >
+                {/* No config on <Chatbot> — the shared provider owns the channel. */}
+                <Chatbot title="Agent Hub" locale="zh-TW" />
+              </Panel>
+              {hasPanels && (
+                <>
+                  <PanelResizeHandle className={styles.handle} />
+                  <Panel id="panels" order={2} defaultSize={38} minSize={22} className={styles.pane}>
+                    <DockPanels openPanels={openPanels} onClose={toggle} />
+                  </Panel>
+                </>
+              )}
+            </PanelGroup>
+          </div>
         </AsgardConversationProvider>
       </div>
     </DemoWrapper>

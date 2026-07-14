@@ -67,19 +67,68 @@ export function CloseIcon({ className }: { className?: string }): ReactNode {
 }
 
 // Per-variant icons for the seven native built-in tools; anything else → generic wrench (F-004).
-const VARIANT_PATHS: Record<string, string> = {
-  Bash: 'M4 17l6-5-6-5M12 19h8',
-  Read: 'M6 2h9l5 5v15H6zM14 2v6h6',
-  Write: 'M6 2h9l5 5v15H6zM14 2v6h6M12 12v6M9 15h6',
-  Edit: 'M4 20h4L18 8l-4-4L4 16zM14 4l4 4',
-  Skill: 'M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z',
-  WebFetch: 'M12 2a10 10 0 100 20 10 10 0 000-20M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20',
-  WebSearch: 'M11 4a7 7 0 100 14 7 7 0 000-14M20 20l-4-4',
-  generic: 'M14 6a3.5 3.5 0 01-4.6 4.6L5 15v4h4l4.4-4.4A3.5 3.5 0 0118 10l-4-4z',
+// Exact lucide-react geometry (Terminal / FileText / FilePlus / FilePen / Sparkles / Globe / Search /
+// Wrench) so the tool-call variants match the chat-kit prototype pixel-for-pixel. Inlined as raw SVG
+// children (not the lucide-react package) to keep @asgard-js/react dependency-free.
+const VARIANT_ICONS: Record<string, ReactNode> = {
+  Bash: (
+    <>
+      <path d="M12 19h8" />
+      <path d="m4 17 6-6-6-6" />
+    </>
+  ),
+  Read: (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </>
+  ),
+  Write: (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M9 15h6" />
+      <path d="M12 18v-6" />
+    </>
+  ),
+  Edit: (
+    <>
+      <path d="M12.5 22H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v9.5" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M13.378 15.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" />
+    </>
+  ),
+  Skill: (
+    <>
+      <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+      <path d="M20 2v4" />
+      <path d="M22 4h-4" />
+      <circle cx="4" cy="20" r="2" />
+    </>
+  ),
+  WebFetch: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
+    </>
+  ),
+  WebSearch: (
+    <>
+      <path d="m21 21-4.34-4.34" />
+      <circle cx="11" cy="11" r="8" />
+    </>
+  ),
+  generic: (
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" />
+  ),
 };
 
 function ToolVariantIcon({ variant, className }: { variant?: string; className?: string }): ReactNode {
-  const path = (variant && VARIANT_PATHS[variant]) || VARIANT_PATHS.generic;
+  const icon = (variant && VARIANT_ICONS[variant]) || VARIANT_ICONS.generic;
 
   return (
     <svg
@@ -93,7 +142,7 @@ function ToolVariantIcon({ variant, className }: { variant?: string; className?:
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d={path} />
+      {icon}
     </svg>
   );
 }

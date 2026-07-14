@@ -37,51 +37,51 @@
   color: var(--asg-color-text-primary, #f0f0f0);
 }
 
+// Definite height so the dockview area is bounded (its 4 groups share this height, not overflow).
+// NB: no `flex: 1` here — flex shorthand sets flex-basis:0% which would override this height.
 .split {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  min-height: 0;
   height: 620px;
 }
 
-.split__pane {
-  flex-shrink: 0;
+.group {
+  height: 100%;
+  width: 100%;
+}
+
+.pane {
   min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-.split__handle {
-  width: 6px;
-  flex-shrink: 0;
-  margin: 0 6px;
-  border-radius: 3px;
-  cursor: col-resize;
-  background: var(--asg-color-border, #303030);
+.pane > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
 }
 
-.split__handle:hover {
+// react-resizable-panels drag handle (Chatbot ↔ panels split).
+.handle {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--asg-color-border, #303030);
+  cursor: col-resize;
+  transition: background 0.15s;
+}
+
+.handle:hover,
+.handle[data-resize-handle-state='hover'],
+.handle[data-resize-handle-state='drag'] {
   background: var(--asg-color-primary, #00aeef);
 }
 
-.split__grow {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-}
-
-.dock {
-  flex: 1;
+// Panels fill the dockview group that frames them (no own border/radius — dockview provides the frame).
+.panel {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
-  min-width: 260px;
-}
-
-.panel {
-  border: 1px solid var(--asg-color-border, #303030);
-  border-radius: 8px;
   background-color: var(--asg-color-surface, #1f1f1f);
   overflow: hidden;
 }
@@ -104,6 +104,9 @@
 }
 
 .panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   padding: 8px 12px;
 }
 
@@ -211,9 +214,9 @@
 }
 
 .browser_host {
-  height: 320px;
+  height: 100%;
 }
 
 .files_host {
-  height: 340px;
+  height: 100%;
 }

@@ -6,6 +6,8 @@
     "name": "react-demo"
   },
   "dependencies": {
-    "lucide-react": "^0.542.0"
+    "dockview-react": "^6.6.1",
+    "lucide-react": "^0.542.0",
+    "react-resizable-panels": "^2.1.7"
   }
 }

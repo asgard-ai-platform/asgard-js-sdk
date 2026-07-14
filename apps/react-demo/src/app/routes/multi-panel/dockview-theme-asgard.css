@@ -1,0 +1,21 @@
+/* Dockview dark theme, remapped onto the SDK's --asg-color-* tokens so the docked SDK panels
+   sit on the same surface as the rest of the demo. Mirrors Sindri's dockview-sindri.css.
+   Usage: className="dockview-theme-dark dockview-theme-asgard". */
+.dockview-theme-asgard {
+  --dv-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-group-view-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-tabs-and-actions-container-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--asg-color-surface, #1f1f1f);
+  --dv-activegroup-visiblepanel-tab-color: var(--asg-color-text-primary, #f0f0f0);
+  --dv-activegroup-hiddenpanel-tab-color: var(--asg-color-text-secondary, #8c8c8c);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--asg-color-text-secondary, #8c8c8c);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--asg-color-text-secondary, #8c8c8c);
+  --dv-separator-border: var(--asg-color-border, #303030);
+  --dv-tab-divider-color: var(--asg-color-border, #303030);
+  --dv-paneview-active-outline-color: var(--asg-color-primary, #00aeef);
+  --dv-active-sash-color: var(--asg-color-primary, #00aeef);
+  --dv-tabs-container-scrollbar-color: var(--asg-color-border, #303030);
+}

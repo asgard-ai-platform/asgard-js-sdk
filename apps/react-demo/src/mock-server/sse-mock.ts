@@ -168,6 +168,15 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   const payload = await readBody(req);
   const requestId = randomUUID();
   const customChannelId = payload.customChannelId ?? 'mock-channel';
+
+  // The Sindri multi-panel demo runs a chat-kit-style Q&A scoped to its OWN channel. Branch out here
+  // so the rest of this handler (used by the other routes) stays exactly as it was.
+  if (customChannelId === 'multi-panel-demo') {
+    await handleMultiPanelRun(res, payload);
+
+    return;
+  }
+
   const replyToCustomMessageId = payload.customMessageId ?? '';
   const text = payload.text ?? '';
   const lastEventId = typeof req.headers['last-event-id'] === 'string' ? req.headers['last-event-id'] : undefined;
@@ -540,6 +549,567 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   writeEvent(res, completeEvent(messageId));
   writeEvent(res, runDoneEvent());
   res.end();
+}
+
+// ===========================================================================================
+// Sindri multi-panel demo (F-014) — a chat-kit-style Q&A, isolated to the `multi-panel-demo`
+// channel. The initial RESET (empty text) just provisions the sandbox and idles with an empty
+// thread; the user then types one of the two questions and gets the matching answer. Content is
+// verbatim from the chat-kit prototype. None of this touches handleMockSse's default run (the
+// behavior the other routes rely on).
+// ===========================================================================================
+
+const MP_SANDBOX_NAME = 'sbx-mock-0001';
+
+// chat-kit a1 thinking — the "rank the channels" question.
+const MP_THINKING_RANK = [
+  '使用者想看上週各通路的訂單並排名。',
+  '第一步先確認「上週」的日期區間 —— 用系統時區的週一到週日,避免跨時區把邊界日算錯。',
+  '接著從 orders 表依 channel 彙總「訂單數」與「金額」兩個指標;',
+  '要先排除測試訂單與已取消的單,只算有效成交,數字才可信。',
+  '金額欄還得留意各通路幣別是否一致,不一致得先換算成同一幣別再加總,否則排名會失真。',
+  '彙總後依訂單數由多到少排序取前 5 名。',
+  '最後考量呈現:表格最適合看精確數字,再附一張可下載的報表 artifact;',
+  '若之後想看趨勢,可再拆成每日折線圖。',
+];
+
+// chat-kit a2 thinking — the "which grew fastest" question.
+const MP_THINKING_GROWTH = [
+  '「成長最快」要比的是成長率,不是絕對量,所以不能只看上週的訂單數排名。',
+  '我需要同時拿到「上週」與「前一週」兩段的各通路訂單數,算出每個通路的週增率((本週 − 上週) / 上週),再依增率由高到低排序。',
+  '但這裡有幾個要小心的地方:基期太小的通路(例如前一週只有個位數訂單)算出來的成長率會爆高、失去意義,得設一個最低基期門檻,或改用絕對增量輔助判讀;',
+  '另外使用者沒指定要比哪兩週,預設先用最近兩個完整週,但也可能其實想看的是月對月或去年同期。',
+  '還要考慮通路命名是否一致(同一通路在不同系統可能叫法不同,得先正規化再彙總),以及要不要排除退貨與取消單只算淨成交。',
+  '最後決定呈現方式:先給一張排序表標出增率與絕對增量,再視需要補一張折線圖看趨勢,避免只憑單一數字誤判。',
+];
+
+// a1 answer + its SQL (as a markdown code fence — the SDK has no dedicated code block).
+const MP_REPLY_RANK = [
+  '## 上週通路訂單\n',
+  '前 5 名通路如下,',
+  '**官網**居冠。',
+  '詳細數字見下表與報表。',
+  '\n\n彙總用的 SQL：\n\n',
+  '```sql\n',
+  'SELECT channel, COUNT(*) AS orders\n',
+  'FROM orders\n',
+  'WHERE week = LAST_WEEK\n',
+  'GROUP BY channel\n',
+  'ORDER BY orders DESC\n',
+  'LIMIT 5;\n',
+  '```',
+];
+
+// chat-kit's a2 is thinking-only; a concise answer is added so the Q&A turn has a reply.
+const MP_REPLY_GROWTH = [
+  '依**週增率**排序,',
+  '**App** 成長最快(+18%),',
+  '其次官網(+9%)、LINE(+4%)。',
+  '已排除前一週基期過小的通路以免成長率失真;',
+  '詳細增率與絕對增量見下表。',
+];
+
+interface MockToolCall {
+  toolName: string;
+  parameter: Record<string, unknown>;
+  /** Empty → native built-in (icon + synthesized label); non-empty → general/platform tool. */
+  toolsetName?: string;
+  /** General tools carry a reason; it becomes the row label (F-004). */
+  reason?: string;
+  isError?: boolean;
+}
+
+// Emit one tool-call group (shared processId), streamed so the running → completed transition shows.
+async function emitToolGroup(res: ServerResponse, header: CommonHeader, calls: MockToolCall[]): Promise<void> {
+  const processId = randomUUID();
+
+  for (let seq = 0; seq < calls.length; seq++) {
+    const c = calls[seq];
+    const toolCall = {
+      toolsetName: c.toolsetName ?? '',
+      toolName: c.toolName,
+      reason: c.reason,
+      parameter: c.parameter,
+    };
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.start',
+      fact: { ...emptyFact(), toolCallStart: { processId, callSeq: seq, toolCall } },
+    });
+    await sleep(120);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.complete',
+      fact: {
+        ...emptyFact(),
+        toolCallComplete: {
+          processId,
+          callSeq: seq,
+          toolCall,
+          toolCallResult: c.isError ? { message: 'failed' } : { ok: true },
+          isError: c.isError ?? false,
+        },
+      },
+    });
+  }
+}
+
+async function mpStreamThinking(
+  res: ServerResponse,
+  header: CommonHeader,
+  reply: string,
+  chunks: string[],
+): Promise<void> {
+  const thinkingId = randomUUID();
+  const msg = (text: string): object => ({
+    messageId: thinkingId,
+    replyToCustomMessageId: reply,
+    text,
+    payload: null,
+    isDebug: false,
+    idx: null,
+    template: null,
+  });
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.thinking.start',
+    fact: { ...emptyFact(), messageThinkingStart: { message: msg('') } },
+  });
+  for (const chunk of chunks) {
+    await sleep(55);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.message.thinking.delta',
+      fact: { ...emptyFact(), messageThinkingDelta: { message: msg(chunk) } },
+    });
+  }
+
+  await sleep(40);
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.thinking.complete',
+    fact: { ...emptyFact(), messageThinkingComplete: { message: msg(chunks.join('')) } },
+  });
+}
+
+async function mpStreamText(res: ServerResponse, header: CommonHeader, reply: string, chunks: string[]): Promise<void> {
+  const messageId = randomUUID();
+  const fullText = chunks.join('');
+  const msg = (text: string, idx: number | null, template: unknown): object => ({
+    messageId,
+    replyToCustomMessageId: reply,
+    text,
+    payload: null,
+    isDebug: false,
+    idx,
+    template,
+  });
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.start',
+    fact: { ...emptyFact(), messageStart: { message: msg('', null, { type: 'TEXT', text: '' }) } },
+  });
+  for (let i = 0; i < chunks.length; i++) {
+    await sleep(60);
+    writeEvent(
+      res,
+      {
+        ...header,
+        eventType: 'asgard.message.delta',
+        fact: { ...emptyFact(), messageDelta: { message: msg(chunks[i], i, null) } },
+      },
+      `${messageId}:${i}`,
+    );
+  }
+
+  await sleep(40);
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.complete',
+    fact: { ...emptyFact(), messageComplete: { message: msg(fullText, null, { type: 'TEXT', text: fullText }) } },
+  });
+}
+
+function mpEmitTable(
+  res: ServerResponse,
+  header: CommonHeader,
+  reply: string,
+  title: string,
+  columns: { header: string; key: string }[],
+  data: Record<string, unknown>[],
+): void {
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.message.complete',
+    fact: {
+      ...emptyFact(),
+      messageComplete: {
+        message: {
+          messageId: randomUUID(),
+          replyToCustomMessageId: reply,
+          text: '',
+          payload: null,
+          isDebug: false,
+          idx: null,
+          template: { type: 'TABLE', title, table: { rowType: 'OBJECT', columns, data } },
+        },
+      },
+    },
+  });
+}
+
+// The 法蘭螺栓 task list (chat-kit): task1 completed, task2 in_progress, task3 pending.
+async function mpEmitTasks(res: ServerResponse, header: CommonHeader): Promise<void> {
+  const processId = randomUUID();
+  const calls: { toolName: string; parameter: Record<string, unknown>; sidecar: Record<string, unknown> }[] = [
+    {
+      toolName: 'TaskCreate',
+      parameter: {
+        activeForm: '查詢 Bolzen 急單用料需求中',
+        description: '查詢 Bolzen 客戶法蘭螺栓急單的料號、強度等級、數量,並計算 SWRCH35K φ7.0 線材總需求量。',
+      },
+      sidecar: { task: { id: 'task-1', subject: '查詢 Bolzen 法蘭螺栓急單用料需求' } },
+    },
+    {
+      toolName: 'TaskCreate',
+      parameter: { activeForm: '查詢庫存狀態中' },
+      sidecar: { task: { id: 'task-2', subject: '查詢 SWRCH35K φ7.0 庫存狀態' } },
+    },
+    {
+      toolName: 'TaskCreate',
+      parameter: { activeForm: '計算短缺量與風險中' },
+      sidecar: { task: { id: 'task-3', subject: '計算短缺量與補貨時效風險' } },
+    },
+    {
+      toolName: 'TaskUpdate',
+      parameter: {},
+      sidecar: { taskId: 'task-1', statusChange: { from: 'pending', to: 'completed' } },
+    },
+    {
+      toolName: 'TaskUpdate',
+      parameter: { activeForm: '查詢庫存狀態中' },
+      sidecar: { taskId: 'task-2', statusChange: { from: 'pending', to: 'in_progress' } },
+    },
+  ];
+  for (let seq = 0; seq < calls.length; seq++) {
+    const tc = calls[seq];
+    const toolCall = { toolsetName: '', toolName: tc.toolName, parameter: tc.parameter };
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.start',
+      fact: { ...emptyFact(), toolCallStart: { processId, callSeq: seq, toolCall } },
+    });
+    await sleep(80);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.complete',
+      fact: {
+        ...emptyFact(),
+        toolCallComplete: {
+          processId,
+          callSeq: seq,
+          toolCall,
+          toolCallResult: { ok: true },
+          toolUseResultSidecar: tc.sidecar,
+        },
+      },
+    });
+  }
+}
+
+// Three general-purpose subagents (chat-kit): each spawned by an Agent tool call that returns early
+// (async_launched), runs child tools, then finishes via subagent.complete.
+async function mpEmitSubagents(res: ServerResponse, header: CommonHeader): Promise<void> {
+  const runs: { description: string; summary: string; children: MockToolCall[] }[] = [
+    {
+      description: '查詢 Bolzen 訂單用料需求',
+      summary: '查得 1 筆:SO-TM-0455…',
+      children: [
+        { toolName: 'list_database_semantic_models', reason: '列出可用語意模型', parameter: {} },
+        { toolName: 'dry_run_database_query', reason: '驗證用料查詢 SQL', parameter: {} },
+        { toolName: 'execute_database_query', reason: '查詢 Bolzen 訂單用料明細', parameter: {} },
+      ],
+    },
+    {
+      description: '查詢 SWRCH35K φ7.0 庫存狀態',
+      summary: '可用庫存 9,500 kg',
+      children: [
+        { toolName: 'list_database_semantic_models', reason: '列出可用語意模型', parameter: {} },
+        { toolName: 'execute_database_query', reason: '查詢 SWRCH35K φ7.0 可用庫存', parameter: {} },
+      ],
+    },
+    {
+      description: '計算短缺量與補貨時效風險',
+      summary: '短缺 6,500 kg,前置 30 天趕不上 7/16',
+      children: [{ toolName: 'execute_database_query', reason: '計算短缺量', parameter: {} }],
+    },
+  ];
+
+  for (const sub of runs) {
+    const subToolUseId = randomUUID();
+    const subAgentId = randomUUID();
+    const agentProcessId = randomUUID();
+    const agentToolCall = { toolsetName: '', toolName: 'Agent', parameter: { description: sub.description } };
+
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.start',
+      fact: {
+        ...emptyFact(),
+        toolCallStart: { processId: agentProcessId, callSeq: 0, toolUseId: subToolUseId, toolCall: agentToolCall },
+      },
+    });
+    await sleep(70);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.subagent.start',
+      fact: {
+        ...emptyFact(),
+        subagentStart: {
+          agentId: subAgentId,
+          parentToolUseId: subToolUseId,
+          subagentType: 'general-purpose',
+          description: sub.description,
+        },
+      },
+    });
+    await sleep(70);
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.tool_call.complete',
+      fact: {
+        ...emptyFact(),
+        toolCallComplete: {
+          processId: agentProcessId,
+          callSeq: 0,
+          toolUseId: subToolUseId,
+          toolCall: agentToolCall,
+          toolCallResult: { status: 'async_launched' },
+        },
+      },
+    });
+
+    const childProcessId = randomUUID();
+    for (let seq = 0; seq < sub.children.length; seq++) {
+      const c = sub.children[seq];
+      const toolUseId = `${subToolUseId}-child-${seq}`;
+      const toolCall = {
+        toolsetName: c.toolsetName ?? '',
+        toolName: c.toolName,
+        reason: c.reason,
+        parameter: c.parameter,
+      };
+      writeEvent(res, {
+        ...header,
+        eventType: 'asgard.tool_call.start',
+        fact: {
+          ...emptyFact(),
+          toolCallStart: {
+            processId: childProcessId,
+            callSeq: seq,
+            toolUseId,
+            parentToolUseId: subToolUseId,
+            toolCall,
+          },
+        },
+      });
+      await sleep(110);
+      writeEvent(res, {
+        ...header,
+        eventType: 'asgard.tool_call.complete',
+        fact: {
+          ...emptyFact(),
+          toolCallComplete: {
+            processId: childProcessId,
+            callSeq: seq,
+            toolUseId,
+            parentToolUseId: subToolUseId,
+            toolCall,
+            toolCallResult: { ok: true },
+          },
+        },
+      });
+    }
+
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.subagent.complete',
+      fact: {
+        ...emptyFact(),
+        subagentComplete: {
+          agentId: subAgentId,
+          parentToolUseId: subToolUseId,
+          subagentType: 'general-purpose',
+          description: sub.description,
+          status: 'completed',
+          summary: sub.summary,
+        },
+      },
+    });
+  }
+}
+
+async function mpEmitSandbox(res: ServerResponse, header: CommonHeader): Promise<void> {
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.sandbox.launch',
+    fact: { ...emptyFact(), sandboxLaunch: { sandboxName: MP_SANDBOX_NAME, blueprintName: 'default' } },
+  });
+  await sleep(60);
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.sandbox.ready',
+    fact: { ...emptyFact(), sandboxReady: { sandboxName: MP_SANDBOX_NAME, blueprintName: 'default' } },
+  });
+}
+
+function mpTitle(res: ServerResponse, header: CommonHeader, title: string): void {
+  writeEvent(res, {
+    ...header,
+    eventType: 'asgard.channel.title.update',
+    fact: { ...emptyFact(), channelTitleUpdate: { title } },
+  });
+}
+
+async function handleMultiPanelRun(res: ServerResponse, payload: ParsedPayload): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId: 'multi-panel-demo',
+  };
+  const reply = payload.customMessageId ?? '';
+  const text = payload.text ?? '';
+  const isReset = payload.action === 'RESET_CHANNEL' || text.trim() === '';
+
+  res.writeHead(200, SSE_HEADERS);
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+  await sleep(40);
+  await mpEmitSandbox(res, header);
+  await sleep(40);
+
+  const done = (): void => {
+    writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+    res.end();
+  };
+
+  // Initial RESET / empty — provision the sandbox and idle with an empty thread; wait for the user.
+  if (isReset) {
+    done();
+
+    return;
+  }
+
+  // Q1 — 「這幾個通路裡,哪個成長最快?」→ growth-rate answer.
+  if (/成長最快|成長率|哪個.*快/.test(text)) {
+    await mpStreamThinking(res, header, reply, MP_THINKING_GROWTH);
+    await sleep(40);
+    await mpStreamText(res, header, reply, MP_REPLY_GROWTH);
+    await sleep(60);
+    mpEmitTable(
+      res,
+      header,
+      reply,
+      '各通路週增率',
+      [
+        { header: '通路', key: 'channel' },
+        { header: '週增率', key: 'growth' },
+        { header: '絕對增量', key: 'delta' },
+      ],
+      [
+        { channel: 'App', growth: '+18%', delta: 140 },
+        { channel: '官網', growth: '+9%', delta: 110 },
+        { channel: 'LINE', growth: '+4%', delta: 25 },
+      ],
+    );
+    await sleep(40);
+    done();
+
+    return;
+  }
+
+  // Q2 — 「幫我分析上週各通路的訂單,排出前幾名。」→ the rich analysis turn.
+  mpTitle(res, header, 'Bolzen 法蘭螺栓急單備料查詢');
+  await sleep(60);
+  mpTitle(res, header, '法蘭螺栓急單:已改查替代料號 SWRCH38K');
+  await sleep(40);
+  await mpStreamThinking(res, header, reply, MP_THINKING_RANK);
+  await sleep(40);
+  await emitToolGroup(res, header, [
+    {
+      toolsetName: 'ag-material-procurement-tools',
+      toolName: 'query_orders',
+      reason: '讀取訂單資料',
+      parameter: { week: 'LAST_WEEK' },
+    },
+    {
+      toolsetName: 'ag-material-procurement-tools',
+      toolName: 'aggregate_by_channel',
+      reason: '依通路彙總',
+      parameter: {},
+    },
+    {
+      toolsetName: 'ag-material-procurement-tools',
+      toolName: 'rank_top',
+      reason: '排序前 5 名',
+      parameter: { limit: 5 },
+    },
+  ]);
+  await sleep(40);
+  await emitToolGroup(res, header, [
+    {
+      toolName: 'Bash',
+      parameter: { command: 'which wkhtmltopdf || which chromium', description: '檢查可用的 PDF 生成工具' },
+    },
+    { toolName: 'Read', parameter: { file_path: '/mnt/article-workspace/info.md' } },
+    {
+      toolName: 'Write',
+      parameter: {
+        file_path: '/work/report.html',
+        content:
+          '<!DOCTYPE html>\n<html lang="zh-TW">\n<head>\n<meta charset="UTF-8" />\n</head>\n<body>\n<h1>短缺分析報告</h1>\n</body>\n</html>',
+      },
+    },
+    {
+      toolName: 'Edit',
+      parameter: {
+        file_path: '/mnt/article-workspace/plan.md',
+        old_string: '### 標題(暫定)\n**SpaceX 上市,台廠跟著飛?**',
+        new_string: '### 標題(已確認)\n**星鏈背後的隱形冠軍:台灣供應鏈如何卡位**\n(副標:兆美元賽道)',
+        replace_all: false,
+      },
+    },
+    { toolName: 'Skill', parameter: { skill: 'local-plugin:shortage-calc', args: 'SWRCH35K φ7.0 目前短缺多少?' } },
+    { toolName: 'WebSearch', parameter: { query: "Inside NATO chief Mark Rutte's U.S. strategy" } },
+    {
+      toolName: 'WebFetch',
+      parameter: { url: 'https://www.cnbc.com/2026/07/09/nato-rutte-trump-europe.html', prompt: '請摘要這篇文章' },
+      isError: true,
+    },
+  ]);
+  await mpEmitTasks(res, header);
+  await mpEmitSubagents(res, header);
+  await sleep(40);
+  await mpStreamText(res, header, reply, MP_REPLY_RANK);
+  await sleep(60);
+  mpEmitTable(
+    res,
+    header,
+    reply,
+    '上週通路訂單',
+    [
+      { header: '通路', key: 'channel' },
+      { header: '訂單數', key: 'orders' },
+      { header: '金額', key: 'amount' },
+    ],
+    [
+      { channel: '官網', orders: 1280, amount: '$48,200' },
+      { channel: 'App', orders: 940, amount: '$31,500' },
+      { channel: 'LINE', orders: 610, amount: '$18,900' },
+    ],
+  );
+  await sleep(40);
+  done();
 }
 
 // F-015 — GET rejoin: replay an existing channel's collapsed history, then a
