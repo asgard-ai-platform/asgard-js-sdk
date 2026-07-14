@@ -108,3 +108,14 @@ export function FilesPanel(): ReactNode {
     </PanelShell>
   );
 }
+
+/** Browser panel — also the app's OWN concern (an agent-controlled browser preview), NOT SDK-derived.
+ * Static placeholder here (like Sindri's) to show it sits at the same level as the SDK panels. */
+export function BrowserPanel(): ReactNode {
+  return (
+    <PanelShell title="Browser" count="app 自有">
+      <div className={styles.panel__empty}>此 browser 由 agent 自動開啟</div>
+      <div className={styles.panel__note}>此面板非 SDK 衍生（app 自己接 browser sandbox）</div>
+    </PanelShell>
+  );
+}
