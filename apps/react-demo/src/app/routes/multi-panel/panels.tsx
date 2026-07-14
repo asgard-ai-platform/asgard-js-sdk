@@ -1,5 +1,12 @@
 import { ReactNode } from 'react';
-import { useChannelTitle, useSandboxName, useSubagents, useTaskList } from '@asgard-js/react';
+import {
+  SandboxBrowser,
+  SandboxFiles,
+  useChannelTitle,
+  useSandboxName,
+  useSubagents,
+  useTaskList,
+} from '@asgard-js/react';
 import styles from './multi-panel.module.scss';
 
 /**
@@ -97,16 +104,25 @@ export function AgentTeamsPanel(): ReactNode {
   );
 }
 
-/** Files panel — the app's OWN concern (sandbox filesystem), NOT SDK-derived. Static here to show the mix. */
+/** Files panel — the SDK <SandboxFiles> (part 3): lazy fs/list tree + text viewer, keyed by useSandboxName(). */
 export function FilesPanel(): ReactNode {
   return (
-    <PanelShell title="Files" count="app 自有">
-      <ul className={styles.list}>
-        <li className={styles.list__row}>📄 README.md</li>
-        <li className={styles.list__row}>📁 outputs / 客服月報.xlsx</li>
-        <li className={styles.list__row}>📁 uploads /</li>
-      </ul>
-      <div className={styles.panel__note}>此面板非 SDK 衍生（app 的 sandbox）</div>
+    <PanelShell title="Files" count="SDK 元件">
+      <div className={styles.files_host}>
+        <SandboxFiles />
+      </div>
+    </PanelShell>
+  );
+}
+
+/** Browser panel — the SDK <SandboxBrowser> (part 2): reads useSandboxName() + calls the sandbox
+ * browser API and embeds the Neko iframe. An SDK component (not app-owned). */
+export function BrowserPanel(): ReactNode {
+  return (
+    <PanelShell title="Browser" count="SDK 元件">
+      <div className={styles.browser_host}>
+        <SandboxBrowser />
+      </div>
     </PanelShell>
   );
 }

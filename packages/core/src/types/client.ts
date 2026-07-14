@@ -8,6 +8,21 @@ export interface CwdDownloadResult {
   filename: string;
 }
 
+/** One entry in a sandbox directory listing (`GET /sandbox/{name}/fs/list`). Matches asgard-core `SandboxFsDirEntry`. */
+export interface SandboxFsEntry {
+  name: string;
+  isDir: boolean;
+  sizeBytes?: number;
+  mtimeUnix?: number;
+  mode?: number;
+}
+
+/** Result of `listSandboxFiles` — one directory's entries; `truncated` when the listing was capped. */
+export interface SandboxFsListResult {
+  entries: SandboxFsEntry[];
+  truncated: boolean;
+}
+
 /**
  * Server-reported run state of a channel (F-015). Mirrors the backend
  * `ChannelRunState` enum returned by `GET /channel/metadata`.
@@ -36,6 +51,12 @@ export interface IAsgardServiceClient {
   rejoinSse?(customChannelId: string, options?: FetchSseOptions): void;
   /** GET channel metadata (F-015): probe whether a channel exists and its run state, without mutating it. */
   getChannelMetadata?(customChannelId: string): Promise<ChannelMetadata>;
+  /** Sandbox Browser: generate a one-time embed URL (Neko) for the sandbox — POST `/sandbox/{name}/browser/open-url`. */
+  getSandboxBrowserUrl?(sandboxName: string): Promise<string>;
+  /** Sandbox Files: list one directory — GET `/sandbox/{name}/fs/list?path=`. */
+  listSandboxFiles?(sandboxName: string, path: string): Promise<SandboxFsListResult>;
+  /** Sandbox Files: read a file's content as text — GET `/sandbox/{name}/fs/file?path=`. */
+  readSandboxFile?(sandboxName: string, path: string): Promise<string>;
   uploadFile?(file: File, customChannelId: string): Promise<BlobUploadResponse>;
   downloadCwdFile?(relativePath: string, customChannelId: string): Promise<CwdDownloadResult>;
 }

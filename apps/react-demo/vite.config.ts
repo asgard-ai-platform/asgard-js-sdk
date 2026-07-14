@@ -30,6 +30,26 @@ function asgardSseMockPlugin(): Plugin {
           next(err as Error);
         }
       });
+
+      // Sandbox Browser (part 2): POST /sandbox/{name}/browser/open-url + the mock Neko frame.
+      server.middlewares.use('/mock-asgard/sandbox', async (req, res, next) => {
+        try {
+          const { handleMockSandbox } = await import('./src/mock-server/sse-mock');
+
+          await handleMockSandbox(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
+      server.middlewares.use('/mock-asgard/sandbox-frame', async (req, res, next) => {
+        try {
+          const { handleMockSandboxFrame } = await import('./src/mock-server/sse-mock');
+
+          await handleMockSandboxFrame(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
     },
   };
 }
