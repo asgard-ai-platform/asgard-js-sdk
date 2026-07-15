@@ -762,8 +762,8 @@ export function AsgardThemeContextProvider(
 
       // Wire the effective theme colors to the SCSS design-token CSS variables, so a few theme settings
       // color the *whole* chatbot — not just the templated bubbles/buttons. The run indicator, input,
-      // the channel-title bar, tool-call rows, and the Task/Subagent panels read these `--asg-color-*` /
-      // `--asgard-tool-call-*` tokens (fixed by default), so setting them from the theme is what makes
+      // the channel-title bar, tool-call rows, the thinking block, and the Task/Subagent panels read these
+      // `--asg-color-*` / `--asgard-*` tokens (fixed by default), so setting them from the theme is what makes
       // those surfaces follow it. Each token is injected only when the theme provides a concrete color
       // (a hex, or a non-`var()` border); otherwise the SCSS default is kept (backward compatible).
       const themeVars: Record<string, string> = {};
@@ -791,12 +791,14 @@ export function AsgardThemeContextProvider(
         themeVars['--asgard-json-viewer-header-bg'] = surface;
       }
 
-      // Border → the border + divider + the tool-call / panel border.
+      // Border → the border + divider + the tool-call / panel / thinking-block border (all the bordered
+      // thread containers share the theme border so none is left on the fixed `#333` default).
       const effectiveBorder = mergedTheme.chatbot?.borderColor;
       if (typeof effectiveBorder === 'string' && !effectiveBorder.startsWith('var(')) {
         themeVars['--asg-color-border'] = effectiveBorder;
         themeVars['--asg-color-divider'] = effectiveBorder;
         themeVars['--asgard-tool-call-border'] = effectiveBorder;
+        themeVars['--asgard-thinking-border'] = effectiveBorder;
       }
 
       if (Object.keys(themeVars).length > 0 && mergedTheme.chatbot) {
