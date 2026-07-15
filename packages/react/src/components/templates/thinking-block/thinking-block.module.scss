@@ -5,7 +5,8 @@
   width: 100%;
   border: 1px solid var(--asgard-thinking-border, #333);
   border-radius: 8px;
-  background-color: var(--asgard-thinking-bg, transparent);
+  // Same surface elevation + default as the tool-call group so the two bordered blocks read alike.
+  background-color: var(--asgard-thinking-bg, #1a1a1a);
   padding: 10px 12px;
 }
 

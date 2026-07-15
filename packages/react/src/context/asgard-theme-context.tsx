@@ -785,6 +785,8 @@ export function AsgardThemeContextProvider(
         themeVars['--asg-color-bg'] = effectiveBg;
         themeVars['--asg-color-surface'] = surface;
         themeVars['--asgard-tool-call-item-bg'] = surface;
+        // Thinking block shares the same surface elevation as the tool-call group (same bordered chrome).
+        themeVars['--asgard-thinking-bg'] = surface;
         // Expanded tool-call JSON viewer: body = base bg (a step darker than the surface it sits on, so
         // the code block reads as inset), header = surface (a step lighter than the body).
         themeVars['--asgard-json-viewer-bg'] = effectiveBg;
