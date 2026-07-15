@@ -200,7 +200,18 @@ export interface ToolCallItemData {
 export interface ToolCallGroupProps {
   title?: string;
   items: ToolCallItemData[];
+  /**
+   * Pins the initial expand state and opts out of auto-collapse. When omitted, the group stays expanded
+   * while it is the live tail of the thread and auto-collapses to its summary once the assistant moves
+   * on — i.e. once `sealed` (mirrors the thinking block / SubagentList). A user click always takes over.
+   */
   defaultExpanded?: boolean;
+  /**
+   * True once later content (another group or a message) follows this group — the assistant has moved
+   * past it, so the finished group may fold. While it is still the tail (`sealed === false`) it stays
+   * open, so it never flickers shut between streamed tools. Ignored when `defaultExpanded` is set.
+   */
+  sealed?: boolean;
   className?: string;
   /** Language for the expanded `Initial` / `Result` titles (F-008). Defaults to `en-US`. */
   locale?: Locale;
@@ -502,15 +513,23 @@ function ToolCallItem({ item, locale }: ToolCallItemProps): ReactNode {
 export function ToolCallGroup({
   title = 'Answer preparation steps',
   items,
-  defaultExpanded = true,
+  defaultExpanded,
+  sealed = false,
   className,
   locale = 'en-US',
 }: ToolCallGroupProps): ReactNode {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  // `expanded === null` → auto: stay open while this group is the live tail (a tool is still running, or
+  // nothing has followed it yet) and fold to the summary only once it is `sealed` by later content — so a
+  // group collapses after it has fully finished, never between streamed tools. A click takes over; an
+  // explicit `defaultExpanded` opts out of auto entirely.
+  const [expanded, setExpanded] = useState<boolean | null>(defaultExpanded ?? null);
+
+  const anyRunning = items.some(item => item.status === 'pending');
+  const isExpanded = expanded ?? (anyRunning || !sealed);
 
   const handleToggle = useCallback((): void => {
-    setIsExpanded(prev => !prev);
-  }, []);
+    setExpanded(() => !isExpanded);
+  }, [isExpanded]);
 
   return (
     <div className={clsx(styles.tool_call_group, className)}>

@@ -208,6 +208,10 @@ export function ChatbotBody(): ReactNode {
     [chatbot],
   );
 
+  // Grouped once per render so each tool-call group can tell whether later content has sealed it
+  // (anything after it → the assistant moved on → the finished group may auto-collapse).
+  const messageGroups = groupMessages(Array.from(messages?.values() ?? []));
+
   return (
     <div className={styles.chatbot_body_wrapper}>
       <div
@@ -217,19 +221,23 @@ export function ChatbotBody(): ReactNode {
         data-scrollable="true"
       >
         <div ref={contentRef} className={styles.chatbot_body__content} style={contentStyles}>
-          {groupMessages(Array.from(messages?.values() ?? [])).map((group, index) => {
+          {messageGroups.map((group, index) => {
             if (group.type === 'tool-call-group') {
               const items = group.toolCalls.map(tc => toolCallToItemData(tc, locale));
               const firstToolCall = group.toolCalls[0];
               const key = `tool-call-group-${firstToolCall?.processId || index}`;
               // F-006 — dynamic localized group summary, replacing the static 'Answer preparation steps'.
               const summary = groupSummary(group.toolCalls, locale);
+              // Sealed once any later group/message follows → the assistant has moved on, so the group may
+              // auto-collapse. While it is the last group (still being built) it stays open — no per-tool flicker.
+              const sealed = index < messageGroups.length - 1;
 
               const renderDefaultContent = (overrides?: { title?: string }): ReactNode => (
                 <ToolCallGroupTemplate
                   items={items}
                   time={firstToolCall?.time}
                   title={overrides?.title ?? summary}
+                  sealed={sealed}
                   locale={locale}
                 />
               );

@@ -50,7 +50,8 @@ export function ToolCallExpand(): ReactNode {
       </div>
 
       <div className={styles.groupContainer}>
-        <ToolCallGroup title="Tool-Call Expand Demo" items={ITEMS} locale={locale} />
+        {/* Items are all completed; pin it open (opt out of auto-collapse) so the expand demo stays visible. */}
+        <ToolCallGroup title="Tool-Call Expand Demo" items={ITEMS} defaultExpanded locale={locale} />
       </div>
     </DemoWrapper>
   );
