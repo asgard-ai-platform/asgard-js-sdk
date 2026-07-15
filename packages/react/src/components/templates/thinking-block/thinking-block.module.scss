@@ -20,7 +20,7 @@
   background: transparent;
   cursor: pointer;
   user-select: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--asgard-thinking-text-secondary, #8c8c8c);
 
@@ -53,18 +53,18 @@
 }
 
 .thinking_block__brain--streaming {
-  color: var(--asgard-thinking-accent, var(--asgard-primary, #1677ff));
+  color: var(--asg-color-primary, #1677ff);
   animation: thinking_pulse 1.4s ease-in-out infinite;
 }
 
 .thinking_block__label--streaming {
-  color: var(--asgard-thinking-accent, var(--asgard-primary, #1677ff));
+  color: var(--asg-color-primary, #1677ff);
 }
 
 .thinking_block__body {
   margin-top: 8px;
   padding-left: 12px;
-  border-left: 2px solid var(--asgard-thinking-border, #333);
+  border-left: 1px solid var(--asgard-thinking-border, #333);
 }
 
 // Streaming window: bottom-anchored, auto-scrolls to latest, plain text, hidden scrollbar.
@@ -104,7 +104,7 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  color: var(--asgard-thinking-accent, var(--asgard-primary, #1677ff));
+  color: var(--asg-color-primary, #1677ff);
 
   &:hover {
     text-decoration: underline;

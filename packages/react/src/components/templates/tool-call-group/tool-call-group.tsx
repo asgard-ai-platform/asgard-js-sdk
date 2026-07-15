@@ -533,12 +533,17 @@ export function ToolCallGroup({
 
   return (
     <div className={clsx(styles.tool_call_group, className)}>
-      <div className={styles.tool_call_group__header} onClick={handleToggle}>
+      <button
+        type="button"
+        className={styles.tool_call_group__header}
+        onClick={handleToggle}
+        aria-expanded={isExpanded}
+      >
         <ChevronRightIcon
           className={clsx(styles.tool_call_group__chevron, isExpanded && styles['tool_call_group__chevron--expanded'])}
         />
         <span className={styles.tool_call_group__title}>{title}</span>
-      </div>
+      </button>
       {isExpanded && (
         <div className={styles.tool_call_group__content}>
           {items.map(item => (

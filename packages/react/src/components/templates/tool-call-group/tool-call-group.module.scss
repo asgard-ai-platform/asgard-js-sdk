@@ -13,14 +13,24 @@
 .tool_call_group__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
   user-select: none;
+  text-align: left;
+  color: var(--asgard-tool-call-text-secondary, #8c8c8c);
+
+  &:hover {
+    color: var(--asgard-tool-call-text, #fff);
+  }
 }
 
 .tool_call_group__chevron {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   color: var(--asgard-tool-call-icon, #8c8c8c);
   transition: transform 0.2s ease;
   flex-shrink: 0;
@@ -33,7 +43,8 @@
 .tool_call_group__title {
   font-size: 12px;
   font-weight: 500;
-  color: var(--asgard-tool-call-text-secondary, #8c8c8c);
+  // Inherit the header button's color so the title brightens with the header on hover.
+  color: inherit;
 }
 
 .tool_call_group__content {
