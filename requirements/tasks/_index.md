@@ -113,4 +113,5 @@
 | `BUILD-026`  | Export bot text content renderer (BotMessageText) | Normal   | done   | [BUILD-026-export-bot-message-text.md](./BUILD-026-export-bot-message-text.md)         |
 | `BUILD-027`  | Unified Chat Heading Bar (ChatHeader)             | High     | done   | [BUILD-027-unified-chat-header.md](./BUILD-027-unified-chat-header.md)                 |
 | `REVIEW-027` | Review: Unified Chat Heading Bar                  | —        | done   | [REVIEW-027-unified-chat-header.md](./REVIEW-027-unified-chat-header.md)               |
-| `BUILD-028`  | Chat-kit Composer (SDK footer rewrite)            | High     | draft  | [BUILD-028-chat-kit-composer.md](./BUILD-028-chat-kit-composer.md)                     |
+| `BUILD-028`  | Chat-kit Composer (SDK footer rewrite)            | High     | done   | [BUILD-028-chat-kit-composer.md](./BUILD-028-chat-kit-composer.md)                     |
+| `BUILD-030`  | Unify the composer's attachment previews          | Normal   | done   | [BUILD-030-unify-attachment-chips.md](./BUILD-030-unify-attachment-chips.md)           |
