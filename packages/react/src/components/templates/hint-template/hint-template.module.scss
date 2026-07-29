@@ -22,6 +22,12 @@
     color: var(--asg-color-error);
   }
 
+  .error_hint_detail {
+    font-size: 12px;
+    color: var(--asg-color-error);
+    text-align: center;
+  }
+
   .error_hint_message {
     font-size: 12px;
     color: white;

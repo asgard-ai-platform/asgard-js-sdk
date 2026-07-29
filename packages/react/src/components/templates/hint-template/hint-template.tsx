@@ -30,6 +30,11 @@ export function HintTemplate(props: HintTemplateProps): ReactNode {
               <span className={classes.time}>{formatTime(message.time)}</span>
               <span>Unexpected error</span>
             </div>
+            {/* The server's own wording for what went wrong (`run.error`'s `error.message`). Without it the
+                bubble said only "Unexpected error", so the cause was reachable solely by reading the raw SSE
+                frame. Hosts that must not show server internals to end users can still replace the whole
+                bubble via `errorMessageRenderer`. */}
+            {message.error.message && <div className={classes.error_hint_detail}>{message.error.message}</div>}
             {onErrorClick && (
               <div className={classes.error_hint_message} onClick={onErrorHintClick}>
                 Click <span>here</span> to view the report.
