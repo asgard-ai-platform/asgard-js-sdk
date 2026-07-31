@@ -16,8 +16,8 @@ type RendererMode = 'with-avatar' | 'no-avatar' | 'wrapper' | 'default';
 const modeOptions: { value: RendererMode; label: string; description: string }[] = [
   {
     value: 'with-avatar',
-    label: 'With Avatar',
-    description: 'Custom cards with Avatar using MessageContainer',
+    label: 'With MessageContainer',
+    description: 'Custom cards using the default chrome-free MessageContainer',
   },
   {
     value: 'no-avatar',
@@ -177,7 +177,7 @@ export function CustomRenderer(): ReactNode {
   const [selectedMode, setSelectedMode] = useState<RendererMode>('with-avatar');
   const initMessages = createMixedCustomRendererMessages();
 
-  // Custom renderer with Avatar - uses MessageContainer
+  // Custom renderer using the SDK's default chrome-free MessageContainer.
   const withAvatarRenderer = useCallback((props: MessageContentRendererProps): ReactNode => {
     const { message, renderDefaultContent, MessageContainer } = props;
 
@@ -306,7 +306,7 @@ export function CustomRenderer(): ReactNode {
   if (message.type === 'bot') {
     const payload = message.message.payload;
     if (payload?.customType === 'order_card') {
-      // Use MessageContainer to wrap custom content with Avatar
+      // Use MessageContainer to wrap custom content in the default bot layout
       return (
         <MessageContainer>
           <OrderCard payload={payload} />
@@ -324,7 +324,7 @@ export function CustomRenderer(): ReactNode {
   if (message.type === 'bot') {
     const payload = message.message.payload;
     if (payload?.customType === 'order_card') {
-      // Fully custom rendering without MessageContainer (no Avatar)
+      // Fully custom rendering without MessageContainer
       return <OrderCard payload={payload} />;
     }
   }

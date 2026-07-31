@@ -52,9 +52,6 @@ export function HintTemplate(props: HintTemplateProps): ReactNode {
       className={clsx('asgard-hint-template asgard-hint-template--hint', classes.hint_root)}
       style={themeTemplate?.HintMessageTemplate?.style}
     >
-      <div className={classes.time} style={themeTemplate?.time?.style}>
-        {formatTime(message.time)}
-      </div>
       <div className={classes.hint_text} style={themeTemplate?.HintMessageTemplate?.style}>
         {template.text}
       </div>

@@ -62,6 +62,37 @@ export function createTextTemplateExample(): ConversationMessage {
   });
 }
 
+export function createStreamingTextTemplateExample(): ConversationMessage {
+  const message = createTextTemplateExample();
+
+  if (message.type !== 'bot') return message;
+
+  return {
+    ...message,
+    isTyping: true,
+    typingText: '這是一段正在串流中的 bot 純文字，用來確認串流狀態同樣沒有頭像、時間戳或泡泡。',
+  };
+}
+
+export function createTextAuxiliaryTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    text: '',
+    template: {
+      type: MessageTemplateType.TEXT,
+      text: '',
+      references: [{ title: 'Asgard documentation', uri: 'https://docs.asgard-ai.com' }],
+      quickReplies: [{ text: '繼續閱讀' }, { text: '顯示更多' }],
+    },
+    messageId,
+    replyToCustomMessageId: '',
+    payload: undefined,
+    isDebug: false,
+    idx: 0,
+  });
+}
+
 export function createHintTemplateExample(): ConversationMessage {
   const messageId = nanoid();
 

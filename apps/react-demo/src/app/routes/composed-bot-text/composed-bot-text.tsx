@@ -13,7 +13,7 @@ import { DemoWrapper } from '../../components/demo-wrapper';
 import styles from './composed-bot-text.module.scss';
 
 const DEMO_TEXT =
-  '這一列用來量寬度。預設路徑的 bot 泡泡是容器的 70%，自組路徑（TemplateBox + TemplateBoxContent + BotMessageText）沒有寬度限制，應該填滿整個 TemplateBoxContent。\n\n### Markdown 也要照舊\n\n- 清單項目\n- `inline code`\n\n> blockquote 一樣要正常渲染。';
+  '這一列用來確認預設 TextTemplate 與自組路徑（TemplateBox + TemplateBoxContent + BotMessageText）都使用無頭像、無時間戳、無泡泡的滿寬 bot 文字版面。\n\n### Markdown 也要照舊\n\n- 清單項目\n- `inline code`\n\n> blockquote 一樣要正常渲染。';
 
 function createDemoMessage(): ConversationMessage {
   const messageId = nanoid();
@@ -76,14 +76,14 @@ export function ComposedBotText(): ReactNode {
   return (
     <DemoWrapper
       title="自組 Bot 文字列"
-      description="對照預設 TextTemplate（泡泡 70% 寬）與用 TemplateBox + TemplateBoxContent + BotMessageText 自組的訊息列（滿寬）。"
+      description="確認預設 TextTemplate 與用 TemplateBox + TemplateBoxContent + BotMessageText 自組的訊息列採用相同的滿寬無 chrome 版面。"
     >
       <div className={styles.controls}>
         <button className={composed ? styles.active : ''} onClick={() => setComposed(true)}>
           Composed（自組，應滿寬）
         </button>
         <button className={!composed ? styles.active : ''} onClick={() => setComposed(false)}>
-          Default（預設，應為 70%）
+          Default（預設，同樣滿寬）
         </button>
       </div>
 

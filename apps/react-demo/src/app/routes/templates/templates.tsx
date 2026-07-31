@@ -4,6 +4,9 @@ import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
 import {
   createTextTemplateExample,
+  createStreamingTextTemplateExample,
+  createTextAuxiliaryTemplateExample,
+  createUserMessageExample,
   createHintTemplateExample,
   createButtonTemplateExample,
   createCarouselTemplateExample,
@@ -20,6 +23,9 @@ import styles from './templates.module.scss';
 
 type TemplateType =
   | 'text'
+  | 'streaming-text'
+  | 'text-auxiliary'
+  | 'user-regression'
   | 'hint'
   | 'button'
   | 'carousel'
@@ -34,6 +40,9 @@ type TemplateType =
 
 const templateOptions: { value: TemplateType; label: string }[] = [
   { value: 'text', label: 'Text' },
+  { value: 'streaming-text', label: 'Streaming Text' },
+  { value: 'text-auxiliary', label: 'Text Auxiliary' },
+  { value: 'user-regression', label: 'User Regression' },
   { value: 'hint', label: 'Hint' },
   { value: 'button', label: 'Button' },
   { value: 'carousel', label: 'Carousel' },
@@ -49,6 +58,9 @@ const templateOptions: { value: TemplateType; label: string }[] = [
 
 const templateCreators: Record<TemplateType, () => ReturnType<typeof createTextTemplateExample>> = {
   text: createTextTemplateExample,
+  'streaming-text': createStreamingTextTemplateExample,
+  'text-auxiliary': createTextAuxiliaryTemplateExample,
+  'user-regression': () => createUserMessageExample('使用者訊息應繼續保留泡泡與時間戳。'),
   hint: createHintTemplateExample,
   button: createButtonTemplateExample,
   carousel: createCarouselTemplateExample,
