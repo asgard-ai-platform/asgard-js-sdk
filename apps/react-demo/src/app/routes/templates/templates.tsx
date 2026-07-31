@@ -87,18 +87,6 @@ export function Templates(): ReactNode {
       description="Preview different message template types. Select a template to see how it renders."
     >
       <div className={styles.controls}>
-        <h3>Select Template</h3>
-        <div className={styles.buttons}>
-          {templateOptions.map(option => (
-            <button
-              key={option.value}
-              className={`${styles.button} ${selectedTemplate === option.value ? styles.active : ''}`}
-              onClick={() => setSelectedTemplate(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
         <div className={styles.previewControls}>
           <h3>Preview Width</h3>
           <div className={styles.widthButtons}>
@@ -119,6 +107,18 @@ export function Templates(): ReactNode {
               960px
             </button>
           </div>
+        </div>
+        <h3>Select Template</h3>
+        <div className={styles.buttons}>
+          {templateOptions.map(option => (
+            <button
+              key={option.value}
+              className={`${styles.button} ${selectedTemplate === option.value ? styles.active : ''}`}
+              onClick={() => setSelectedTemplate(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
