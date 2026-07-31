@@ -38,6 +38,8 @@ type TemplateType =
   | 'math'
   | 'attachment';
 
+type PreviewWidth = 'narrow' | 'wide';
+
 const templateOptions: { value: TemplateType; label: string }[] = [
   { value: 'text', label: 'Text' },
   { value: 'streaming-text', label: 'Streaming Text' },
@@ -76,6 +78,7 @@ const templateCreators: Record<TemplateType, () => ReturnType<typeof createTextT
 
 export function Templates(): ReactNode {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('text');
+  const [previewWidth, setPreviewWidth] = useState<PreviewWidth>('narrow');
   const initMessages = [templateCreators[selectedTemplate]()];
 
   return (
@@ -96,9 +99,34 @@ export function Templates(): ReactNode {
             </button>
           ))}
         </div>
+        <div className={styles.previewControls}>
+          <h3>Preview Width</h3>
+          <div className={styles.widthButtons}>
+            <button
+              type="button"
+              className={`${styles.button} ${previewWidth === 'narrow' ? styles.active : ''}`}
+              aria-pressed={previewWidth === 'narrow'}
+              onClick={() => setPreviewWidth('narrow')}
+            >
+              375px
+            </button>
+            <button
+              type="button"
+              className={`${styles.button} ${previewWidth === 'wide' ? styles.active : ''}`}
+              aria-pressed={previewWidth === 'wide'}
+              onClick={() => setPreviewWidth('wide')}
+            >
+              960px
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className={styles.chatbotContainer}>
+      <div
+        className={`${styles.chatbotContainer} ${
+          previewWidth === 'wide' ? styles.chatbotContainerWide : styles.chatbotContainerNarrow
+        }`}
+      >
         <Chatbot
           title={`${templateOptions.find(o => o.value === selectedTemplate)?.label} Template Demo`}
           config={{ botProviderEndpoint: 'skip' }}
