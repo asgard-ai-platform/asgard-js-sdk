@@ -3,11 +3,7 @@
   flex-direction: column;
   gap: 12px;
   width: 100%;
-  background: #585858;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 12px;
+  color: var(--asg-color-text-primary, #fff);
 }
 
 .header {

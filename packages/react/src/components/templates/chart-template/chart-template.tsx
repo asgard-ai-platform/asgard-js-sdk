@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState, useRef, useEffect, CSSProperties } from 'react';
+import { ReactNode, useMemo, useState, useRef, useEffect } from 'react';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
 import { ConversationBotMessage, ChartMessageTemplate } from '@asgard-js/core';
 import { VegaEmbed } from 'react-vega';
@@ -58,14 +58,6 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
     return cloned as unknown as VisualizationSpec;
   }, [spec, chartWidth]);
 
-  const styles = useMemo<CSSProperties>(
-    () => ({
-      color: botMessage?.color,
-      backgroundColor: botMessage?.backgroundColor,
-    }),
-    [botMessage],
-  );
-
   return (
     <TemplateBox
       className="asgard-chart-template"
@@ -74,7 +66,7 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
       style={themeTemplate?.ChartMessageTemplate?.style}
     >
       <TemplateBoxContent quickReplies={template?.quickReplies} references={template?.references} message={message}>
-        <div className={classes.container} style={styles}>
+        <div className={classes.container} style={{ color: botMessage?.color }}>
           <div className={classes.header}>
             <div className={classes.title_box}>
               {template.title && <div className={classes.title}>{template.title}</div>}
