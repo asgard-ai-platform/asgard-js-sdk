@@ -80,6 +80,7 @@ export function Templates(): ReactNode {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('text');
   const [previewWidth, setPreviewWidth] = useState<PreviewWidth>('narrow');
   const initMessages = [templateCreators[selectedTemplate]()];
+  const previewWidthPx = previewWidth === 'wide' ? 960 : 375;
 
   return (
     <DemoWrapper
@@ -88,7 +89,9 @@ export function Templates(): ReactNode {
     >
       <div className={styles.controls}>
         <div className={styles.previewControls}>
-          <h3>Preview Width</h3>
+          <h3>
+            Preview Width <span className={styles.currentWidth}>{previewWidthPx}px</span>
+          </h3>
           <div className={styles.widthButtons}>
             <button
               type="button"
@@ -122,12 +125,13 @@ export function Templates(): ReactNode {
         </div>
       </div>
 
-      <div className={styles.chatbotContainer} style={{ width: previewWidth === 'wide' ? 960 : 375 }}>
+      <div className={styles.chatbotContainer} style={{ width: previewWidthPx }}>
         <Chatbot
           title={`${templateOptions.find(o => o.value === selectedTemplate)?.label} Template Demo`}
           config={{ botProviderEndpoint: 'skip' }}
           customChannelId="templates-demo"
           initMessages={initMessages}
+          theme={{ chatbot: { width: '100%', maxWidth: 'none', height: '600px' } }}
         />
       </div>
     </DemoWrapper>
