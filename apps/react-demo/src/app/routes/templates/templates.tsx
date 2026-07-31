@@ -122,11 +122,7 @@ export function Templates(): ReactNode {
         </div>
       </div>
 
-      <div
-        className={`${styles.chatbotContainer} ${
-          previewWidth === 'wide' ? styles.chatbotContainerWide : styles.chatbotContainerNarrow
-        }`}
-      >
+      <div className={styles.chatbotContainer} style={{ width: previewWidth === 'wide' ? 960 : 375 }}>
         <Chatbot
           title={`${templateOptions.find(o => o.value === selectedTemplate)?.label} Template Demo`}
           config={{ botProviderEndpoint: 'skip' }}

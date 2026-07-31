@@ -60,19 +60,10 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  transition: width 0.2s ease;
 
   > div {
     width: 100%;
     max-width: none;
     height: 600px;
   }
-}
-
-.chatbotContainerNarrow {
-  width: 375px;
-}
-
-.chatbotContainerWide {
-  width: 960px;
 }
