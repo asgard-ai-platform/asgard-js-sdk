@@ -393,6 +393,66 @@ export function createImageTemplateExample(width = 400, height = 400): Conversat
   });
 }
 
+export function createVideoTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: 'Chat-kit video template preview',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.VIDEO,
+      originalContentUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      previewImageUrl: 'https://dummyimage.com/640x360/1f1f1f/ffffff&text=Video+Preview',
+      duration: 212_000,
+      quickReplies,
+    },
+  });
+}
+
+export function createAudioTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: 'Chat-kit audio template preview',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.AUDIO,
+      originalContentUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      duration: 60_000,
+      quickReplies,
+    },
+  });
+}
+
+export function createLocationTemplateExample(): ConversationMessage {
+  const messageId = nanoid();
+
+  return createBaseTemplateExample({
+    messageId,
+    replyToCustomMessageId: '',
+    text: 'Chat-kit location template preview',
+    payload: null,
+    isDebug: false,
+    idx: 0,
+    template: {
+      type: MessageTemplateType.LOCATION,
+      title: '台北 101',
+      text: '台北市信義區信義路五段 7 號',
+      latitude: 25.033964,
+      longitude: 121.564468,
+      quickReplies,
+    },
+  });
+}
+
 export function createMathTemplateExample(): ConversationMessage {
   return createBaseTemplateExample({
     messageId: nanoid(),

@@ -8,6 +8,9 @@ import {
   createButtonTemplateExample,
   createCarouselTemplateExample,
   createImageTemplateExample,
+  createVideoTemplateExample,
+  createAudioTemplateExample,
+  createLocationTemplateExample,
   createChartTemplateExample,
   createTableTemplateExample,
   createMathTemplateExample,
@@ -15,7 +18,19 @@ import {
 } from '../../mocks/messages';
 import styles from './templates.module.scss';
 
-type TemplateType = 'text' | 'hint' | 'button' | 'carousel' | 'image' | 'chart' | 'table' | 'math' | 'attachment';
+type TemplateType =
+  | 'text'
+  | 'hint'
+  | 'button'
+  | 'carousel'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'location'
+  | 'chart'
+  | 'table'
+  | 'math'
+  | 'attachment';
 
 const templateOptions: { value: TemplateType; label: string }[] = [
   { value: 'text', label: 'Text' },
@@ -23,6 +38,9 @@ const templateOptions: { value: TemplateType; label: string }[] = [
   { value: 'button', label: 'Button' },
   { value: 'carousel', label: 'Carousel' },
   { value: 'image', label: 'Image' },
+  { value: 'video', label: 'Video' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'location', label: 'Location' },
   { value: 'chart', label: 'Chart' },
   { value: 'table', label: 'Table' },
   { value: 'math', label: 'Math' },
@@ -35,6 +53,9 @@ const templateCreators: Record<TemplateType, () => ReturnType<typeof createTextT
   button: createButtonTemplateExample,
   carousel: createCarouselTemplateExample,
   image: createImageTemplateExample,
+  video: createVideoTemplateExample,
+  audio: createAudioTemplateExample,
+  location: createLocationTemplateExample,
   chart: createChartTemplateExample,
   table: createTableTemplateExample,
   math: createMathTemplateExample,
