@@ -5,6 +5,14 @@
 }
 
 .template_box--bot {
+  // Bot messages follow the chat-kit content-first layout. Templates may still
+  // render these legacy nodes for API compatibility, but they are no longer
+  // part of the SDK's default message UI.
+  :global(.asgard-avatar),
+  :global(.asgard-time) {
+    display: none;
+  }
+
   &.template_box--horizontal {
     flex-direction: row;
   }

@@ -11,20 +11,18 @@ export interface BotMessageTextProps {
 }
 
 /**
- * The bot message text content — the themed `.text--bot` wrapper around the streaming/markdown renderer,
+ * The bot message text content — the chrome-free `.text--bot` wrapper around the streaming/markdown renderer,
  * without the surrounding `TemplateBox`, `Avatar`, or `Time`. Exported so a consumer can compose a custom
  * bot message row (e.g. via `renderMessageContent` + `TemplateBox` / `TemplateBoxContent`) without
  * re-implementing the markdown styling.
  *
- * It carries no width constraint of its own, so it fills whatever container it is placed in. The built-in
- * `TextTemplate` adds the chat-bubble width itself; a custom row can add one through `className`.
+ * It fills its container and intentionally has no bubble background, padding, or rounded corners.
  */
 export function BotMessageText({ children, className }: BotMessageTextProps): ReactNode {
   const theme = useAsgardThemeContext();
 
   const style: CSSProperties = {
     color: theme?.botMessage?.color,
-    backgroundColor: theme?.botMessage?.backgroundColor,
   };
 
   return (

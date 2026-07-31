@@ -7,7 +7,6 @@ import {
   TableColumnFormat,
   TableRowType,
 } from '@asgard-js/core';
-import { Time } from '../time';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { StreamdownClient } from '../text-template/streamdown-client';
 import clsx from 'clsx';
@@ -416,7 +415,6 @@ export function TableTemplate(props: TableTemplateProps): ReactNode {
           )}
         </div>
       </TemplateBoxContent>
-      <Time className={classes.time} time={message.time} />
     </TemplateBox>
   );
 }

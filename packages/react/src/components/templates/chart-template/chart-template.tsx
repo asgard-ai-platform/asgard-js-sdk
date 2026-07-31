@@ -1,7 +1,6 @@
 import { ReactNode, useMemo, useState, useRef, useEffect, CSSProperties } from 'react';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
 import { ConversationBotMessage, ChartMessageTemplate } from '@asgard-js/core';
-import { Time } from '../time';
 import { VegaEmbed } from 'react-vega';
 import { VisualizationSpec } from 'vega-embed';
 import classes from './chart-template.module.scss';
@@ -101,7 +100,6 @@ export function ChartTemplate(props: ChartTemplateProps): ReactNode {
           </div>
         </div>
       </TemplateBoxContent>
-      <Time className={classes.chart_time} time={message.time} />
     </TemplateBox>
   );
 }

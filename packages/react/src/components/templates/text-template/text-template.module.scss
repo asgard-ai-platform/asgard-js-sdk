@@ -26,15 +26,17 @@
 }
 
 .text--bot {
-  background: #585858;
-  border-top-left-radius: 0;
+  width: 100%;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 // Width of the built-in bot message row. Kept off `.text--bot` so that a consumer composing its own
 // row (via `renderMessageContent` + `BotMessageText`) fills the reading width instead of inheriting
 // the chat-bubble constraint.
 .text--bot-default {
-  max-width: 70%;
+  max-width: none;
 }
 
 .content {

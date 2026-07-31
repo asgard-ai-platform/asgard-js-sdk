@@ -18,8 +18,7 @@ import {
   TemplateBox,
   TemplateBoxContent,
 } from '../../templates';
-import { Avatar } from '../../templates/avatar';
-import { useAsgardTemplateContext, useAsgardContext, MessageContainerProps } from '../../../context';
+import { useAsgardTemplateContext, MessageContainerProps } from '../../../context';
 
 interface ConversationMessageRendererProps {
   message: ConversationMessage;
@@ -28,19 +27,15 @@ interface ConversationMessageRendererProps {
 export function ConversationMessageRenderer(props: ConversationMessageRendererProps): ReactNode {
   const { message } = props;
   const { renderMessageContent } = useAsgardTemplateContext();
-  const { avatar } = useAsgardContext();
 
-  // Create MessageContainer component that wraps custom content with Avatar
+  // Create MessageContainer component that wraps custom content in the SDK's
+  // chrome-free bot message layout.
   const MessageContainer = useMemo(() => {
     return function Container({ children }: MessageContainerProps): ReactNode {
-      // Bot message: show Avatar + content
       if (message.type === 'bot') {
         return (
           <TemplateBox type="bot" direction="horizontal">
-            <Avatar avatar={avatar} />
-            <TemplateBoxContent message={message} time={message.time}>
-              {children}
-            </TemplateBoxContent>
+            <TemplateBoxContent message={message}>{children}</TemplateBoxContent>
           </TemplateBox>
         );
       }
@@ -57,7 +52,7 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
       // Other types: return children directly
       return children;
     };
-  }, [message, avatar]);
+  }, [message]);
 
   const renderDefaultContent = useCallback((): ReactNode => {
     if (message.type === 'user') {

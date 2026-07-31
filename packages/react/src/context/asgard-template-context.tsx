@@ -28,7 +28,7 @@ export interface MessageContentRendererProps {
   message: ConversationMessage;
   /** Function to render the default message content */
   renderDefaultContent: () => ReactNode;
-  /** Container component that wraps custom content with Avatar for bot messages */
+  /** Container component that wraps custom content in the default chrome-free bot message layout. */
   MessageContainer: FC<MessageContainerProps>;
 }
 

@@ -1,6 +1,5 @@
 import { ReactNode, useEffect } from 'react';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
-import { Avatar } from '../avatar';
 import styles from './audio-template.module.scss';
 import { ConversationBotMessage, AudioMessageTemplate } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
@@ -16,7 +15,7 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
   const { originalContentUrl } = template;
 
   const { template: themeTemplate } = useAsgardThemeContext();
-  const { avatar, messageBoxBottomRef } = useAsgardContext();
+  const { messageBoxBottomRef } = useAsgardContext();
 
   // Auto scroll to bottom when AUDIO message is rendered
   useEffect(() => {
@@ -36,8 +35,7 @@ export function AudioTemplate(props: AudioTemplateProps): ReactNode {
       direction="horizontal"
       style={themeTemplate?.AudioMessageTemplate?.style}
     >
-      <Avatar avatar={avatar} />
-      <TemplateBoxContent quickReplies={template.quickReplies} time={message.time} message={message}>
+      <TemplateBoxContent quickReplies={template.quickReplies} message={message}>
         <div className={styles.audio_box}>
           <audio
             className={styles.audio_player}

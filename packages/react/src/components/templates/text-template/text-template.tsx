@@ -3,9 +3,7 @@ import clsx from 'clsx';
 import { ConversationBotMessage, ConversationMessage } from '@asgard-js/core';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
 import classes from './text-template.module.scss';
-import { Avatar } from '../avatar';
 import { Time } from '../time';
-import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { BotMessageText } from './bot-message-text';
 
@@ -15,8 +13,6 @@ interface TextTemplateProps {
 
 export function TextTemplate(props: TextTemplateProps): ReactNode {
   const { message } = props;
-
-  const { avatar } = useAsgardContext();
 
   const theme = useAsgardThemeContext();
   const { botMessage } = theme;
@@ -75,7 +71,7 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
     return null;
   }
 
-  // Empty message with references or quick replies: invisible avatar placeholder, no message box
+  // Empty message with references or quick replies: render the auxiliary content without bot chrome.
   if (isEmptyMessage) {
     return (
       <TemplateBox
@@ -85,9 +81,7 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
         style={rootStyle}
         isEmpty
       >
-        <Avatar invisible />
         <TemplateBoxContent
-          time={message.time}
           quickReplies={quickReplies}
           references={references}
           message={botConversationMessage}
@@ -104,13 +98,7 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
       direction="horizontal"
       style={rootStyle}
     >
-      <Avatar avatar={avatar} />
-      <TemplateBoxContent
-        time={message.time}
-        quickReplies={quickReplies}
-        references={references}
-        message={botConversationMessage}
-      >
+      <TemplateBoxContent quickReplies={quickReplies} references={references} message={botConversationMessage}>
         {isBot ? (
           <BotMessageText className={classes['text--bot-default']}>{messageText}</BotMessageText>
         ) : (

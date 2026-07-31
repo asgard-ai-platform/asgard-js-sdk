@@ -1,6 +1,5 @@
 import { ReactNode, useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { TemplateBox, TemplateBoxContent } from '../template-box';
-import { Avatar } from '../avatar';
 import styles from './video-template.module.scss';
 import { ConversationBotMessage, VideoMessageTemplate } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
@@ -75,7 +74,7 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
 
   const { template: themeTemplate } = useAsgardThemeContext();
 
-  const { avatar, messageBoxBottomRef } = useAsgardContext();
+  const { messageBoxBottomRef } = useAsgardContext();
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoBoxRef = useRef<HTMLDivElement>(null);
@@ -227,13 +226,7 @@ export function VideoTemplate(props: VideoTemplateProps): ReactNode {
       direction="horizontal"
       style={themeTemplate?.VideoMessageTemplate?.style}
     >
-      <Avatar avatar={avatar} />
-      <TemplateBoxContent
-        quickReplies={template.quickReplies}
-        references={template.references}
-        time={message.time}
-        message={message}
-      >
+      <TemplateBoxContent quickReplies={template.quickReplies} references={template.references} message={message}>
         <div ref={videoBoxRef} className={styles.video_box}>
           {!isPlaying ? (
             <div className={styles.video_preview} onClick={handlePlayClick}>
