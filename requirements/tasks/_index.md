@@ -63,14 +63,15 @@
 
 ## ▶ Next Task
 
-**`BUILD-039`** — Theme audit 第一階段（asgard-sdk-pm#31）。截至 2026-08-04，已發版至 **`0.3.40`**。以下段落保留各 cycle 的脈絡與 backlog。
+**None — awaiting task selection.** 截至 2026-08-04，npm 上仍為 **`0.3.40`**（BUILD-039 已進 main、未發版）。下一張候選：`BUILD-040`（draft，等使用者指示才動工）。以下段落保留各 cycle 的脈絡與 backlog。
 
 **Theme audit cycle（asgard-sdk-pm#31）**：稽核票 2026-07-23 開出（對 0.3.14），PM 2026-07-23 回覆接受三階段框架、並把第三階段方向改為「SDK 直接採用 `asgard-design-system` 當 token 層」，承諾第一、二階段照清單開票——但**至今未開**（`asgard-sdk-pm` @ `7b917ca` 的 `features/` 只有 F-001~F-023、`tasks/` 只有 TASK-001 / TASK-003）。經使用者授權**不等 PM 開票、先行動工**，以 issue 本體為 source spec。
 
-- `BUILD-039` / `REVIEW-039` —— 第一階段的型別 export + 幽靈 token 接線 + 死 API（非破壞）。
-- `BUILD-040` / `REVIEW-040` —— 第一階段的缺陷 8（grid row 顯式化 + `renderHeader` 回 `null`）。自 039 拆出，因其有版面回歸風險、驗證方式不同。
+- `BUILD-039` / `REVIEW-039` —— 第一階段的型別 export + 幽靈 token 接線 + 死 API 處理（非破壞）。已 **merged to main** via PR #381（merge commit `3ff4efb`，5 commits 保留），**未發版**。送 PR 前對七個消費端（全部 `^` caret、發版即自動擴散）做了完整下游稽核，**三處實作因此修正**：(a) markdown 連結色改由 `botMessage.linkColor` 驅動而非 `primaryComponent.mainColor`——後者會使 Sindri 暗色 4.14:1、sdk-demo 3.87:1 跌破 WCAG AA；七家都沒設 `linkColor`，故連結全數維持現狀，並加了「設 accent 不准動連結」的回歸鎖；(b) **撤回 `chatbot.borderRadius` 的 deprecation**——稽核票該條是誤判，欄位實際有效（`chatbot-container.tsx` rest-spread 成 inline style），Sindri / Odin / Mimir 都設 `.5rem`；(c) consent inset 兩 token（`code-bg` / `code-border`）改成對寫入，避免只設其一的消費端（Mimir、embed 的 `?bgColor=`）拿到半套。結論：**零下游回歸**，淺色模式數處為修復。詳細決策見 `BUILD-039-theme-api-and-token-wiring.md` Execution Log。
+- `BUILD-040` / `REVIEW-040` —— 第一階段的缺陷 8（grid row 顯式化 + `renderHeader` 回 `null`）。自 039 拆出，因其有版面回歸風險、驗證方式不同。**draft，未動工**。
 - **第二階段**（SCSS 硬編色 token 化）尚未開票。**第三階段被外部前置卡死**：PM 定調要依賴的 `@asgard/design-tokens` 尚未發上 npm（`npm view` 回 404），在它上架前連 spec 都不該起草。
-- 2026-08-04 複驗（`main` @ `2989051`，0.3.40）相對原票 0.3.14 的變化：缺陷 1 的 `Locale` 已由 BUILD-038 export；缺陷 2 的 10 個 markdown token 已接 8 個，僅剩 `link` / `link-hover`；缺陷 3 幽靈 token 從 25 降到 17（其中 12 個是 `--asgard-consent-modal-*` 一整組）。缺陷 4/5/6/7/8 全數仍成立，其中缺陷 4 的引用點從 5 增為 7、缺陷 8 的 grid 從 4 列增為 5 列。
+- 2026-08-04 複驗（`main` @ `2989051`，0.3.40）相對原票 0.3.14 的變化：缺陷 1 的 `Locale` 已由 BUILD-038 export；缺陷 2 的 10 個 markdown token 已接 8 個，僅剩 `link` / `link-hover`；缺陷 3 幽靈 token 從 25 降到 17（其中 12 個是 `--asgard-consent-modal-*` 一整組）。缺陷 4/5/6/7/8 全數仍成立，其中缺陷 4 的引用點從 5 增為 7、缺陷 8 的 grid 從 4 列增為 5 列。**BUILD-039 後的更正**：實際需接線的是 8 個（其餘 9 個的 fallback 鏈已通到 `--asg-color-*`）；稽核票的缺陷 7 對 `borderRadius` 是誤判（見上）。
+- 稽核過程另挖出既有 bug 並立案 **asgard-sdk-pm#52**：annotations pass 以 `undefined` 蓋掉 theme 預設（`deepMerge` 不跳過 `undefined`），6 個顏色欄位的 default 層形同不存在、palette token 對泡泡斷路（`.text--user` 固定 `#4767eb` 等）。修復屬行為變更，需自己的 cycle + 下游稽核。
 
 **最近兩個 cycle（asgard-sdk-pm#48 / #49）**：
 
@@ -78,7 +79,7 @@
 - `BUILD-038` / `REVIEW-038` —— File Explorer 未接 i18n（57 則硬寫繁中）＋ 3 處 `window.prompt` / 1 處 `window.confirm` 換成 SDK modal。已 **merged to main** via PR #380，**發版 `0.3.40`**，#49 已關閉。
   - 已知缺口：ja-JP / zh-TW 未做瀏覽器驗證（demo route 掛載 panel 時未包 template-context provider，永遠解析成 `en-US`），僅靠單元測試。若要補，需在 demo 加 locale 切換或獨立 route。
 
-**Backlog（尚未開票）**：(1) demo app 不在 typecheck 閘門內 —— BUILD-039 後從 8 個既有型別錯誤降到 **5 個**（`ChatbotTheme` 相關的 3 個已消除；剩 `ErrorMessage` 缺欄位、`events` handler 簽章、`history-scroll-bug` template 型別、core 無 `Theme` export、`tool-call` 缺 `cancelled`），建議與「重啟 `ci.yml`」一併處理；(2) **F-021 Cycle 2** 的剩餘項；(3) **F-020 sandbox 動作卡視覺**（port prototype 的 `SandboxBrowserHandoffCard` / `SandboxOpenFileCard`）；(4) BUG-003 衍生 —— `TaskList` 在任務全部完成後不會自動收合（`SubagentList` 會），docked 後會持續佔住半個版面直到頻道重置，已於 asgard-sdk-pm#32 留言告知 PM，待其決定是否開票。
+**Backlog（尚未開票）**：(1) demo app 不在 typecheck 閘門內 —— BUILD-039 後從 8 個既有型別錯誤降到 **5 個**（`ChatbotTheme` 相關的 3 個已消除；剩 `ErrorMessage` 缺欄位、`events` handler 簽章、`history-scroll-bug` template 型別、core 無 `Theme` export、`tool-call` 缺 `cancelled`），建議與「重啟 `ci.yml`」一併處理；(2) **F-021 Cycle 2** 的剩餘項；(3) **F-020 sandbox 動作卡視覺**（port prototype 的 `SandboxBrowserHandoffCard` / `SandboxOpenFileCard`）；(4) BUG-003 衍生 —— `TaskList` 在任務全部完成後不會自動收合（`SubagentList` 會），docked 後會持續佔住半個版面直到頻道重置，已於 asgard-sdk-pm#32 留言告知 PM，待其決定是否開票；(5) **asgard-sdk-pm#52** —— deepMerge / annotations pass 蓋掉 theme 預設層（見上方 Theme audit cycle 段），修復屬行為變更、需下游稽核。
 
 `BUILD-030` / `REVIEW-030`（**F-023 停止生成改為真正中止背景 run**）皆 done（§1 0 violation、§3 13/13 R# Pass），已 **merged to main** via PR #364。停止改為呼叫 `POST {base}/message/suspend` 並等既有 SSE 串流的終止事件才放行；`isConnecting` 的四義由新的 `RunStatus.kind` 拆開（`user` / `reset` / `restore` / `replay` / `nudge`），只有 `user` 可停。**下游追蹤**：SDK 發版後六個前端要 bump（見 asgard-sdk-pm#34 內的清單，目前皆 `^0.3.21`），其中 `asgard-auto-post-chatbot-extension` 是唯一需要改碼的（用 `renderFooter` 取代整個 footer，目前完全沒有停止鈕，且把 `isConnecting` 當送出 gate）。**同期順修並已 merged 進 main**：PR #362（`references/` submodule 讓 Nx project graph 全崩，所有 target 失敗）、PR #363（新增 `typecheck:packages` + husky `pre-push` 閘門；`build:*` 遇型別錯誤仍 exit 0，CI 又停用中，導致十個型別錯誤曾無聲躺在 main 上）。**Backlog 新增**：demo app 不在 typecheck 閘門內（`apps/react-demo` 目前有 8 個既有型別錯誤），建議與「重啟 `ci.yml`」一併處理。
 
