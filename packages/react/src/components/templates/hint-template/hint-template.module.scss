@@ -10,6 +10,9 @@
   font-size: 13px;
   color: white;
   word-break: break-all;
+  // An error bubble carries server-authored text of unbounded length; without a ceiling here a
+  // single long message stretches the whole thread.
+  max-width: 100%;
 
   &.hint_root__error {
     color: var(--asg-color-error);
@@ -17,14 +20,106 @@
 
   .error_hint_title {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--asg-spacing-2);
     color: var(--asg-color-error);
+    max-width: 100%;
+  }
+
+  // Collapsed summary: two lines max. `break-word` (not `break-all`) so English error text breaks
+  // between words instead of mid-token.
+  .error_hint_summary {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .error_hint_toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: 12px;
+    font-family: inherit;
+    color: rgba(200, 200, 200, 1);
+    cursor: pointer;
+
+    &:hover {
+      color: white;
+    }
+  }
+
+  .error_hint_chevron {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+
+  .error_hint_chevron__expanded {
+    transform: rotate(90deg);
+  }
+
+  .error_details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: stretch;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    font-size: 12px;
+    color: rgba(220, 220, 220, 1);
+  }
+
+  .error_detail_row {
+    display: flex;
+    gap: var(--asg-spacing-2);
+  }
+
+  .error_detail_block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .error_detail_label {
+    flex-shrink: 0;
+    color: rgba(150, 150, 150, 1);
+  }
+
+  .error_detail_value {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  // The raw upstream error. Monospace + preserved newlines make a stack-ish string readable, and
+  // the height cap keeps even a multi-kilobyte one scrolling inside the bubble.
+  .error_inner {
+    margin: 0;
+    max-height: 160px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    font-family: var(--asg-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(220, 220, 220, 1);
   }
 
   .error_hint_message {
     font-size: 12px;
     color: white;
+    align-self: flex-start;
 
     > span {
       border-bottom: 1px solid white;
@@ -40,4 +135,5 @@
 .time {
   font-size: 12px;
   color: rgba(140, 140, 140, 1);
+  flex-shrink: 0;
 }
