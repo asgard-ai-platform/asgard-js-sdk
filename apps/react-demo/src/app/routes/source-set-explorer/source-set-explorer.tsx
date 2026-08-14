@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { SourceSetFileExplorer } from '@asgard-js/react';
+import { AsgardThemeContextValue, SourceSetFileExplorer } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
 import { installVolumeMock, MOCK_VOLUME_ENDPOINT } from './volume-mock';
@@ -27,10 +27,29 @@ const usingMock = !ENV_ENDPOINT;
 const endpoint = ENV_ENDPOINT ?? MOCK_VOLUME_ENDPOINT;
 const customHeaders = ENV_TOKEN ? { Authorization: `Bearer ${ENV_TOKEN}` } : undefined;
 
+// Two extremes rather than a palette: the SDK's own defaults are light, so the only theme worth
+// checking by eye is one that would make an unscoped panel obviously wrong — white on black.
+const THEMES: { label: string; value?: Partial<AsgardThemeContextValue> }[] = [
+  { label: '預設（淺）', value: undefined },
+  {
+    label: '深色',
+    value: {
+      chatbot: {
+        backgroundColor: '#1f1f1f',
+        borderColor: '#434343',
+        mainColor: '#f5f5f5',
+        secondaryColor: '#8c8c8c',
+        primaryComponent: { mainColor: '#7c8cff' },
+      },
+    },
+  },
+];
+
 export function SourceSetExplorerRoute(): ReactNode {
   const [readOnly, setReadOnly] = useState(false);
   const [rootPath, setRootPath] = useState(ENV_ROOT_PATH ?? '');
   const [lastError, setLastError] = useState<string | null>(null);
+  const [themeIdx, setThemeIdx] = useState(0);
   const [mockReady, setMockReady] = useState(!usingMock);
 
   useEffect(() => {
@@ -48,6 +67,7 @@ export function SourceSetExplorerRoute(): ReactNode {
     customHeaders,
     rootPath: rootPath || undefined,
     readOnly,
+    theme: THEMES[themeIdx].value,
     onError: (error: unknown): void => setLastError(error instanceof Error ? error.message : String(error)),
   };
 
@@ -68,6 +88,16 @@ export function SourceSetExplorerRoute(): ReactNode {
               <option value="">(volume root)</option>
               <option value="docs">docs</option>
               <option value="skills">skills</option>
+            </select>
+          </label>
+          <label className={styles.check}>
+            theme
+            <select value={themeIdx} onChange={e => setThemeIdx(Number(e.target.value))}>
+              {THEMES.map((preset, i) => (
+                <option key={preset.label} value={i}>
+                  {preset.label}
+                </option>
+              ))}
             </select>
           </label>
           <span className={styles.hint}>

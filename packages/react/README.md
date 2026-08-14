@@ -642,6 +642,89 @@ Note: When `fullScreen` prop is set to `true`, the chatbot's width and height wi
 <a id="hooks"></a>
 <br/>
 
+## SourceSet File Explorer
+
+A file explorer for a SourceSet volume, with no chat anywhere near it. Use it where someone needs to
+edit files directly — a Drive or SkillSet detail page, an Agent Hub directory — instead of starting a
+throwaway editor sandbox for one change.
+
+It is the same explorer the chat panel uses: same tree, toolbar, right-click menu, clipboard, dialogs
+and file viewer. Only the header differs (one fixed source, so no picker) and everything sandbox-shaped
+is absent — no wake button, no live watch, no liveness polling.
+
+```tsx
+import { SourceSetFileExplorer } from '@asgard-js/react';
+import '@asgard-js/react/style';
+
+<SourceSetFileExplorer
+  sourceSetEndpoint={`${API}/v1/source-set/${sourceSetId}/volume`}
+  customHeaders={{ Authorization: `Bearer ${token}` }}
+  label="my-drive"
+  readOnly={!canWrite}
+  locale="zh-TW"
+  theme={chatbotTheme}
+  onError={error => reportToSentry(error)}
+/>;
+```
+
+### Where it can point
+
+| Consumer                  | `sourceSetEndpoint`                                   | Auth                                           |
+| ------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
+| Direct to the edge server | `{EDGE}/ns/{ns}/source-set/{name}/volume`             | `apiKey`                                       |
+| Platform / SourceSet      | `{PLATFORM_API}/v1/source-set/{source_set_id}/volume` | `customHeaders: { Authorization: 'Bearer …' }` |
+| Platform / SkillSet       | `{PLATFORM_API}/v1/skill-set/{skill_set_id}/volume`   | same                                           |
+| Agent Hub / Directory     | `{HUB_API}/v1/directory/{directory_id}/volume`        | same                                           |
+
+Two things that bite:
+
+- **Do not pass `apiKey` when the endpoint is a BFF relay.** The volume key is the relay's, held
+  server-side. Anything you put in `apiKey` ships in the browser bundle.
+- **Agent Hub's Directory is already prefixed by the relay.** Paths you send are relative to that
+  directory, not to the SourceSet volume root — do not add a prefix of your own.
+
+### Give it a box with a height
+
+The panel is `height: 100%` and scrolls its tree internally, so it needs a parent whose height is
+already known. Given an `auto`-height parent it grows to fit instead of scrolling: a 10 000-entry
+directory measured **244,846px** tall and pushed the rest of the page off screen.
+
+```tsx
+<div style={{ height: '70vh' }}>          {/* or flex: 1 with min-height: 0 */}
+  <SourceSetFileExplorer … />
+</div>
+```
+
+`flex: 1` and `height` together do not work — on a flex item the basis wins in the main axis, so ask
+for one or the other.
+
+### Props
+
+| Prop                | Type                               | Notes                                                                                                          |
+| ------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `sourceSetEndpoint` | `string`                           | Required. Points at `…/volume` directly.                                                                       |
+| `apiKey`            | `string`                           | Edge only. Never with a relay.                                                                                 |
+| `customHeaders`     | `Record<string, string>`           | `{ Authorization: 'Bearer …' }` for a relay.                                                                   |
+| `label`             | `string`                           | Shown in the header. Cosmetic.                                                                                 |
+| `rootPath`          | `string`                           | Lock the tree to a subdirectory (volume-relative, e.g. `notes`).                                               |
+| `initialPath`       | `string`                           | Reveal and select this path on mount. Volume-relative, **not** relative to `rootPath`.                         |
+| `readOnly`          | `boolean`                          | Hides every mutating action and marks the header. The viewer still shows source, but not an editable buffer.   |
+| `locale`            | `'en-US' \| 'ja-JP' \| 'zh-TW'`    | Defaults to `en-US`. No Chatbot needed.                                                                        |
+| `theme`             | `Partial<AsgardThemeContextValue>` | Same shape as `<Chatbot theme>`. The panel always scopes the design tokens, so it is themed even without this. |
+| `onError`           | `(error: unknown) => void`         | Gets the untouched failure. The panel shows its own sentence too.                                              |
+
+### No live updates
+
+A volume is served by several replicas, so a filesystem watch registered on one cannot see another's
+writes; the backend deliberately offers none. The toolbar's refresh button is how the user picks up
+someone else's changes — there is no push.
+
+### Large directories
+
+Listing walks the pages up to a ceiling (10 000 entries). When it stops short the tree says so under
+that directory — with a count when the backend gave one, and "there may be more" when it did not.
+Silence would present a partial listing as a whole one.
+
 ## Hooks
 
 <a id="use-asgard-context"></a>

@@ -1,7 +1,9 @@
 import { ReactNode, useEffect, useMemo } from 'react';
 import { AsgardSourceSetClient } from '@asgard-js/core';
+import { AsgardThemeContextValue } from '../../context/asgard-theme-context';
 import { useFileExplorerController } from '../../hooks/use-file-explorer-controller';
 import { Locale } from '../../i18n';
+import { AsgardThemeScope } from '../theme-scope/theme-scope';
 import { FileExplorerProvider } from '../file-explorer/file-explorer-context';
 import {
   FileExplorerHeader,
@@ -45,6 +47,14 @@ export interface SourceSetFileExplorerProps {
   readOnly?: boolean;
   /** Defaults to `en-US`. No surrounding Chatbot is needed for this to take effect. */
   locale?: Locale;
+  /**
+   * Same shape as `<Chatbot theme>`; pass the same value to keep both surfaces in step.
+   *
+   * The panel always establishes its own theme scope, with or without this — the design tokens are
+   * emitted onto the chat shell's root, and this component is deliberately mounted nowhere near one, so
+   * without a scope it renders the light defaults on whatever page it lands on.
+   */
+  theme?: Partial<AsgardThemeContextValue>;
   /** Called with the untouched failure on any failed action; the panel shows its own sentence too. */
   onError?: (error: unknown) => void;
 }
@@ -53,7 +63,8 @@ export interface SourceSetFileExplorerProps {
 const SOURCE_ID = 'source-set-volume';
 
 export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactNode {
-  const { sourceSetEndpoint, apiKey, customHeaders, label, rootPath, initialPath, readOnly, locale, onError } = props;
+  const { sourceSetEndpoint, apiKey, customHeaders, label, rootPath, initialPath, readOnly, locale, theme, onError } =
+    props;
 
   // `customHeaders` is an object literal at most call sites, so a fresh identity arrives every render.
   // The client is rebuilt from the serialized headers rather than the object, so it survives renders
@@ -86,25 +97,30 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   }, [initialPath, requestFile]);
 
   return (
-    <FileExplorerProvider
-      sources={sources}
-      controller={controller}
-      providers={providers}
-      readOnly={readOnly}
-      locale={locale}
-      onError={onError}
-    >
-      <FileExplorerRoot>
-        <FileExplorerHeader>
-          <FileExplorerHeaderRow>
-            {label && <span className={styles.sourceLabel}>{label}</span>}
-            <span className={styles.sourceCrumb}>{root}</span>
-            <FileExplorerReadOnlyBadge />
-          </FileExplorerHeaderRow>
-        </FileExplorerHeader>
-        <FileExplorerWorkspace />
-      </FileExplorerRoot>
-    </FileExplorerProvider>
+    // `height: 100%` on the scope is load-bearing, not tidiness: it is a plain div, the explorer inside
+    // it is `height: 100%`, and an `auto`-height link anywhere in that chain turns "scroll inside the
+    // panel" into "grow the page" — measured at 244,846px once already.
+    <AsgardThemeScope theme={theme} style={{ height: '100%', minHeight: 0 }}>
+      <FileExplorerProvider
+        sources={sources}
+        controller={controller}
+        providers={providers}
+        readOnly={readOnly}
+        locale={locale}
+        onError={onError}
+      >
+        <FileExplorerRoot>
+          <FileExplorerHeader>
+            <FileExplorerHeaderRow>
+              {label && <span className={styles.sourceLabel}>{label}</span>}
+              <span className={styles.sourceCrumb}>{root}</span>
+              <FileExplorerReadOnlyBadge />
+            </FileExplorerHeaderRow>
+          </FileExplorerHeader>
+          <FileExplorerWorkspace />
+        </FileExplorerRoot>
+      </FileExplorerProvider>
+    </AsgardThemeScope>
   );
 }
 

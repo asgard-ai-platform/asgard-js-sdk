@@ -25,6 +25,7 @@ SDK for integrating AI chatbots with the [Asgard AI](https://asgard-ai.com) plat
     - [Tool Call Consent](./packages/react/README.md#tool-call-consent)
     - [EMIT Action](./packages/react/README.md#emit-action)
   - [Custom Header](./packages/react/README.md#custom-header)
+  - [SourceSet File Explorer](./packages/react/README.md#sourceset-file-explorer)
   - [Development](./packages/react/README.md#development)
 - [Core Package (@asgard-js/core)](./packages/core/README.md)
   - [Installation](./packages/core/README.md#installation)
@@ -37,6 +38,7 @@ SDK for integrating AI chatbots with the [Asgard AI](https://asgard-ai.com) plat
     - [File Upload API](./packages/core/README.md#file-upload-api)
     - [Authentication Types](./packages/core/README.md#authentication-types)
     - [Derived State](./packages/core/README.md#derived-state)
+    - [AsgardSourceSetClient](./packages/core/README.md#asgardsourcesetclient-sourceset-volume)
   - [Development](./packages/core/README.md#development)
 - [Links](#links)
 
@@ -51,6 +53,7 @@ SDK for integrating AI chatbots with the [Asgard AI](https://asgard-ai.com) plat
 - **Voice Input** - Browser speech recognition integration
 - **Conversation Export** - Download chat history as Markdown
 - **Tool Call Consent** - Built-in approval modal for user-controlled tool execution
+- **File Explorer** - Browse and edit a sandbox's working directory inside the chat, or a SourceSet volume on a page with no chat at all
 
 ## Getting Started
 
