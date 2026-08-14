@@ -362,3 +362,18 @@ Files:
   first expand and ~0.5s on a re-expand; the walk itself is 10 requests / 2ms, so it is all first-mount
   DOM cost. I could not account for the whole gap against the 466ms measured on 2026-08-14 under
   nominally the same procedure, so treat the first-expand figure as approximate.
+- 2026-08-15: `theme` implemented — the prop F-025 listed and this task shipped without, recorded as a
+  false pass on R11. It rides `AsgardThemeScope`, which the panel now establishes **unconditionally**:
+  the design tokens are emitted onto the chat shell's root and this component is mounted nowhere near
+  one, so without a scope it rendered the light defaults on whatever page it landed on — the
+  no-theme-passed case was the broken one, not the configured one. The scope wrapper passes its height
+  through, or it would have reintroduced R18. 4 cases; verified in the browser under a dark theme at
+  both widths, with the 10,600-entry directory still scrolling inside the panel (scope 543px = shell
+  543px, page not overflowing).
+- 2026-08-15: TASK-004's README half done, split across the two PRs so each documents its own layer:
+  `packages/core/README.md` for the client (four bases, the four contract differences, and what
+  `complete: false` alongside `total: 0` means), `packages/react/README.md` for the component (the same
+  four bases as a props table, the bounded-height requirement with the 244,846px measurement, and why
+  `flex: 1` plus `height` yields neither), plus root README links. All six of TASK-004's README
+  criteria are met, including the two it names explicitly — no `apiKey` to a relay, and Agent Hub
+  prefixing Directory paths already.

@@ -200,8 +200,10 @@ None outstanding.
    keystroke after the flip issued a real write. Minor 5 is withdrawn; the defect and its fix are logged
    on BUILD-061.
 2. **R11 was a false pass.** It was recorded as "`locale` / `theme` apply without a Chatbot provider —
-   Pass". `locale` did not reach the file viewer at all, and **`theme` is not implemented** — the prop
-   does not exist. The `locale` half is now fixed and tested; `theme` remains outstanding.
+   Pass". `locale` did not reach the file viewer at all, and **`theme` was not implemented** — the prop
+   did not exist. Both are now real and tested: `locale` reaches the viewer, and `theme` rides an
+   `AsgardThemeScope` the panel establishes unconditionally — a host that passes no theme still needs
+   the tokens, and that was the broken case, not the configured one.
 3. **R3 / R12 were passing against a client that could silently truncate.** Confirmed by probe: a
    response with no `paging` reported 1000 of 3000 files as complete, and a relay ignoring `page`
    returned triplicated entries as complete. Both now detected; see BUILD-061's log.
