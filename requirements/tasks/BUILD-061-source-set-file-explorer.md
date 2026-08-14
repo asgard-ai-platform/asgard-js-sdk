@@ -4,11 +4,12 @@
 
 - Task ID: `BUILD-061`
 - Status: `done`
-- Issue: `https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/79` (architecture deviation, this
-  cycle's governing decision) · `https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/74`
-  (toolbar extension point) · spec batch
-  `https://github.com/asgard-ai-platform/asgard-sdk-pm/pull/60`. Downstream consumer:
-  `asgard-ai-platform/asgard-odin-pm#439` (UC-032).
+- Issue: `https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/76` (F-025),
+  `.../issues/77` (F-026, UI half), `.../issues/78` (TASK-004) — **all opened 2026-08-14, after this
+  task was done**; until then the batch existed only as spec files inside the merged PR #60. Governing
+  decisions: `.../issues/79` (compose rather than duplicate — still unanswered, and #76's text still
+  describes the superseded approach, so a note was left there) and `.../issues/74` (toolbar slot
+  withdrawn). Downstream consumer: `asgard-ai-platform/asgard-odin-pm#439` (UC-032).
 - Source spec: `references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-025-sourceset-file-explorer-元件.md`
   (all ACs) + `.../F-026-sourceset-volume-大目錄分頁載入.md` (UI half) +
   `.../tasks/TASK-004-sourceset-file-explorer-demo-route-與接入文件.md` (demo route only; the README is
