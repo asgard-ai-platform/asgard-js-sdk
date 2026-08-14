@@ -1,6 +1,6 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAsgardTemplateContext } from '../../context/asgard-template-context';
-import { t } from '../../i18n';
+import { Locale, t } from '../../i18n';
 import { StreamdownClient } from '../templates/text-template/streamdown-client';
 import { ArrowLeftIcon, CodeIcon, DownloadIcon, EyeIcon, CircleAlertIcon, RefreshIcon } from './icons';
 import { Spinner } from '../spinner';
@@ -22,6 +22,8 @@ export interface FileViewProps {
   onSaveFile?: FsSaveFile;
   /** Show the source, but never an editable buffer (F-025). */
   readOnly?: boolean;
+  /** Overrides the surrounding template context, for an assembly mounted with no Chatbot above it. */
+  locale?: Locale;
   /** Watch this file (≈ `fs/watch` SSE) so an agent-side write reloads the view (AC3). */
   watchFile?: FsWatchFile;
   /** Report editing / unsaved-changes state so the host can guard mid-edit panel yanks (F-021 AC10). */
@@ -59,7 +61,6 @@ function kindOf(ext: string): FileKind {
  * available alongside it. Reports dirty state (AC10).
  */
 export function FileView(props: FileViewProps): ReactNode {
-  const { locale = 'en-US' } = useAsgardTemplateContext();
   const {
     sandboxName,
     file,
@@ -71,7 +72,13 @@ export function FileView(props: FileViewProps): ReactNode {
     downloadDisabled,
     onBack,
     readOnly,
+    locale: localeProp,
   } = props;
+  // The viewer gets composed into assemblies with no Chatbot above them, so the template context alone
+  // is not enough — its default is `en-US`, which produced a panel whose tree was translated and whose
+  // file header was not.
+  const { locale: contextLocale = 'en-US' } = useAsgardTemplateContext();
+  const locale = localeProp ?? contextLocale;
   const ext = extOf(file.name);
   const kind = kindOf(ext);
   const canToggle = kind !== 'image';
@@ -143,19 +150,35 @@ export function FileView(props: FileViewProps): ReactNode {
 
   // Edit → debounced save (≈ PUT fs/file).
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleSave = (val: string): void => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
+  // Memoized on the saver's identity so the `body` memo below can list it as a dependency and mean it.
+  // As a plain per-render function it could not be listed without defeating the memo — and leaving it
+  // out is what let a stale closure keep writing through a saver the panel had already withdrawn.
+  const scheduleSave = useCallback(
+    (val: string): void => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
 
-    saveTimer.current = setTimeout(() => {
-      void Promise.resolve(onSaveFile?.(sandboxName, file.path, val)).then(() => setDirty(false));
-    }, 400);
-  };
+      saveTimer.current = setTimeout(() => {
+        void Promise.resolve(onSaveFile?.(sandboxName, file.path, val)).then(() => setDirty(false));
+      }, 400);
+    },
+    [onSaveFile, sandboxName, file.path],
+  );
 
   useEffect(() => {
     return (): void => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, []);
+
+  // A save can already be waiting out its debounce when permission is withdrawn. Dropping it is the
+  // point of withdrawing — otherwise one last write lands after the panel already says "read only".
+  useEffect(() => {
+    if (canEdit) return;
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    saveTimer.current = null;
+  }, [canEdit]);
 
   const body = useMemo((): ReactNode => {
     if (content === null && !error) {
@@ -202,7 +225,7 @@ export function FileView(props: FileViewProps): ReactNode {
         }}
       />
     );
-  }, [content, error, kind, mode, file.name, ext, locale]);
+  }, [content, error, kind, mode, file.name, ext, locale, canEdit, scheduleSave]);
 
   return (
     <div className={styles.root}>

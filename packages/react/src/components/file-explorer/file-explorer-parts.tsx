@@ -287,7 +287,8 @@ export function FileExplorerBody({ children }: { children: ReactNode }): ReactNo
 
 /** The single-file view; renders nothing until a file is opened. */
 export function FileExplorerView(): ReactNode {
-  const { openFile, activeSourceId, providers, controller, setOpenFile, actDownload, readOnly } = useFileExplorer();
+  const { openFile, activeSourceId, providers, controller, setOpenFile, actDownload, readOnly, locale } =
+    useFileExplorer();
 
   if (!openFile || !activeSourceId) return null;
 
@@ -299,6 +300,7 @@ export function FileExplorerView(): ReactNode {
       // Both: `readOnly` changes what the viewer offers, and withholding the saver makes a stray save
       // impossible even if something slipped past that.
       readOnly={readOnly}
+      locale={locale}
       onSaveFile={readOnly ? undefined : providers.saveFile}
       watchFile={providers.watchFile}
       onDirtyChange={controller.setEditingDirty}

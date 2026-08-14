@@ -98,7 +98,7 @@ export function installVolumeMock(): () => void {
     dirs.delete(path);
   };
 
-  const handle = (url: URL, method: string, body: BodyInit | null | undefined): Response => {
+  const handle = async (url: URL, method: string, body: BodyInit | null | undefined): Promise<Response> => {
     const op = url.pathname.slice(url.pathname.lastIndexOf('/') + 1);
     const path = url.searchParams.get('path') ?? '';
 
@@ -138,9 +138,13 @@ export function installVolumeMock(): () => void {
         return json({ error: 'already exists' }, 409);
       }
 
+      // `AsgardSourceSetClient.write` always appends a Blob, and FormData hands a Blob back as a `File`
+      // — never a string. Reading it with a `typeof … === 'string'` test stored an empty file for every
+      // save and upload, silently, which is worse than an error: the demo looked like it worked and
+      // then showed you a blank file.
       const form = body instanceof FormData ? body : null;
       const picked = form?.get('file');
-      const text = typeof picked === 'string' ? picked : '';
+      const text = typeof picked === 'string' ? picked : picked ? await picked.text() : '';
       files.set(path, text);
       insert(path, file(baseOf(path), text.length));
 
@@ -188,7 +192,7 @@ export function installVolumeMock(): () => void {
 
     // Async, but with no invented latency (§7): a paged walk is many round trips, so the loading state
     // is visible on its own without a fake delay propping it up.
-    return Promise.resolve(handle(new URL(href), init?.method ?? 'GET', init?.body));
+    return handle(new URL(href), init?.method ?? 'GET', init?.body);
   }) as typeof fetch;
 
   return (): void => {
