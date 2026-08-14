@@ -13,6 +13,7 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
   const { listDir } = providers;
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
   const [notLoaded, setNotLoaded] = useState(0);
+  const [maybeMore, setMaybeMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,9 +29,13 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
         if (cancelled) return;
 
         setEntries(sortEntries(result.entries.map(e => ({ ...e, path: joinPath(dirPath, e.name) }))));
-        // F-026 — a source that can count says how many it held back. A source that cannot (the sandbox
-        // fs API answers `truncated` with no total) reports 0 and the line stays away.
-        setNotLoaded(Math.max(0, (result.totalEntries ?? 0) - result.entries.length));
+
+        // F-026 — three states, not two. A source that can count says how many it held back; one that
+        // knows it is short but not by how much (a relay that sent a full page and no paging) still has
+        // to say so; and a source that says nothing gets today's silence.
+        const shortfall = Math.max(0, (result.totalEntries ?? 0) - result.entries.length);
+        setNotLoaded(shortfall);
+        setMaybeMore(result.complete === false && shortfall === 0);
       })
       .catch(e => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -75,9 +80,9 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
       {entries.map(entry => (
         <TreeNode key={entry.path} entry={entry} depth={depth} />
       ))}
-      {notLoaded > 0 && (
+      {(notLoaded > 0 || maybeMore) && (
         <div className={styles.emptyDir} style={pad}>
-          {t(locale, 'fileExplorer.notLoaded', { n: notLoaded })}
+          {notLoaded > 0 ? t(locale, 'fileExplorer.notLoaded', { n: notLoaded }) : t(locale, 'fileExplorer.maybeMore')}
         </div>
       )}
     </>

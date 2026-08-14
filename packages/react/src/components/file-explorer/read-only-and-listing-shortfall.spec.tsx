@@ -298,6 +298,35 @@ describe('listDir shortfall (F-026 UI half)', () => {
     expect(screen.getByText(t('en-US', 'fileExplorer.notLoaded', { n: 2999 }))).toBeTruthy();
   });
 
+  it('says so when a source knows it is short but not by how much', async () => {
+    // A relay that returns a full page and no paging at all: the client cannot tell whether more
+    // exists, and staying quiet would present a partial listing as a whole one.
+    const unverifiable = async (): Promise<FsListResult> => ({
+      entries: [{ name: 'a.txt', isDir: false, sizeBytes: 5, mtimeUnix: 0, mode: 420 }],
+      truncated: true,
+      totalEntries: 0,
+      complete: false,
+    });
+    render(<Harness providers={{ ...ALL_PROVIDERS, listDir: unverifiable }} />);
+    await screen.findByText('a.txt');
+
+    expect(screen.getByText(t('en-US', 'fileExplorer.maybeMore'))).toBeTruthy();
+  });
+
+  it('prefers the exact count over the vague line when the source can count', async () => {
+    const capped = async (): Promise<FsListResult> => ({
+      entries: [{ name: 'a.txt', isDir: false, sizeBytes: 5, mtimeUnix: 0, mode: 420 }],
+      truncated: true,
+      totalEntries: 40,
+      complete: false,
+    });
+    render(<Harness providers={{ ...ALL_PROVIDERS, listDir: capped }} />);
+    await screen.findByText('a.txt');
+
+    expect(screen.getByText(t('en-US', 'fileExplorer.notLoaded', { n: 39 }))).toBeTruthy();
+    expect(screen.queryByText(t('en-US', 'fileExplorer.maybeMore'))).toBeNull();
+  });
+
   it('shows nothing extra when the provider reports no shortfall — the sandbox path is unchanged', async () => {
     render(<Harness />);
     await screen.findByText('a.txt');

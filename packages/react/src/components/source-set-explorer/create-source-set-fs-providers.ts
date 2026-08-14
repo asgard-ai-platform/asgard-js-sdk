@@ -44,9 +44,9 @@ export function toVolumePath(explorerPath: string): string {
 export function createSourceSetFsProviders(client: AsgardSourceSetClient): SourceSetFsProviders {
   return {
     listDir: async (_sourceId: string, path: string): Promise<FsListResult> => {
-      const { entries, total, truncatedAtCap } = await client.listAll(toVolumePath(path));
+      const { entries, total, complete } = await client.listAll(toVolumePath(path));
 
-      return { entries, truncated: truncatedAtCap, totalEntries: total };
+      return { entries, truncated: !complete, totalEntries: total, complete };
     },
     readFile: async (_sourceId: string, path: string): Promise<string> => {
       const { content } = await client.read(toVolumePath(path));

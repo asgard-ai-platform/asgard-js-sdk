@@ -192,6 +192,20 @@ None outstanding.
    content area is `min-height: auto`, and on a flex item `flex: 1` beats `height` in the main axis, so
    asking for both got neither. Fixed in the route (`flex: none; height: 70vh`); re-measured at 543px.
 
+### Corrected after this review (found by a later audit)
+
+1. **R1 was still passing wrongly.** This review recorded R1 as Pass after fixing the viewer's _initial_
+   render, and Minor 5 blamed CodeMirror for not reacting to a live `readOnly` flip. Both were wrong:
+   the cause was a missing memo dependency in the viewer, and the consequence was not cosmetic — a
+   keystroke after the flip issued a real write. Minor 5 is withdrawn; the defect and its fix are logged
+   on BUILD-061.
+2. **R11 was a false pass.** It was recorded as "`locale` / `theme` apply without a Chatbot provider —
+   Pass". `locale` did not reach the file viewer at all, and **`theme` is not implemented** — the prop
+   does not exist. The `locale` half is now fixed and tested; `theme` remains outstanding.
+3. **R3 / R12 were passing against a client that could silently truncate.** Confirmed by probe: a
+   response with no `paging` reported 1000 of 3000 files as complete, and a relay ignoring `page`
+   returned triplicated entries as complete. Both now detected; see BUILD-061's log.
+
 ### Important (should fix before release)
 
 1. **`R14` has never run against a real volume** — see above. This is the largest remaining gap in the

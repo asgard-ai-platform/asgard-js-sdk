@@ -40,6 +40,17 @@ export interface FsListResult {
    * omits it gets today's behavior, cap flag and all.
    */
   totalEntries?: number;
+  /**
+   * `false` when this listing is known not to be the whole directory, **or cannot be shown to be**.
+   *
+   * Separate from `totalEntries` because the two answer different questions. A source may know it is
+   * short without knowing by how much — a relay that returns a full page and no paging at all is the
+   * case that matters — and the tree words those two situations differently rather than staying quiet
+   * about the second.
+   *
+   * Optional: `undefined` reads as complete, which is what every source did before F-026.
+   */
+  complete?: boolean;
 }
 
 /** List a directory (≈ `GET fs/list`). */

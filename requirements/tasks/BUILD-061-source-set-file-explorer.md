@@ -327,3 +327,38 @@ Files:
   by a `fetch` interceptor — which does exercise the real client and the real adapter, but not the real
   backend. `apps/react-demo/.env` still has no volume endpoint or token. Combined with BUILD-060, whose
   37 cases all mock `fetch`, **nothing in this batch has yet touched a live volume.**
+- 2026-08-15: **Three independent audits run after this task was marked done, and they were right to
+  be.** Two AC audits (core / react) plus an adversarial bug hunt over the diff; every finding below was
+  reproduced first-hand rather than taken on report.
+  - **`readOnly` could be bypassed and wrote to the volume.** Turning it on while a file was open left
+    the buffer typable _and saving_: the viewer's body memo omitted `canEdit`, so React reused the
+    previous element, whose `onChange` closed over the pre-flip saver — the "withhold the saver" defence
+    one layer up never got the chance to apply. Same staleness meant a rotated key kept saving through
+    the old client. Fixed by stabilising `scheduleSave` first (a per-render function could not be listed
+    without defeating the memo, which is presumably why it was omitted), then declaring both, plus
+    dropping any pending debounced save the moment permission is withdrawn. 4 new cases.
+    **eslint had been reporting this all along** — its text went from one missing dep to two — but the
+    check being made was "0 errors, 4 warnings", a count, which did not move.
+  - **`locale` never reached the viewer**, which read the chat template context and so defaulted to
+    English: a standalone panel rendered its tree in one language and its file header in another.
+  - **The demo mock stored an empty file for every write**, testing the FormData entry with
+    `typeof === 'string'` when a Blob comes back as a `File`. Editing a file and reopening it showed it
+    blank. The client was sending the right bytes, so the demo could never have verified the write path
+    it exists to demonstrate — TASK-004 AC3.
+- 2026-08-15: **F-026 hardened after the audit showed two silent-truncation shapes** (option C, chosen
+  explicitly over "throw" and over "always warn"). The old `list` synthesized `paging` from
+  `entries.length` when the response carried none; `listAll` then read that as "the whole directory" and
+  reported 1000 of 3000 files as complete. And `paging.index` was never checked, so a relay that ignores
+  `page` yielded duplicates — measured `f0,f1,f2,f0,f1,f2,f0,f1,f2` reported as complete.
+  `SourceSetListResult.paging` is now `| null` (never invented); `listAll` returns `complete` in place of
+  `truncatedAtCap` — a name that could not describe the three ways a walk falls short. A full page with
+  no paging is unanswerable and says so; a short one is genuinely the whole directory; a mismatched index
+  stops before appending, because duplicates are worse than a shortfall. The rename was taken now
+  because the type is unreleased; after release it would need a `@deprecated` cycle.
+  UI: `FsListResult.complete` (optional, absent = today's behavior) and a second wording for
+  "short by an unknown amount". 5 core + 2 react cases; three mutations each caught.
+- 2026-08-15: Re-measured after the change — 1,200 entries (the ≥1000 bar F-026 names) render in **74ms**
+  and correctly show no shortfall line. The demo's deliberately-heavy 10,600 fixture takes ~3.5s on a
+  first expand and ~0.5s on a re-expand; the walk itself is 10 requests / 2ms, so it is all first-mount
+  DOM cost. I could not account for the whole gap against the 466ms measured on 2026-08-14 under
+  nominally the same procedure, so treat the first-expand figure as approximate.
