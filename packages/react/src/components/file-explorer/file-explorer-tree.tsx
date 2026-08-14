@@ -12,6 +12,7 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
   const { activeSourceId, providers, refreshKey, locale } = useFileExplorer();
   const { listDir } = providers;
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
+  const [notLoaded, setNotLoaded] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +28,9 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
         if (cancelled) return;
 
         setEntries(sortEntries(result.entries.map(e => ({ ...e, path: joinPath(dirPath, e.name) }))));
+        // F-026 — a source that can count says how many it held back. A source that cannot (the sandbox
+        // fs API answers `truncated` with no total) reports 0 and the line stays away.
+        setNotLoaded(Math.max(0, (result.totalEntries ?? 0) - result.entries.length));
       })
       .catch(e => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -71,6 +75,11 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
       {entries.map(entry => (
         <TreeNode key={entry.path} entry={entry} depth={depth} />
       ))}
+      {notLoaded > 0 && (
+        <div className={styles.emptyDir} style={pad}>
+          {t(locale, 'fileExplorer.notLoaded', { n: notLoaded })}
+        </div>
+      )}
     </>
   );
 }

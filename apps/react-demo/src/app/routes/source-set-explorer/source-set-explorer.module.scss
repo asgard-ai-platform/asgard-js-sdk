@@ -1,0 +1,82 @@
+.stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.75rem;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.check {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.hint {
+  color: #6b7280;
+}
+
+.errorBar {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+}
+
+// Side by side, not a toggle: the point is comparing the two widths, and a toggle makes you hold one
+// of them in your head (AGENTS.md → Demo application).
+//
+// The height is definite and `flex` is off, and both halves of that are load-bearing. The explorer is
+// `height: 100%` with the tree scrolling inside it, so it needs a parent whose height is already
+// known. Two things conspire against that here: `DemoWrapper`'s content area is a row flex with
+// `min-height: auto`, so it grows with its children rather than bounding them; and on a flex item
+// `flex: 1` wins over `height` in the main axis, so asking for both silently gets neither.
+//
+// Measured before the fix: expanding the 10,600-entry directory made the panel **244,846px** tall,
+// with the tree not scrolling at all. A host embedding this component owes it the same bounded box.
+.shells {
+  display: flex;
+  flex: none;
+  gap: 1rem;
+  height: 70vh;
+  min-height: 0;
+}
+
+.narrow {
+  display: flex;
+  flex: 0 0 360px;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wide {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.shellTitle {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+// `min-height: 0` matters: without it the flex child refuses to shrink and the tree runs off the page
+// instead of scrolling inside its own box.
+.narrowBox,
+.wideBox {
+  flex: 1;
+  min-height: 0;
+}

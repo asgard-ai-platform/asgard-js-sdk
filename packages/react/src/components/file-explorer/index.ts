@@ -8,6 +8,8 @@ import {
   FileExplorerEmptyState,
   FileExplorerHeader,
   FileExplorerHeaderRow,
+  FileExplorerNotice,
+  FileExplorerReadOnlyBadge,
   FileExplorerRoot,
   FileExplorerSourceSelect,
   FileExplorerToolbar,
@@ -17,6 +19,7 @@ import {
 
 export { FileExplorerPanel } from './file-explorer-panel';
 export type { FileExplorerPanelProps, FsListDir } from './file-explorer-panel';
+export { fsErrorMessage } from './fs-error-message';
 export { FileView } from './file-view';
 export type { FileViewProps } from './file-view';
 export { createSandboxFsProviders } from './create-sandbox-fs-providers';
@@ -59,6 +62,8 @@ export const FileExplorer = {
   Root: FileExplorerRoot,
   Header: FileExplorerHeader,
   HeaderRow: FileExplorerHeaderRow,
+  ReadOnlyBadge: FileExplorerReadOnlyBadge,
+  Notice: FileExplorerNotice,
   SourceSelect: FileExplorerSourceSelect,
   CloseButton: FileExplorerCloseButton,
   Cwd: FileExplorerCwd,

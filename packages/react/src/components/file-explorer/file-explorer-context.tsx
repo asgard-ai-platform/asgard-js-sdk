@@ -13,13 +13,38 @@ import {
 import { FileExplorerController, SourceViewState } from '../../hooks/use-file-explorer-controller';
 import { useAsgardTemplateContext } from '../../context/asgard-template-context';
 import { Locale, t } from '../../i18n';
+import { ContextMenuItem } from './context-menu';
 import { useFileExplorerDialog } from './file-explorer-dialog';
+import { fsErrorMessage } from './fs-error-message';
 import { ancestorDirs, baseName, joinPath, parentDir, uniqueName } from './paths';
 import { FsEntry, FsProviders, FsSource } from './types';
 
 export type Clipboard = { op: 'copy' | 'cut'; entry: FsEntry } | null;
 export type MenuTarget = { kind: 'file' | 'dir'; entry: FsEntry } | { kind: 'background' };
 export type OpenMenu = { x: number; y: number; target: MenuTarget } | null;
+
+/**
+ * The actions `readOnly` removes, keyed as the context menu keys them. Copy and cut go with the rest:
+ * a clipboard you can fill but never paste is dead UI.
+ *
+ * Hiding is what F-025 asks for, and it is a different rule from the existing "nothing is selected"
+ * one, which keeps *disabling*. Absent permission removes the action; absent selection parks it.
+ */
+const MUTATING_ACTION_KEYS: ReadonlySet<string> = new Set([
+  'newfile',
+  'newfolder',
+  'upload',
+  'copy',
+  'cut',
+  'paste',
+  'rename',
+  'delete',
+]);
+
+/** Drop the mutating entries from built context-menu sections, then drop any section left empty. */
+export function withoutMutatingItems(sections: ContextMenuItem[][]): ContextMenuItem[][] {
+  return sections.map(section => section.filter(item => !MUTATING_ACTION_KEYS.has(item.key))).filter(s => s.length > 0);
+}
 
 /**
  * Everything the File Explorer parts need. Holding it here — rather than inside one panel component —
@@ -39,6 +64,11 @@ export interface FileExplorerContextValue {
   onClose?: () => void;
   onNudge?: () => void | Promise<void>;
   nudgeDisabled?: boolean;
+  /** Hide every mutating action, in both the toolbar and the menu (F-025). */
+  readOnly: boolean;
+  /** The current failure sentence, or `null`. Rendered by `<FileExplorer.Notice>` (F-025). */
+  notice: string | null;
+  dismissNotice: () => void;
 
   // --- state ---
   expanded: Set<string>;
@@ -113,14 +143,44 @@ export interface FileExplorerProviderProps {
   nudgeDisabled?: boolean;
   /** When provided, the header shows a close (X) button. */
   onClose?: () => void;
+  /**
+   * Hide every mutating action — new file / new folder / upload / copy / cut / paste / rename / delete —
+   * in both the toolbar and the right-click menu, and keep the FileView from editing (F-025).
+   *
+   * Distinct from a missing provider, which *disables* the action instead: "this source cannot do that"
+   * and "you may not do that here" read differently, and only the second should make the button vanish.
+   */
+  readOnly?: boolean;
+  /**
+   * Called with the untouched failure whenever a file action fails, for the host's own logging or
+   * toast. The panel shows its own sentence either way — this is in addition, not instead.
+   */
+  onError?: (error: unknown) => void;
+  /**
+   * Override the locale. Defaults to the surrounding template context, which is how the in-chat panel
+   * gets it; a standalone assembly mounted on a page with no Chatbot passes its own.
+   */
+  locale?: Locale;
   children: ReactNode;
 }
 
 export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNode {
-  const { sources, controller, providers, basePath, onNudge, nudgeDisabled, onClose, children } = props;
-  const { listDir, saveFile, mkdir, remove, copy, move, upload, download } = providers;
+  const {
+    sources,
+    controller,
+    providers,
+    basePath,
+    onNudge,
+    nudgeDisabled,
+    onClose,
+    readOnly = false,
+    onError,
+    children,
+  } = props;
+  const { listDir, saveFile, createFile, mkdir, remove, copy, move, upload, download } = providers;
 
-  const { locale = 'en-US' } = useAsgardTemplateContext();
+  const { locale: contextLocale = 'en-US' } = useAsgardTemplateContext();
+  const locale = props.locale ?? contextLocale;
   const { dialog, requestInput, requestConfirm } = useFileExplorerDialog(locale);
 
   // A selected id that is not in `sources` falls back to the first source rather than resolving to no
@@ -155,6 +215,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   const [clipboard, setClipboard] = useState<Clipboard>(null);
   const [menu, setMenu] = useState<OpenMenu>(null);
   const [nudging, setNudging] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const uploadDirRef = useRef<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -223,31 +284,53 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   }, [controller.requestedFile, activeSourceId, rootPath, updateView]);
 
   // --- actions (toolbar + context menu share these) ---
+  const dismissNotice = useCallback((): void => setNotice(null), []);
+
+  /**
+   * Name a failure: a sentence in the panel plus the untouched error to the host (F-025).
+   *
+   * Until BUILD-061 these were swallowed on the grounds that a refetch would show the truth. It does
+   * not: a delete refused with 403 and a delete that succeeded both end as a re-listed tree, so the
+   * only signal was the file still being there. Silence was the bug.
+   */
+  const report = useCallback(
+    (error: unknown): void => {
+      setNotice(fsErrorMessage(locale, error));
+      onError?.(error);
+    },
+    [locale, onError],
+  );
+
   const run = useCallback(
     async (p: Promise<void> | void, affectedDir?: string): Promise<void> => {
       try {
         await Promise.resolve(p);
+        // Clear on success so a fixed problem stops being reported; the tree refetches either way.
+        setNotice(null);
         if (affectedDir) expand(affectedDir);
 
         bumpRefresh();
-      } catch {
-        // Surface via the tree's own error rows on refetch; nothing to roll back here.
+      } catch (error) {
+        report(error);
         bumpRefresh();
       }
     },
-    [expand, bumpRefresh],
+    [expand, bumpRefresh, report],
   );
 
   const actNewFile = useCallback(
     async (dir: string): Promise<void> => {
-      if (!activeSourceId || !saveFile) return;
+      // `createFile` first: it is the one that refuses to overwrite (F-025 wants a clash to 409, not to
+      // silently replace the file). A source without it keeps today's `saveFile` behavior.
+      const create = createFile ?? saveFile;
+      if (!activeSourceId || !create) return;
 
       const name = await requestInput({ title: t(locale, 'fileExplorer.newFilePrompt'), defaultValue: 'untitled.txt' });
       if (!name) return;
 
-      void run(saveFile(activeSourceId, joinPath(dir, name), ''), dir);
+      void run(create(activeSourceId, joinPath(dir, name), ''), dir);
     },
-    [activeSourceId, saveFile, run, requestInput, locale],
+    [activeSourceId, createFile, saveFile, run, requestInput, locale],
   );
   const actNewFolder = useCallback(
     async (dir: string): Promise<void> => {
@@ -337,9 +420,12 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   );
   const actDownload = useCallback(
     (entry: FsEntry): void => {
-      if (activeSourceId && download) void download(activeSourceId, entry.path, entry.name);
+      // Not through `run`: a download changes nothing, so re-listing the tree would be pure waste. It
+      // still reports, because a download that quietly does nothing is the same puzzle as a delete that does.
+      if (activeSourceId && download)
+        void Promise.resolve(download(activeSourceId, entry.path, entry.name)).catch(report);
     },
-    [activeSourceId, download],
+    [activeSourceId, download, report],
   );
 
   const handleNudge = useCallback(async (): Promise<void> => {
@@ -387,6 +473,9 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       onClose,
       onNudge,
       nudgeDisabled,
+      readOnly,
+      notice,
+      dismissNotice,
       expanded,
       selectedPath,
       selectedEntry,
@@ -428,6 +517,9 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       onClose,
       onNudge,
       nudgeDisabled,
+      readOnly,
+      notice,
+      dismissNotice,
       expanded,
       selectedPath,
       selectedEntry,

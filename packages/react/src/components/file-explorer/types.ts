@@ -31,6 +31,15 @@ export interface FsListResult {
   entries: SandboxFsDirEntry[];
   /** True when the backend capped the listing. */
   truncated: boolean;
+  /**
+   * How many entries the directory holds in total, when the source can say (F-026). The tree shows the
+   * difference against `entries.length` as "N more items not loaded" — a capped listing that just stops
+   * looks complete, which is the worst way to be wrong.
+   *
+   * Optional because the sandbox fs API cannot say: it answers `truncated` and no count. A source that
+   * omits it gets today's behavior, cap flag and all.
+   */
+  totalEntries?: number;
 }
 
 /** List a directory (≈ `GET fs/list`). */
@@ -71,6 +80,16 @@ export interface FsProviders {
   listDir: FsListDir;
   readFile?: FsReadFile;
   saveFile?: FsSaveFile;
+  /**
+   * Create a file, **failing rather than overwriting** when the path is taken (≈ `create_only=true`,
+   * which answers 409). Used only by the new-file action; editing an open file always goes through
+   * `saveFile`, which must overwrite.
+   *
+   * Optional: a source that omits it has new-file fall back to `saveFile`, which is what the sandbox
+   * panel has always done. It exists because F-025 asks a name clash to say "already exists" rather
+   * than quietly replace someone's file.
+   */
+  createFile?: FsSaveFile;
   watchFile?: FsWatchFile;
   mkdir?: FsMutatePath;
   /** Delete a file or directory — routed by `isDir` (the two often map to different endpoints). */

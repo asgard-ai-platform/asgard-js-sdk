@@ -2,10 +2,11 @@ import { ReactNode } from 'react';
 import { t } from '../../i18n';
 import { Spinner } from '../spinner';
 import { ContextMenu, ContextMenuItem } from './context-menu';
-import { FileExplorerContextValue, MenuTarget, useFileExplorer } from './file-explorer-context';
+import { FileExplorerContextValue, MenuTarget, useFileExplorer, withoutMutatingItems } from './file-explorer-context';
 import { FileExplorerTree } from './file-explorer-tree';
 import { FileView } from './file-view';
 import {
+  CircleAlertIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ClipboardPasteIcon,
@@ -152,43 +153,54 @@ export function FileExplorerToolbar(): ReactNode {
     actPaste,
     setClipboard,
     bumpRefresh,
+    readOnly,
   } = ctx;
-  const { saveFile, mkdir, upload, download, move, remove } = providers;
+  const { saveFile, createFile, mkdir, upload, download, move, remove } = providers;
+  const canCreateFile = Boolean(createFile ?? saveFile);
 
   if (openFile) return null;
 
   return (
     <div className={styles.toolbar} role="toolbar" aria-label={t(locale, 'fileExplorer.toolbar')}>
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => actNewFile(targetDir)}
-        disabled={!saveFile}
-        aria-label={t(locale, 'fileExplorer.newFile')}
-        title={t(locale, 'fileExplorer.newFile')}
-      >
-        <FilePlusIcon size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => actNewFolder(targetDir)}
-        disabled={!mkdir}
-        aria-label={t(locale, 'fileExplorer.newFolder')}
-        title={t(locale, 'fileExplorer.newFolder')}
-      >
-        <FolderPlusIcon size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => actUpload(targetDir)}
-        disabled={!upload}
-        aria-label={t(locale, 'fileExplorer.upload')}
-        title={t(locale, 'fileExplorer.upload')}
-      >
-        <UploadIcon size={16} />
-      </button>
+      {/*
+        `readOnly` removes the mutating actions rather than grey them out — see the prop's own doc. They
+        are wrapped in two groups rather than eight conditionals so the separator leaves with the group
+        it separates; a lone divider between Download and Refresh is what happens otherwise.
+      */}
+      {!readOnly && (
+        <>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => actNewFile(targetDir)}
+            disabled={!canCreateFile}
+            aria-label={t(locale, 'fileExplorer.newFile')}
+            title={t(locale, 'fileExplorer.newFile')}
+          >
+            <FilePlusIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => actNewFolder(targetDir)}
+            disabled={!mkdir}
+            aria-label={t(locale, 'fileExplorer.newFolder')}
+            title={t(locale, 'fileExplorer.newFolder')}
+          >
+            <FolderPlusIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => actUpload(targetDir)}
+            disabled={!upload}
+            aria-label={t(locale, 'fileExplorer.upload')}
+            title={t(locale, 'fileExplorer.upload')}
+          >
+            <UploadIcon size={16} />
+          </button>
+        </>
+      )}
       <button
         type="button"
         className={styles.toolBtn}
@@ -199,57 +211,61 @@ export function FileExplorerToolbar(): ReactNode {
       >
         <DownloadIcon size={16} />
       </button>
-      <span className={styles.toolSep} aria-hidden />
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => selectedEntry && setClipboard({ op: 'copy', entry: selectedEntry })}
-        disabled={!selectedEntry}
-        aria-label={t(locale, 'fileExplorer.copy')}
-        title={t(locale, 'fileExplorer.copy')}
-      >
-        <CopyIcon size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => selectedEntry && setClipboard({ op: 'cut', entry: selectedEntry })}
-        disabled={!selectedEntry}
-        aria-label={t(locale, 'fileExplorer.cut')}
-        title={t(locale, 'fileExplorer.cut')}
-      >
-        <ScissorsIcon size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => void actPaste(targetDir)}
-        disabled={!clipboard}
-        aria-label={t(locale, 'fileExplorer.paste')}
-        title={pasteLabel}
-      >
-        <ClipboardPasteIcon size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.toolBtn}
-        onClick={() => selectedEntry && actRename(selectedEntry)}
-        disabled={!move || !selectedEntry}
-        aria-label={t(locale, 'fileExplorer.rename')}
-        title={t(locale, 'fileExplorer.rename')}
-      >
-        <PencilIcon size={16} />
-      </button>
-      <button
-        type="button"
-        className={`${styles.toolBtn} ${styles.toolDanger}`}
-        onClick={() => selectedEntry && actDelete(selectedEntry)}
-        disabled={!remove || !selectedEntry}
-        aria-label={t(locale, 'fileExplorer.delete')}
-        title={t(locale, 'fileExplorer.delete')}
-      >
-        <TrashIcon size={16} />
-      </button>
+      {!readOnly && (
+        <>
+          <span className={styles.toolSep} aria-hidden />
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => selectedEntry && setClipboard({ op: 'copy', entry: selectedEntry })}
+            disabled={!selectedEntry}
+            aria-label={t(locale, 'fileExplorer.copy')}
+            title={t(locale, 'fileExplorer.copy')}
+          >
+            <CopyIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => selectedEntry && setClipboard({ op: 'cut', entry: selectedEntry })}
+            disabled={!selectedEntry}
+            aria-label={t(locale, 'fileExplorer.cut')}
+            title={t(locale, 'fileExplorer.cut')}
+          >
+            <ScissorsIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => void actPaste(targetDir)}
+            disabled={!clipboard}
+            aria-label={t(locale, 'fileExplorer.paste')}
+            title={pasteLabel}
+          >
+            <ClipboardPasteIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            onClick={() => selectedEntry && actRename(selectedEntry)}
+            disabled={!move || !selectedEntry}
+            aria-label={t(locale, 'fileExplorer.rename')}
+            title={t(locale, 'fileExplorer.rename')}
+          >
+            <PencilIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={`${styles.toolBtn} ${styles.toolDanger}`}
+            onClick={() => selectedEntry && actDelete(selectedEntry)}
+            disabled={!remove || !selectedEntry}
+            aria-label={t(locale, 'fileExplorer.delete')}
+            title={t(locale, 'fileExplorer.delete')}
+          >
+            <TrashIcon size={16} />
+          </button>
+        </>
+      )}
       <span className={styles.toolSpacer} />
       <button
         type="button"
@@ -271,7 +287,7 @@ export function FileExplorerBody({ children }: { children: ReactNode }): ReactNo
 
 /** The single-file view; renders nothing until a file is opened. */
 export function FileExplorerView(): ReactNode {
-  const { openFile, activeSourceId, providers, controller, setOpenFile, actDownload } = useFileExplorer();
+  const { openFile, activeSourceId, providers, controller, setOpenFile, actDownload, readOnly } = useFileExplorer();
 
   if (!openFile || !activeSourceId) return null;
 
@@ -280,7 +296,9 @@ export function FileExplorerView(): ReactNode {
       sandboxName={activeSourceId}
       file={openFile}
       readFile={providers.readFile}
-      onSaveFile={providers.saveFile}
+      // Withholding the saver is how the viewer is told not to offer editing; `readOnly` is about
+      // permission, so it wins over whatever the source can technically do.
+      onSaveFile={readOnly ? undefined : providers.saveFile}
       watchFile={providers.watchFile}
       onDirtyChange={controller.setEditingDirty}
       // The tree's own download, not a second path: same provider call, so the bytes and the saved name are
@@ -316,7 +334,8 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
     actUpload,
     actDownload,
   } = ctx;
-  const { saveFile, mkdir, remove, move, upload, download } = providers;
+  const { saveFile, createFile, mkdir, remove, move, upload, download } = providers;
+  const canCreateFile = Boolean(createFile ?? saveFile);
   const root = rootPath ?? '/';
 
   const refreshSec: ContextMenuItem[] = [
@@ -401,7 +420,7 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
           label: t(locale, 'fileExplorer.newFile'),
           icon: <FilePlusIcon size={15} />,
           onSelect: () => actNewFile(e.path),
-          disabled: !saveFile,
+          disabled: !canCreateFile,
         },
         {
           key: 'newfolder',
@@ -467,7 +486,7 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
         label: t(locale, 'fileExplorer.newFile'),
         icon: <FilePlusIcon size={15} />,
         onSelect: () => actNewFile(root),
-        disabled: !saveFile,
+        disabled: !canCreateFile,
       },
       {
         key: 'newfolder',
@@ -491,11 +510,36 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
 /** The right-click menu; renders nothing unless one is open (and never over the file view). */
 export function FileExplorerContextMenu(): ReactNode {
   const ctx = useFileExplorer();
-  const { menu, openFile, closeMenu } = ctx;
+  const { menu, openFile, closeMenu, readOnly } = ctx;
 
   if (openFile || !menu) return null;
 
-  return <ContextMenu x={menu.x} y={menu.y} sections={buildSections(ctx, menu.target)} onClose={closeMenu} />;
+  // Filtering the built sections, rather than branching inside `buildSections`, is what keeps the menu
+  // and the toolbar hiding the same set: both read one list of mutating keys.
+  const sections = buildSections(ctx, menu.target);
+
+  return (
+    <ContextMenu
+      x={menu.x}
+      y={menu.y}
+      sections={readOnly ? withoutMutatingItems(sections) : sections}
+      onClose={closeMenu}
+    />
+  );
+}
+
+/**
+ * The "Read only" marker for the header row (F-025). An explorer whose actions are simply absent looks
+ * broken; naming the reason is the difference between "you cannot" and "it is not working".
+ *
+ * Renders nothing unless the provider was given `readOnly`, so an assembly can place it unconditionally.
+ */
+export function FileExplorerReadOnlyBadge(): ReactNode {
+  const { readOnly, locale } = useFileExplorer();
+
+  if (!readOnly) return null;
+
+  return <span className={styles.readOnlyBadge}>{t(locale, 'fileExplorer.readOnly')}</span>;
 }
 
 /**
@@ -534,6 +578,32 @@ export function FileExplorerEmptyState(): ReactNode {
 }
 
 /**
+ * The failure line (F-025). Sits between the header and the toolbar, states what went wrong in one
+ * sentence, and can be dismissed. Renders nothing when there is nothing to say.
+ */
+export function FileExplorerNotice(): ReactNode {
+  const { notice, dismissNotice, locale } = useFileExplorer();
+
+  if (!notice) return null;
+
+  return (
+    <div className={styles.notice} role="status">
+      <CircleAlertIcon size={14} />
+      <span className={styles.noticeText}>{notice}</span>
+      <button
+        type="button"
+        className={styles.noticeDismiss}
+        onClick={dismissNotice}
+        aria-label={t(locale, 'fileExplorer.dismissNotice')}
+        title={t(locale, 'fileExplorer.dismissNotice')}
+      >
+        <XIcon size={14} />
+      </button>
+    </div>
+  );
+}
+
+/**
  * Toolbar + tree/view + context menu — every behavior of the explorer below the header.
  *
  * **Assemble this rather than its parts.** Sindri's directory tab and the built-in sandbox panel differ
@@ -543,6 +613,7 @@ export function FileExplorerEmptyState(): ReactNode {
 export function FileExplorerWorkspace(): ReactNode {
   return (
     <>
+      <FileExplorerNotice />
       <FileExplorerToolbar />
       <FileExplorerBody>
         <FileExplorerTree />

@@ -1,23 +1,7 @@
 import { AsgardServiceClient, isHttpError, SandboxFsListResult } from '@asgard-js/core';
 import { FsListDir } from './file-explorer-panel';
+import { blobToDataUrl, isImagePath, triggerBlobDownload } from './fs-blob';
 import { FsReadFile, FsSaveFile, FsWatchFile } from './types';
-
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
-
-function isImagePath(path: string): boolean {
-  const i = path.lastIndexOf('.');
-
-  return i > 0 && IMAGE_EXTS.has(path.slice(i + 1).toLowerCase());
-}
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (): void => resolve(String(reader.result));
-    reader.onerror = (): void => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
 
 /** A directory mutation (mkdir / delete). */
 export type FsMutatePath = (sandboxName: string, path: string) => Promise<void>;
@@ -41,17 +25,6 @@ export interface SandboxFsProviders {
   upload: FsUpload;
   /** Download a file to the browser (`GET fs/file` → `<a download>`). */
   download: (sandboxName: string, path: string, name: string) => Promise<void>;
-}
-
-function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
 export interface SandboxFsProvidersOptions {

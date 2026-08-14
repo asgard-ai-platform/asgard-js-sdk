@@ -8,6 +8,12 @@ import styles from './home.module.scss';
 
 const demoCards = [
   {
+    title: 'SourceSet File Explorer',
+    description:
+      'F-025 / F-026 — the File Explorer on a SourceSet volume, with no chat: read-only mode, paged large directories, 409 on a name clash. Narrow and wide side by side.',
+    to: '/source-set-explorer',
+  },
+  {
     title: 'Templates',
     description: 'Explore all message template types: Text, Button, Carousel, Image, Chart, Table, and more.',
     to: '/templates',

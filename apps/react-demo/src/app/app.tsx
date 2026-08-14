@@ -65,6 +65,7 @@ import { JoinInitRoute } from './routes/join-init';
 import { StopGenerationRoute } from './routes/stop-generation';
 import { AllFeaturesRoute } from './routes/all-features';
 import { AllFeaturesWideRoute } from './routes/all-features-wide';
+import { SourceSetExplorerRoute } from './routes/source-set-explorer';
 
 export function App(): React.ReactElement {
   return (
@@ -74,6 +75,7 @@ export function App(): React.ReactElement {
         <Route path="/templates" element={<Templates />} />
         <Route path="/question-template" element={<QuestionTemplateRoute />} />
         <Route path="/canvas-card" element={<CanvasCardRoute />} />
+        <Route path="/source-set-explorer" element={<SourceSetExplorerRoute />} />
         <Route path="/data-insight-style" element={<DataInsightStyle />} />
         <Route path="/features" element={<Features />} />
         <Route path="/theme" element={<Theme />} />
