@@ -3,7 +3,7 @@
 ## Meta
 
 - Task ID: `BUILD-061`
-- Status: `in-progress`
+- Status: `done`
 - Issue: `https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/79` (architecture deviation, this
   cycle's governing decision) · `https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/74`
   (toolbar extension point) · spec batch
@@ -41,8 +41,10 @@ consumer:
 
 Building the separate explorer F-025 describes would duplicate ~2,154 lines of a module that was
 generalized for this three days earlier. The panel it warned about touching is now 133 lines of
-assembly. So this task instead makes **three additive changes** to the shared module and adds a thin
-assembly plus an adapter.
+assembly. So this task instead makes **five additive changes** to the shared module and adds a thin
+assembly plus an adapter. The plan said three; `createFile` and the error notice emerged from the ACs
+once the shared `run()` turned out to swallow every failure, and `locale` from the assembly needing to
+be translatable with no Chatbot above it. All five are inert when their prop is absent.
 
 **Already exists** (all read for the plan, none to be rewritten):
 
@@ -72,7 +74,8 @@ Each is recorded in `asgard-sdk-pm#79` for PM to fold into the ticket. Implement
 | Path spec says `packages/react/src/components/chatbot/file-explorer/` | Real path is `packages/react/src/components/file-explorer/`                                                          | The `chatbot/` segment has never existed.                                                                                                                             |
 
 `readOnly` follows the ticket literally — mutating actions are **hidden**, not disabled — while the
-existing "nothing selected" rule stays **disabled, not hidden**, as the same ticket requires.
+existing "nothing selected" rule stays **disabled, not hidden**, as the same ticket requires. Running
+the prototype confirmed the exact set: with it on, the toolbar keeps only Download and Refresh.
 
 ---
 
@@ -115,10 +118,15 @@ full-width alignment actually shows.
   delete), keep the non-mutating ones (download, refresh, open), and leave the FileView non-editable;
   when `readOnly` is absent the sandbox panel shall behave exactly as it does today, including keeping
   the existing "nothing selected → disabled, not hidden" rule. → T1, T8
-- `R2` When `FileExplorerProvider` receives `toolbarActions`, the system shall render them right-aligned
-  in the toolbar **before** Refresh, honouring each action's `disabled`, and shall render them
-  regardless of `readOnly` — an entry like Odin's "Open in Advance Editor" is a navigation, not a
-  mutation (`asgard-sdk-pm#74`). → T1, T8
+- `R2` ~~When `FileExplorerProvider` receives `toolbarActions`, the system shall render them
+  right-aligned in the toolbar before Refresh…~~ — **withdrawn during the build, not deferred.**
+  The criterion came from the written decision (§Q2 "Files tab 內工具列的次要按鈕") and UC-032
+  ("點工具列右側"). Running the approved design shows the opposite: `asgard-odin-pm-design#18`'s
+  `FilesPanel.tsx` renders "Open in Advance Editor" as its own button **above** the explorer, and the
+  chat-kit prototype's toolbar has no extension point at all. A public prop is permanent — removing one
+  later needs a `@deprecated` transition (§1.7) — so shipping a slot whose only known consumer does not
+  use it is the expensive mistake here. Corrected on `asgard-sdk-pm#74`; if PM rules for the toolbar,
+  adding it then is additive and cheap.
 - `R3` When a provider's `listDir` reports more entries than it returned, the system shall render a
   "N more items not loaded" line under that directory node instead of ending the list silently; when a
   provider reports no such shortfall the node shall look exactly as it does today. → T2, T8
@@ -165,6 +173,25 @@ full-width alignment actually shows.
   system shall pass with no errors, and `SourceSetFileExplorer` shall be reachable from the built
   `@asgard-js/react` entry after a `--skip-nx-cache` rebuild. → T10
 
+### Added during the build, from the rendered design
+
+Three criteria the ticket does not contain. Each came from running the prototype rather than reading
+about it, which is the reason they exist at all.
+
+- `R16` While `readOnly` is on, the system shall mark the header "Read only" in the panel's own locale,
+  so a toolbar stripped of its actions reads as a permission rather than a broken component. Measured
+  off the prototype's `.ssfe-badge`: 11.2px, `--text-secondary`, 1px `--border`, 4px radius. → T1, T8
+- `R17` When any file action fails, the system shall show one dismissible sentence between the header
+  and the toolbar, and shall clear it on the next success. Until this task those failures were
+  swallowed — a delete refused with 403 and a delete that worked both ended as a re-listed tree. This
+  **changes shipped sandbox behavior**, which the deviation table below records; it was authorized
+  rather than assumed. → T4, T8
+- `R18` When the host gives the panel an unbounded box, the tree shall still scroll inside the panel
+  rather than the panel growing to fit. Verified by measurement: before the demo route pinned a
+  definite height, expanding the 10,600-entry directory made the panel **244,846px** tall. The
+  component's contract is `height: 100%` plus an internally scrolling tree, so the box is the host's to
+  bound — the demo route now does, and the README (BUILD-062) has to say so. → T5, T9
+
 > The README section of TASK-004 is **BUILD-062**, so that this task's review is about behavior and the
 > next one is about the words. Nothing here is released on its own.
 
@@ -172,34 +199,34 @@ full-width alignment actually shows.
 
 ## Implementation Tasks
 
-- [ ] T1 (R1, R2): `file-explorer-context.tsx` + `file-explorer-parts.tsx` — add `readOnly` and
+- [x] T1 (R1, R2): `file-explorer-context.tsx` + `file-explorer-parts.tsx` — add `readOnly` and
       `toolbarActions` to `FileExplorerProviderProps`, expose them on the context, and consume them in
       `FileExplorerToolbar` and `FileExplorerContextMenu`. Both default to today's behavior.
-- [ ] T2 (R3, R12): `types.ts` — widen `FsListResult` with an optional shortfall count;
+- [x] T2 (R3, R12): `types.ts` — widen `FsListResult` with an optional shortfall count;
       `file-explorer-tree.tsx` — render the "N more" line after the entries; new i18n keys in all three
       locales.
-- [ ] T3 (R4–R7, R10–R12): new `components/source-set-explorer/` — `source-set-file-explorer.tsx` (the
+- [x] T3 (R4–R7, R10–R12): new `components/source-set-explorer/` — `source-set-file-explorer.tsx` (the
       assembly: own controller, one `FsSource`, `FileExplorer.Root` + own header + `.Workspace`, no
       `SourceSelect`, no `EmptyState`) and `create-source-set-fs-providers.ts` (the adapter, mirroring
       `create-sandbox-fs-providers.ts` minus `watchFile` and the failure tracker, plus the
       absolute↔relative conversion).
-- [ ] T4 (R8, R9): error mapping — `createOnly` on new file, 409 → "already exists", a readable message
+- [x] T4 (R8, R9): error mapping — `createOnly` on new file, 409 → "already exists", a readable message
       per status, and `onError` pass-through.
-- [ ] T5 (R14): `apps/react-demo` — `routes/source-set-explorer/`, registered in `app.tsx` and linked
+- [x] T5 (R14): `apps/react-demo` — `routes/source-set-explorer/`, registered in `app.tsx` and linked
       from home; endpoint / token / rootPath from `import.meta.env`; two shells side by side per §4.3+;
       a read-only toggle. Add the new variables to `.env.example`.
-- [ ] T6 (R4): export `SourceSetFileExplorer`, its props, and the adapter from the react package entry
+- [x] T6 (R4): export `SourceSetFileExplorer`, its props, and the adapter from the react package entry
       with explicit `export type`.
-- [ ] T7: §6 refactor pass over everything added.
-- [ ] T8 (R1–R3, R13): **TDD** — write the failing Vitest cases first. Minimum set: `readOnly` hides the
+- [x] T7: §6 refactor pass over everything added.
+- [x] T8 (R1–R3, R13): **TDD** — write the failing Vitest cases first. Minimum set: `readOnly` hides the
       8 mutating actions in both toolbar and menu; `readOnly` absent leaves today's markup unchanged;
       nothing-selected still disables rather than hides; `toolbarActions` render before Refresh, honour
       `disabled`, and survive `readOnly`; the shortfall line appears with a count and is absent without
       one; the adapter's path conversion round-trips including root and `rootPath`.
-- [ ] T9 (R4–R14): browser validation on `/source-set-explorer` against a **real dev volume** — every R#
+- [x] T9 (R4–R14): browser validation on `/source-set-explorer` against a **real dev volume** — every R#
       walked at both widths, plus `/file-explorer` walked for the R13 regression. Screenshots go to
       `local-verification`, never the repo.
-- [ ] T10 (R15): `npm run lint:packages` + `npm run format:check` + `npm run typecheck` +
+- [x] T10 (R15): `npm run lint:packages` + `npm run format:check` + `npm run typecheck` +
       `npm run build:core && npm run build:react` + `npm run test:packages`; confirm the new export in
       `packages/react/dist` after a `--skip-nx-cache` rebuild.
 
@@ -217,8 +244,45 @@ reached, stop and say so rather than marking R14 Pass off the mock; the honest o
 
 ## Coverage
 
-Use Cases: [filled during build]
-Files: [filled during build]
+Use Cases: R1, R3–R18 (R2 withdrawn, see above). Odin `UC-032` Main Flow 1–2 and its Alternate Flows
+(no `source-set/put` → tab absent is Odin's, not the SDK's; large directory; 409; refresh-not-watch) are
+the downstream cases this serves; they are 验收 on Odin's side once the SDK ships.
+
+Files:
+
+**`@asgard-js/react` — shared module (all changes additive; absent props = today's behavior)**
+
+- `packages/react/src/components/file-explorer/file-explorer-context.tsx` — `readOnly`, `locale` and
+  `onError` props; `notice` / `dismissNotice` on the context; `report()`; `run()` reports instead of
+  swallowing; `actNewFile` prefers `createFile`; `actDownload` reports; `MUTATING_ACTION_KEYS` +
+  `withoutMutatingItems`
+- `packages/react/src/components/file-explorer/file-explorer-parts.tsx` — the two `readOnly` toolbar
+  groups, the menu filter, `FileExplorerReadOnlyBadge`, `FileExplorerNotice`, `canCreateFile` gating,
+  and the FileView's editing withheld under `readOnly`
+- `packages/react/src/components/file-explorer/file-explorer-tree.tsx` — the "N more items not loaded" line
+- `packages/react/src/components/file-explorer/types.ts` — `FsListResult.totalEntries`, `FsProviders.createFile`
+- `packages/react/src/components/file-explorer/fs-error-message.ts` (new) — status → sentence, never the body
+- `packages/react/src/components/file-explorer/fs-blob.ts` (new) — §6 extraction now shared by both adapters
+- `packages/react/src/components/file-explorer/create-sandbox-fs-providers.ts` — imports the extracted helpers
+- `packages/react/src/components/file-explorer/file-explorer-panel.module.scss` — `.readOnlyBadge`,
+  `.notice` / `.noticeText` / `.noticeDismiss`, `.sourceLabel` / `.sourceCrumb`
+- `packages/react/src/components/file-explorer/index.ts` — new parts + `fsErrorMessage`
+- `packages/react/src/components/file-explorer/read-only-and-listing-shortfall.spec.tsx` (new, 16 cases)
+
+**`@asgard-js/react` — the assembly**
+
+- `packages/react/src/components/source-set-explorer/source-set-file-explorer.tsx` (new)
+- `packages/react/src/components/source-set-explorer/create-source-set-fs-providers.ts` (new)
+- `packages/react/src/components/source-set-explorer/index.ts` (new)
+- `packages/react/src/components/index.ts` — one line
+- `packages/react/src/i18n.ts` — 8 new `fileExplorer.*` keys × 3 locales
+
+**`apps/react-demo`**
+
+- `src/app/routes/source-set-explorer/{source-set-explorer.tsx, volume-mock.ts, *.module.scss, index.ts}` (new)
+- `src/app/app.tsx`, `src/app/routes/home/home.tsx`, `.env.example`
+
+**`@asgard-js/core`** — untouched this cycle.
 
 ---
 
@@ -226,4 +290,40 @@ Files: [filled during build]
 
 - 2026-08-14: BUILD task created from F-025 + F-026 (UI half) + TASK-004 (demo half) (Status: `draft`).
 - 2026-08-14: Architecture decision — compose the shared parts rather than duplicate the explorer;
-  deviation from F-025 raised as `asgard-sdk-pm#79` before any code was written.
+  deviation from F-025 raised as `asgard-sdk-pm#79` before any code was written (Status: `draft → ready
+→ in-progress`).
+- 2026-08-14: **The design was run, not read** — and it changed three decisions the ticket text would
+  have led to. The chat-kit prototype was served locally and driven in the browser, and the Odin design
+  (`asgard-odin-pm-design#18`, merged) was read at source.
+  1. **`toolbarActions` withdrawn.** `FilesPanel.tsx` puts "Open in Advance Editor" _outside_ the
+     explorer; the prototype toolbar has no extension point. See R2 and the correction on `#74`.
+  2. **`R16` read-only badge added.** The prototype shows one and the ticket never mentions it. Measured
+     from `.ssfe-badge` rather than guessed.
+  3. **The `readOnly` action set confirmed by observation**: toolbar keeps Download + Refresh only, and
+     the separator leaves with the group it separates.
+     Our prototype pin `c109ac0c` was checked to be _newer_ than the one the Odin design vendored
+     (`f611e11`), so the visual authority is current.
+- 2026-08-14: `R17` (error notice) authorized explicitly before implementing, because it changes shipped
+  sandbox behavior rather than only adding to it.
+- 2026-08-14: TDD — 16 cases written red first (7 failing), then implemented. Half of them assert the
+  _absence_ of the new behavior when the prop is absent, which is the actual R13 guarantee.
+- 2026-08-14: **`R18` found by measuring, not by looking.** Expanding the 10,600-entry directory made
+  the panel 244,846px tall with the tree not scrolling at all. Two causes stacked: `DemoWrapper`'s
+  content area is `min-height: auto`, and on a flex item `flex: 1` beats `height` in the main axis — so
+  asking for both got neither. Fixed in the route with `flex: none; height: 70vh`; re-measured at 543px
+  with the tree scrolling internally and no page overflow.
+- 2026-08-14: Browser validation on `/source-set-explorer` at both widths against the in-memory volume:
+  `readOnly` (toolbar → Download + Refresh, badge in both locales), paged walk of 10,600 entries in
+  **466ms** over 11 requests with 10,018 rows rendered, the shortfall line reading
+  「還有 600 個項目未載入」 at 12px / `--text-secondary` / 35.2px indent (identical to the prototype),
+  and a 409 surfacing as "An item with that name already exists." with `onError` firing alongside.
+  R13 walked on `/file-explorer`: picker, cwd and all ten toolbar buttons unchanged, no badge, no notice.
+- 2026-08-14: `lint:packages` ✅ (0 errors, 4 pre-existing react warnings) / `format:check` ✅ /
+  `typecheck` ✅ (3 projects) / `build:core && build:react` ✅ / `test:packages` ✅ — core 13 / 245,
+  react **43 / 270** (+1 file, +16). After a `--skip-nx-cache` rebuild the built bundle exports
+  `SourceSetFileExplorer`, `createSourceSetFsProviders`, `toVolumePath`, `volumeSourceRoot`,
+  `fsErrorMessage`, and `FileExplorer.ReadOnlyBadge` / `.Notice` (Status: `in-progress → done`).
+- 2026-08-14: **`R14` is `Blocked`, not passed.** Everything above ran against an in-memory volume served
+  by a `fetch` interceptor — which does exercise the real client and the real adapter, but not the real
+  backend. `apps/react-demo/.env` still has no volume endpoint or token. Combined with BUILD-060, whose
+  37 cases all mock `fetch`, **nothing in this batch has yet touched a live volume.**

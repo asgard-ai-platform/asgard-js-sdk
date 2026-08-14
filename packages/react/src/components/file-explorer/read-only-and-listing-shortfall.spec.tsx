@@ -166,6 +166,43 @@ describe('readOnly (F-025)', () => {
   });
 });
 
+describe('readOnly reaches the file viewer too (F-025 R1)', () => {
+  /** Open `a.txt` in the wide viewer and hand back what the viewer offers. */
+  async function openFile(readOnly: boolean): Promise<{ labels: string[] }> {
+    render(<Harness readOnly={readOnly} />);
+    const row = await screen.findByText('a.txt');
+    fireEvent.doubleClick(row);
+    await screen.findByLabelText(t('en-US', 'fileExplorer.reloadFile'));
+
+    const labels = screen
+      .getAllByRole('button')
+      .map(b => b.getAttribute('aria-label') ?? '')
+      .filter(Boolean);
+
+    return { labels };
+  }
+
+  // The editor is lazily loaded, so whether the buffer is typable is asserted in the browser (§3 R1),
+  // not here — a jsdom check would pass vacuously whenever CodeMirror simply had not mounted yet. What
+  // *is* deterministic here is the promise the button makes, and that is the half that misleads.
+  it('offers source, not editing — a "Switch to editing" that cannot save is worse than no button', async () => {
+    // The chat-kit prototype gets this wrong: under readOnly its viewer still offers "Switch to edit"
+    // and hands back an editable buffer whose save silently no-ops. Matching the design would mean
+    // matching a defect.
+    const { labels } = await openFile(true);
+
+    expect(labels).toContain(t('en-US', 'fileExplorer.switchToSource'));
+    expect(labels).not.toContain(t('en-US', 'fileExplorer.switchToEdit'));
+  });
+
+  it('offers editing as before when readOnly is absent', async () => {
+    const { labels } = await openFile(false);
+
+    expect(labels).toContain(t('en-US', 'fileExplorer.switchToEdit'));
+    expect(labels).not.toContain(t('en-US', 'fileExplorer.switchToSource'));
+  });
+});
+
 describe('mutation failures are named, not swallowed (F-025)', () => {
   /** Reject the way the volume does: a real `HttpError` carrying the status the caller branches on. */
   const failWith = (status: number) => (): Promise<void> => Promise.reject(new HttpError(status, 'nope', 'raw body'));

@@ -69,7 +69,7 @@
 
 ## ▶ Next Task
 
-**Cycle 2（F-025 元件 + F-026 UI 提示 + TASK-004 demo route）** —— `BUILD-060` / `REVIEW-060` 皆 `done`（§1 15 ✅ / 0 ❌ / 9 n/a、§3 R1–R10 全 Pass、0 BLOCKERs），branch `feat/f024-sourceset-volume-core-client`，**尚未開 PR、未發版**。REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目錄時 listAll 會續打最多 10 個請求）與 `truncatedAtCap` 無法區分「達上限」與「後端提早停」。上一個收尾：`BUILD-051` / `REVIEW-051`（[`asgard-sdk-pm#62`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/62) F-028 下一句建議 placeholder 與 Tab 採用）—— §1 20/20、§3 R1–R14 全 Pass，2026-08-12 **merged to main** via PR #425（merge commit `a93d137c`）。**刻意未發版**：與 F-029（[`#64`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/64)）／F-030（[`#66`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/66)）併批發一次，六個消費端因此只需 bump 一次；在那之前 `main` 上的版本號維持 `0.3.61`，issue #62 也還不到移 Review 的門檻（缺 tag）。以下段落保留各 cycle 的脈絡與 backlog。
+**Cycle 3（BUILD-062：TASK-004 的 README 半邊）** —— `BUILD-060`/`REVIEW-060` 與 `BUILD-061`/`REVIEW-061` 皆 `done`，branch `feat/f024-sourceset-volume-core-client`，**尚未開 PR、未發版**。`BUILD-061` 走的是 `asgard-sdk-pm#79` 的組合路線（不另開第二套 explorer），對 `components/file-explorer/` 做 5 處 additive 改動＋ 2 處**經授權的行為變更**：mutation 錯誤不再被 `run()` 吞掉（sandbox 側同受惠），以及 `readOnly` 下 FileView 只給「檢視原始碼」而非可編輯緩衝區。**看畫面才發現的三件事**：`toolbarActions` 砍掉（Odin 設計稿把 Open in Advance Editor 放在總管外，[`#74`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/74) 已留言更正）、規格漏寫的「唯讀」badge（`FileExplorer.ReadOnlyBadge`）、以及展開 10,600 筆目錄時面板長到 244,846px 不捲動（`flex: 1` 在主軸蓋掉 `height`）。**兩項 Blocked**：`R7` `initialPath` demo 沒有控制項所以沒走到；`R14` **整批到目前為止一次真實 volume 請求都沒發過** —— BUILD-060 的 37 個測試全 mock `fetch`，BUILD-061 打的是攔截式 in-memory volume（走真 client + 真 adapter，但不是真後端），`apps/react-demo/.env` 仍無 volume endpoint／token。REVIEW-061 另留 5 則 Minor。
 
 **近期收尾的 cycle**：
 
@@ -105,118 +105,118 @@
 
 ## Task Queue
 
-| Task ID      | Title                                             | Priority | Status      | Spec                                                                                                     |
-| ------------ | ------------------------------------------------- | -------- | ----------- | -------------------------------------------------------------------------------------------------------- |
-| `BUILD-001`  | Message Stream Assembly Robustness                | High     | done        | [BUILD-001-stream-assembly-robustness.md](./BUILD-001-stream-assembly-robustness.md)                     |
-| `REVIEW-001` | Review: Message Stream Assembly Robustness        | —        | done        | [REVIEW-001-stream-assembly-robustness.md](./REVIEW-001-stream-assembly-robustness.md)                   |
-| `BUILD-002`  | Last-Event-ID Resume                              | High     | done        | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)                                 |
-| `REVIEW-002` | Review: Last-Event-ID Resume                      | —        | done        | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)                               |
-| `BUILD-003`  | Transcript Replay Kernel + message.user           | High     | done        | [BUILD-003-transcript-replay-kernel.md](./BUILD-003-transcript-replay-kernel.md)                         |
-| `REVIEW-003` | Review: Transcript Replay Kernel                  | —        | done        | [REVIEW-003-transcript-replay-kernel.md](./REVIEW-003-transcript-replay-kernel.md)                       |
-| `BUILD-004`  | Thinking Message Display                          | High     | done        | [BUILD-004-thinking-message-display.md](./BUILD-004-thinking-message-display.md)                         |
-| `REVIEW-004` | Review: Thinking Message Display                  | —        | done        | [REVIEW-004-thinking-message-display.md](./REVIEW-004-thinking-message-display.md)                       |
-| `BUILD-005`  | Run Indicator Bound to Connection at Seam         | High     | done        | [BUILD-005-run-indicator-at-seam.md](./BUILD-005-run-indicator-at-seam.md)                               |
-| `REVIEW-005` | Review: Run Indicator at Seam                     | —        | done        | [REVIEW-005-run-indicator-at-seam.md](./REVIEW-005-run-indicator-at-seam.md)                             |
-| `BUILD-006`  | Built-in Tool-Call Variants + Label Synth         | High     | done        | [BUILD-006-builtin-tool-call-variants.md](./BUILD-006-builtin-tool-call-variants.md)                     |
-| `REVIEW-006` | Review: Built-in Tool-Call Variants               | —        | done        | [REVIEW-006-builtin-tool-call-variants.md](./REVIEW-006-builtin-tool-call-variants.md)                   |
-| `BUILD-007`  | Tool-Call i18n Locale Prop                        | High     | done        | [BUILD-007-tool-call-i18n-locale.md](./BUILD-007-tool-call-i18n-locale.md)                               |
-| `REVIEW-007` | Review: Tool-Call i18n Locale Prop                | —        | done        | [REVIEW-007-tool-call-i18n-locale.md](./REVIEW-007-tool-call-i18n-locale.md)                             |
-| `BUILD-008`  | Tool-Call Grouping + Group Summary                | High     | done        | [BUILD-008-tool-call-grouping-summary.md](./BUILD-008-tool-call-grouping-summary.md)                     |
-| `REVIEW-008` | Review: Tool-Call Grouping + Group Summary        | —        | done        | [REVIEW-008-tool-call-grouping-summary.md](./REVIEW-008-tool-call-grouping-summary.md)                   |
-| `BUILD-009`  | Write/Edit Diff + Unified Status                  | High     | done        | [BUILD-009-write-edit-diff-status.md](./BUILD-009-write-edit-diff-status.md)                             |
-| `REVIEW-009` | Review: Write/Edit Diff + Unified Status          | —        | done        | [REVIEW-009-write-edit-diff-status.md](./REVIEW-009-write-edit-diff-status.md)                           |
-| `BUILD-010`  | Tool-Call Expanded Content + Localized Titles     | High     | done        | [BUILD-010-tool-call-expand-localize.md](./BUILD-010-tool-call-expand-localize.md)                       |
-| `REVIEW-010` | Review: Tool-Call Expanded Content                | —        | done        | [REVIEW-010-tool-call-expand-localize.md](./REVIEW-010-tool-call-expand-localize.md)                     |
-| `BUILD-011`  | Tool-Call Failure Detection via isError           | High     | done        | [BUILD-011-toolcall-iserror.md](./BUILD-011-toolcall-iserror.md)                                         |
-| `REVIEW-011` | Review: Tool-Call Failure Detection               | —        | done        | [REVIEW-011-toolcall-iserror.md](./REVIEW-011-toolcall-iserror.md)                                       |
-| `BUILD-012`  | Task Check List Panel                             | High     | done        | [BUILD-012-task-check-list.md](./BUILD-012-task-check-list.md)                                           |
-| `REVIEW-012` | Review: Task Check List Panel                     | —        | done        | [REVIEW-012-task-check-list.md](./REVIEW-012-task-check-list.md)                                         |
-| `BUILD-013`  | Subagent List Panel                               | High     | done        | [BUILD-013-subagent-list.md](./BUILD-013-subagent-list.md)                                               |
-| `REVIEW-013` | Review: Subagent List Panel                       | —        | done        | [REVIEW-013-subagent-list.md](./REVIEW-013-subagent-list.md)                                             |
-| `BUILD-014`  | Derived-State Stores                              | High     | done        | [BUILD-014-derived-state-stores.md](./BUILD-014-derived-state-stores.md)                                 |
-| `REVIEW-014` | Review: Derived-State Stores                      | —        | done        | [REVIEW-014-derived-state-stores.md](./REVIEW-014-derived-state-stores.md)                               |
-| `BUILD-015`  | Channel Title Store                               | Normal   | done        | [BUILD-015-channel-title-store.md](./BUILD-015-channel-title-store.md)                                   |
-| `REVIEW-015` | Review: Channel Title Store                       | —        | done        | [REVIEW-015-channel-title-store.md](./REVIEW-015-channel-title-store.md)                                 |
-| `BUILD-016`  | Channel Title UI                                  | High     | done        | [BUILD-016-channel-title-ui.md](./BUILD-016-channel-title-ui.md)                                         |
-| `REVIEW-016` | Review: Channel Title UI                          | —        | done        | [REVIEW-016-channel-title-ui.md](./REVIEW-016-channel-title-ui.md)                                       |
-| `BUILD-017`  | Join-Init Orchestration + metadata gate           | High     | done        | [BUILD-017-join-init-metadata-gate.md](./BUILD-017-join-init-metadata-gate.md)                           |
-| `REVIEW-017` | Review: Join-Init Orchestration                   | —        | done        | [REVIEW-017-join-init-metadata-gate.md](./REVIEW-017-join-init-metadata-gate.md)                         |
-| `BUILD-018`  | Channel Home Rename (cwd → channel-home)          | High     | done        | [BUILD-018-channel-home-rename.md](./BUILD-018-channel-home-rename.md)                                   |
-| `REVIEW-018` | Review: Channel Home Rename                       | —        | done        | [REVIEW-018-channel-home-rename.md](./REVIEW-018-channel-home-rename.md)                                 |
-| `BUILD-019`  | Sandbox Launch HUD                                | High     | done        | [BUILD-019-sandbox-launch-hud.md](./BUILD-019-sandbox-launch-hud.md)                                     |
-| `REVIEW-019` | Review: Sandbox Launch HUD                        | —        | done        | [REVIEW-019-sandbox-launch-hud.md](./REVIEW-019-sandbox-launch-hud.md)                                   |
-| `BUILD-020`  | Hide Subagent Message / Thinking Frames           | High     | done        | [BUILD-020-hide-subagent-messages.md](./BUILD-020-hide-subagent-messages.md)                             |
-| `REVIEW-020` | Review: Hide Subagent Message / Thinking          | —        | done        | [REVIEW-020-hide-subagent-messages.md](./REVIEW-020-hide-subagent-messages.md)                           |
-| `BUILD-021`  | Consume launchedSandboxes + Rx Store              | High     | done        | [BUILD-021-launched-sandboxes-store.md](./BUILD-021-launched-sandboxes-store.md)                         |
-| `REVIEW-021` | Review: launchedSandboxes Rx Store                | —        | done        | [REVIEW-021-launched-sandboxes-store.md](./REVIEW-021-launched-sandboxes-store.md)                       |
-| `BUILD-022`  | sandbox:// Handoff Cards                          | High     | done        | [BUILD-022-sandbox-handoff-cards.md](./BUILD-022-sandbox-handoff-cards.md)                               |
-| `REVIEW-022` | Review: sandbox:// Handoff Cards                  | —        | done        | [REVIEW-022-sandbox-handoff-cards.md](./REVIEW-022-sandbox-handoff-cards.md)                             |
-| `BUILD-023`  | File Explorer Side Panel — Cycle 1                | High     | done        | [BUILD-023-file-explorer-panel.md](./BUILD-023-file-explorer-panel.md)                                   |
-| `REVIEW-023` | Review: File Explorer Side Panel — Cycle 1        | —        | done        | [REVIEW-023-file-explorer-panel.md](./REVIEW-023-file-explorer-panel.md)                                 |
-| `BUILD-024`  | File Explorer Mutations + Context Menu + Nudge    | High     | done        | [BUILD-024-file-explorer-mutations.md](./BUILD-024-file-explorer-mutations.md)                           |
-| `REVIEW-024` | Review: File Explorer Mutations + Nudge           | —        | done        | [REVIEW-024-file-explorer-mutations.md](./REVIEW-024-file-explorer-mutations.md)                         |
-| `BUILD-025`  | Guard the File Explorer glyphs against drift      | Normal   | done        | [BUILD-025-file-explorer-icon-guard.md](./BUILD-025-file-explorer-icon-guard.md)                         |
-| `BUILD-026`  | Export bot text content renderer (BotMessageText) | Normal   | done        | [BUILD-026-export-bot-message-text.md](./BUILD-026-export-bot-message-text.md)                           |
-| `BUILD-027`  | Unified Chat Heading Bar (ChatHeader)             | High     | done        | [BUILD-027-unified-chat-header.md](./BUILD-027-unified-chat-header.md)                                   |
-| `REVIEW-027` | Review: Unified Chat Heading Bar                  | —        | done        | [REVIEW-027-unified-chat-header.md](./REVIEW-027-unified-chat-header.md)                                 |
-| `BUILD-028`  | Chat-kit Composer (SDK footer rewrite)            | High     | draft       | [BUILD-028-chat-kit-composer.md](./BUILD-028-chat-kit-composer.md)                                       |
-| `BUILD-029`  | File Explorer Cycle 3 — watch + lifecycle         | High     | done        | [BUILD-029-file-explorer-watch-and-lifecycle.md](./BUILD-029-file-explorer-watch-and-lifecycle.md)       |
-| `BUILD-030`  | Stop generation suspends the background run       | High     | done        | [BUILD-030-stop-generation-suspend-run.md](./BUILD-030-stop-generation-suspend-run.md)                   |
-| `REVIEW-030` | Review: Stop generation suspends background run   | —        | done        | [REVIEW-030-stop-generation-suspend-run.md](./REVIEW-030-stop-generation-suspend-run.md)                 |
-| `BUILD-031`  | Dock run-chrome panels outside thread scroll box  | High     | done        | [BUILD-031-docked-run-chrome-out-of-scroll-box.md](./BUILD-031-docked-run-chrome-out-of-scroll-box.md)   |
-| `REVIEW-031` | Review: Dock run-chrome outside thread scroll box | —        | done        | [REVIEW-031-docked-run-chrome-out-of-scroll-box.md](./REVIEW-031-docked-run-chrome-out-of-scroll-box.md) |
-| `BUILD-032`  | Carry payload on the NUDGE outbound               | High     | done        | [BUILD-032-nudge-payload.md](./BUILD-032-nudge-payload.md)                                               |
-| `REVIEW-032` | Review: Carry payload on the NUDGE outbound       | —        | done        | [REVIEW-032-nudge-payload.md](./REVIEW-032-nudge-payload.md)                                             |
-| `BUILD-033`  | Refuse a nudge while a run holds the channel      | High     | done        | [BUILD-033-nudge-busy-guard.md](./BUILD-033-nudge-busy-guard.md)                                         |
-| `REVIEW-033` | Review: Refuse a nudge while a run holds channel  | —        | done        | [REVIEW-033-nudge-busy-guard.md](./REVIEW-033-nudge-busy-guard.md)                                       |
-| `BUILD-034`  | Hoist the run indicator out of the footer         | High     | done        | [BUILD-034-hoist-run-indicator-out-of-footer.md](./BUILD-034-hoist-run-indicator-out-of-footer.md)       |
-| `BUILD-035`  | Wire sandboxPhase into init/restore join paths    | High     | done        | [BUILD-035-sandbox-phase-join-paths.md](./BUILD-035-sandbox-phase-join-paths.md)                         |
-| `REVIEW-035` | Review: sandboxPhase into init/restore join paths | —        | done        | [REVIEW-035-sandbox-phase-join-paths.md](./REVIEW-035-sandbox-phase-join-paths.md)                       |
-| `BUILD-036`  | Materialize a replayed tool-call from complete    | High     | done        | [BUILD-036-tool-call-complete-replay.md](./BUILD-036-tool-call-complete-replay.md)                       |
-| `REVIEW-036` | Review: Materialize replayed tool-call            | —        | done        | [REVIEW-036-tool-call-complete-replay.md](./REVIEW-036-tool-call-complete-replay.md)                     |
-| `BUILD-037`  | Rebuild the client on a StrictMode remount        | High     | done        | [BUILD-037-strictmode-client-detach.md](./BUILD-037-strictmode-client-detach.md)                         |
-| `BUILD-038`  | Localize File Explorer, replace native prompts    | High     | done        | [BUILD-038-file-explorer-i18n.md](./BUILD-038-file-explorer-i18n.md)                                     |
-| `REVIEW-038` | Review: Localize File Explorer, replace prompts   | —        | done        | [REVIEW-038-file-explorer-i18n.md](./REVIEW-038-file-explorer-i18n.md)                                   |
-| `BUILD-039`  | Export theme type surface + wire phantom tokens   | High     | done        | [BUILD-039-theme-api-and-token-wiring.md](./BUILD-039-theme-api-and-token-wiring.md)                     |
-| `REVIEW-039` | Review: Theme type surface + phantom tokens       | —        | done        | [REVIEW-039-theme-api-and-token-wiring.md](./REVIEW-039-theme-api-and-token-wiring.md)                   |
-| `BUILD-040`  | Anchor chat column rows; allow a null header      | Normal   | draft       | [BUILD-040-explicit-grid-rows.md](./BUILD-040-explicit-grid-rows.md)                                     |
-| `REVIEW-040` | Review: Explicit chat column rows                 | —        | draft       | [REVIEW-040-explicit-grid-rows.md](./REVIEW-040-explicit-grid-rows.md)                                   |
-| `BUILD-041`  | Let a resumed subagent read as running again      | High     | done        | [BUILD-041-resumed-subagent-reads-running.md](./BUILD-041-resumed-subagent-reads-running.md)             |
-| `REVIEW-041` | Review: Resumed subagent reads as running         | —        | done        | [REVIEW-041-resumed-subagent-reads-running.md](./REVIEW-041-resumed-subagent-reads-running.md)           |
-| `BUILD-042`  | Export user text renderer (UserMessageText)       | Normal   | done        | [BUILD-042-export-user-message-text.md](./BUILD-042-export-user-message-text.md)                         |
-| `REVIEW-042` | Review: Export user text content renderer         | —        | done        | [REVIEW-042-export-user-message-text.md](./REVIEW-042-export-user-message-text.md)                       |
-| `BUILD-043`  | Let `locale` reach every part of the chatbot      | Normal   | done        | [BUILD-043-locale-reaches-file-explorer.md](./BUILD-043-locale-reaches-file-explorer.md)                 |
-| `REVIEW-043` | Review: Let `locale` reach the whole chatbot      | —        | done        | [REVIEW-043-locale-reaches-file-explorer.md](./REVIEW-043-locale-reaches-file-explorer.md)               |
-| `BUILD-044`  | Route remaining hardcoded strings through i18n    | Normal   | done        | [BUILD-044-i18n-remaining-strings.md](./BUILD-044-i18n-remaining-strings.md)                             |
-| `REVIEW-044` | Review: Route remaining strings through i18n      | —        | done        | [REVIEW-044-i18n-remaining-strings.md](./REVIEW-044-i18n-remaining-strings.md)                           |
-| `BUILD-045`  | Give ApiKeyInput a supplied locale                | Normal   | done        | [BUILD-045-api-key-input-locale.md](./BUILD-045-api-key-input-locale.md)                                 |
-| `REVIEW-045` | Review: Give ApiKeyInput a supplied locale        | —        | done        | [REVIEW-045-api-key-input-locale.md](./REVIEW-045-api-key-input-locale.md)                               |
-| `BUILD-046`  | deepMerge treats undefined as no opinion          | Normal   | done        | [BUILD-046-deep-merge-undefined.md](./BUILD-046-deep-merge-undefined.md)                                 |
-| `REVIEW-046` | Review: deepMerge undefined semantics             | —        | done        | [REVIEW-046-deep-merge-undefined.md](./REVIEW-046-deep-merge-undefined.md)                               |
-| `BUILD-047`  | Chat column inset scales with its own width       | Normal   | done        | [BUILD-047-chat-column-gutter.md](./BUILD-047-chat-column-gutter.md)                                     |
-| `BUILD-048`  | Stop break-all from splitting English words       | Normal   | done        | [BUILD-048-word-break-splits-english.md](./BUILD-048-word-break-splits-english.md)                       |
-| `BUILD-049`  | Fix two self-referencing theme color defaults     | Normal   | done        | [BUILD-049-theme-token-self-reference.md](./BUILD-049-theme-token-self-reference.md)                     |
-| `BUILD-050`  | Lock every loading spinner to a shared phase      | Normal   | done        | [BUILD-050-phase-locked-spinner.md](./BUILD-050-phase-locked-spinner.md)                                 |
-| `REVIEW-050` | Review: Lock loading spinners to a shared phase   | —        | done        | [REVIEW-050-phase-locked-spinner.md](./REVIEW-050-phase-locked-spinner.md)                               |
-| `BUILD-051`  | Prompt suggestion placeholder + Tab adopt         | Normal   | done        | [BUILD-051-prompt-suggestion-placeholder.md](./BUILD-051-prompt-suggestion-placeholder.md)               |
-| `REVIEW-051` | Review: Prompt suggestion placeholder + Tab adopt | —        | done        | [REVIEW-051-prompt-suggestion-placeholder.md](./REVIEW-051-prompt-suggestion-placeholder.md)             |
-| `BUILD-052`  | QUESTION template as a fillable card              | Normal   | done        | [BUILD-052-question-template.md](./BUILD-052-question-template.md)                                       |
-| `REVIEW-052` | Review: QUESTION template as a fillable card      | —        | done        | [REVIEW-052-question-template.md](./REVIEW-052-question-template.md)                                     |
-| `BUILD-053`  | Toolbar new-file and rename actions               | Normal   | done        | [BUILD-053-toolbar-new-file-and-rename.md](./BUILD-053-toolbar-new-file-and-rename.md)                   |
-| `REVIEW-053` | Review: Toolbar new-file and rename actions       | —        | done        | [REVIEW-053-toolbar-new-file-and-rename.md](./REVIEW-053-toolbar-new-file-and-rename.md)                 |
-| `BUILD-054`  | File viewer download action                       | Normal   | done        | [BUILD-054-file-view-download.md](./BUILD-054-file-view-download.md)                                     |
-| `REVIEW-054` | Review: File viewer download action               | —        | done        | [REVIEW-054-file-view-download.md](./REVIEW-054-file-view-download.md)                                   |
-| `BUILD-055`  | Canvas stream events → conversation state (core)  | Normal   | done        | [BUILD-055-canvas-events-core.md](./BUILD-055-canvas-events-core.md)                                     |
-| `REVIEW-055` | Review: canvas stream events (core)               | —        | done        | [REVIEW-055-canvas-events-core.md](./REVIEW-055-canvas-events-core.md)                                   |
-| `BUILD-056`  | Canvas card: sandboxed iframe + streaming morph   | Normal   | done        | [BUILD-056-canvas-card-react.md](./BUILD-056-canvas-card-react.md)                                       |
-| `REVIEW-056` | Review: canvas card (react)                       | —        | done        | [REVIEW-056-canvas-card-react.md](./REVIEW-056-canvas-card-react.md)                                     |
-| `BUILD-057`  | Stop the File Explorer controller identity loop   | High     | done        | [BUILD-057-file-explorer-controller-identity.md](./BUILD-057-file-explorer-controller-identity.md)       |
-| `REVIEW-057` | Review: File Explorer controller identity loop    | —        | done        | [REVIEW-057-file-explorer-controller-identity.md](./REVIEW-057-file-explorer-controller-identity.md)     |
-| `BUILD-058`  | Hoist the header L3 escape hatch to Chatbot       | High     | done        | [BUILD-058-hoist-header-render-slot.md](./BUILD-058-hoist-header-render-slot.md)                         |
-| `REVIEW-058` | Review: hoist the header L3 escape hatch          | —        | done        | [REVIEW-058-hoist-header-render-slot.md](./REVIEW-058-hoist-header-render-slot.md)                       |
-| `BUILD-059`  | Close the typecheck coverage gaps                 | High     | done        | [BUILD-059-typecheck-coverage.md](./BUILD-059-typecheck-coverage.md)                                     |
-| `REVIEW-059` | Review: typecheck coverage gaps                   | —        | done        | [REVIEW-059-typecheck-coverage.md](./REVIEW-059-typecheck-coverage.md)                                   |
-| `BUILD-060`  | Standalone SourceSet volume client in core        | High     | done        | [BUILD-060-sourceset-volume-core-client.md](./BUILD-060-sourceset-volume-core-client.md)                 |
-| `REVIEW-060` | Review: SourceSet volume client in core           | —        | done        | [REVIEW-060-sourceset-volume-core-client.md](./REVIEW-060-sourceset-volume-core-client.md)               |
-| `BUILD-061`  | Mount the File Explorer on a SourceSet volume     | High     | in-progress | [BUILD-061-source-set-file-explorer.md](./BUILD-061-source-set-file-explorer.md)                         |
-| `REVIEW-061` | Review: File Explorer on a SourceSet volume       | —        | draft       | [REVIEW-061-source-set-file-explorer.md](./REVIEW-061-source-set-file-explorer.md)                       |
+| Task ID      | Title                                             | Priority | Status | Spec                                                                                                     |
+| ------------ | ------------------------------------------------- | -------- | ------ | -------------------------------------------------------------------------------------------------------- |
+| `BUILD-001`  | Message Stream Assembly Robustness                | High     | done   | [BUILD-001-stream-assembly-robustness.md](./BUILD-001-stream-assembly-robustness.md)                     |
+| `REVIEW-001` | Review: Message Stream Assembly Robustness        | —        | done   | [REVIEW-001-stream-assembly-robustness.md](./REVIEW-001-stream-assembly-robustness.md)                   |
+| `BUILD-002`  | Last-Event-ID Resume                              | High     | done   | [BUILD-002-last-event-id-resume.md](./BUILD-002-last-event-id-resume.md)                                 |
+| `REVIEW-002` | Review: Last-Event-ID Resume                      | —        | done   | [REVIEW-002-last-event-id-resume.md](./REVIEW-002-last-event-id-resume.md)                               |
+| `BUILD-003`  | Transcript Replay Kernel + message.user           | High     | done   | [BUILD-003-transcript-replay-kernel.md](./BUILD-003-transcript-replay-kernel.md)                         |
+| `REVIEW-003` | Review: Transcript Replay Kernel                  | —        | done   | [REVIEW-003-transcript-replay-kernel.md](./REVIEW-003-transcript-replay-kernel.md)                       |
+| `BUILD-004`  | Thinking Message Display                          | High     | done   | [BUILD-004-thinking-message-display.md](./BUILD-004-thinking-message-display.md)                         |
+| `REVIEW-004` | Review: Thinking Message Display                  | —        | done   | [REVIEW-004-thinking-message-display.md](./REVIEW-004-thinking-message-display.md)                       |
+| `BUILD-005`  | Run Indicator Bound to Connection at Seam         | High     | done   | [BUILD-005-run-indicator-at-seam.md](./BUILD-005-run-indicator-at-seam.md)                               |
+| `REVIEW-005` | Review: Run Indicator at Seam                     | —        | done   | [REVIEW-005-run-indicator-at-seam.md](./REVIEW-005-run-indicator-at-seam.md)                             |
+| `BUILD-006`  | Built-in Tool-Call Variants + Label Synth         | High     | done   | [BUILD-006-builtin-tool-call-variants.md](./BUILD-006-builtin-tool-call-variants.md)                     |
+| `REVIEW-006` | Review: Built-in Tool-Call Variants               | —        | done   | [REVIEW-006-builtin-tool-call-variants.md](./REVIEW-006-builtin-tool-call-variants.md)                   |
+| `BUILD-007`  | Tool-Call i18n Locale Prop                        | High     | done   | [BUILD-007-tool-call-i18n-locale.md](./BUILD-007-tool-call-i18n-locale.md)                               |
+| `REVIEW-007` | Review: Tool-Call i18n Locale Prop                | —        | done   | [REVIEW-007-tool-call-i18n-locale.md](./REVIEW-007-tool-call-i18n-locale.md)                             |
+| `BUILD-008`  | Tool-Call Grouping + Group Summary                | High     | done   | [BUILD-008-tool-call-grouping-summary.md](./BUILD-008-tool-call-grouping-summary.md)                     |
+| `REVIEW-008` | Review: Tool-Call Grouping + Group Summary        | —        | done   | [REVIEW-008-tool-call-grouping-summary.md](./REVIEW-008-tool-call-grouping-summary.md)                   |
+| `BUILD-009`  | Write/Edit Diff + Unified Status                  | High     | done   | [BUILD-009-write-edit-diff-status.md](./BUILD-009-write-edit-diff-status.md)                             |
+| `REVIEW-009` | Review: Write/Edit Diff + Unified Status          | —        | done   | [REVIEW-009-write-edit-diff-status.md](./REVIEW-009-write-edit-diff-status.md)                           |
+| `BUILD-010`  | Tool-Call Expanded Content + Localized Titles     | High     | done   | [BUILD-010-tool-call-expand-localize.md](./BUILD-010-tool-call-expand-localize.md)                       |
+| `REVIEW-010` | Review: Tool-Call Expanded Content                | —        | done   | [REVIEW-010-tool-call-expand-localize.md](./REVIEW-010-tool-call-expand-localize.md)                     |
+| `BUILD-011`  | Tool-Call Failure Detection via isError           | High     | done   | [BUILD-011-toolcall-iserror.md](./BUILD-011-toolcall-iserror.md)                                         |
+| `REVIEW-011` | Review: Tool-Call Failure Detection               | —        | done   | [REVIEW-011-toolcall-iserror.md](./REVIEW-011-toolcall-iserror.md)                                       |
+| `BUILD-012`  | Task Check List Panel                             | High     | done   | [BUILD-012-task-check-list.md](./BUILD-012-task-check-list.md)                                           |
+| `REVIEW-012` | Review: Task Check List Panel                     | —        | done   | [REVIEW-012-task-check-list.md](./REVIEW-012-task-check-list.md)                                         |
+| `BUILD-013`  | Subagent List Panel                               | High     | done   | [BUILD-013-subagent-list.md](./BUILD-013-subagent-list.md)                                               |
+| `REVIEW-013` | Review: Subagent List Panel                       | —        | done   | [REVIEW-013-subagent-list.md](./REVIEW-013-subagent-list.md)                                             |
+| `BUILD-014`  | Derived-State Stores                              | High     | done   | [BUILD-014-derived-state-stores.md](./BUILD-014-derived-state-stores.md)                                 |
+| `REVIEW-014` | Review: Derived-State Stores                      | —        | done   | [REVIEW-014-derived-state-stores.md](./REVIEW-014-derived-state-stores.md)                               |
+| `BUILD-015`  | Channel Title Store                               | Normal   | done   | [BUILD-015-channel-title-store.md](./BUILD-015-channel-title-store.md)                                   |
+| `REVIEW-015` | Review: Channel Title Store                       | —        | done   | [REVIEW-015-channel-title-store.md](./REVIEW-015-channel-title-store.md)                                 |
+| `BUILD-016`  | Channel Title UI                                  | High     | done   | [BUILD-016-channel-title-ui.md](./BUILD-016-channel-title-ui.md)                                         |
+| `REVIEW-016` | Review: Channel Title UI                          | —        | done   | [REVIEW-016-channel-title-ui.md](./REVIEW-016-channel-title-ui.md)                                       |
+| `BUILD-017`  | Join-Init Orchestration + metadata gate           | High     | done   | [BUILD-017-join-init-metadata-gate.md](./BUILD-017-join-init-metadata-gate.md)                           |
+| `REVIEW-017` | Review: Join-Init Orchestration                   | —        | done   | [REVIEW-017-join-init-metadata-gate.md](./REVIEW-017-join-init-metadata-gate.md)                         |
+| `BUILD-018`  | Channel Home Rename (cwd → channel-home)          | High     | done   | [BUILD-018-channel-home-rename.md](./BUILD-018-channel-home-rename.md)                                   |
+| `REVIEW-018` | Review: Channel Home Rename                       | —        | done   | [REVIEW-018-channel-home-rename.md](./REVIEW-018-channel-home-rename.md)                                 |
+| `BUILD-019`  | Sandbox Launch HUD                                | High     | done   | [BUILD-019-sandbox-launch-hud.md](./BUILD-019-sandbox-launch-hud.md)                                     |
+| `REVIEW-019` | Review: Sandbox Launch HUD                        | —        | done   | [REVIEW-019-sandbox-launch-hud.md](./REVIEW-019-sandbox-launch-hud.md)                                   |
+| `BUILD-020`  | Hide Subagent Message / Thinking Frames           | High     | done   | [BUILD-020-hide-subagent-messages.md](./BUILD-020-hide-subagent-messages.md)                             |
+| `REVIEW-020` | Review: Hide Subagent Message / Thinking          | —        | done   | [REVIEW-020-hide-subagent-messages.md](./REVIEW-020-hide-subagent-messages.md)                           |
+| `BUILD-021`  | Consume launchedSandboxes + Rx Store              | High     | done   | [BUILD-021-launched-sandboxes-store.md](./BUILD-021-launched-sandboxes-store.md)                         |
+| `REVIEW-021` | Review: launchedSandboxes Rx Store                | —        | done   | [REVIEW-021-launched-sandboxes-store.md](./REVIEW-021-launched-sandboxes-store.md)                       |
+| `BUILD-022`  | sandbox:// Handoff Cards                          | High     | done   | [BUILD-022-sandbox-handoff-cards.md](./BUILD-022-sandbox-handoff-cards.md)                               |
+| `REVIEW-022` | Review: sandbox:// Handoff Cards                  | —        | done   | [REVIEW-022-sandbox-handoff-cards.md](./REVIEW-022-sandbox-handoff-cards.md)                             |
+| `BUILD-023`  | File Explorer Side Panel — Cycle 1                | High     | done   | [BUILD-023-file-explorer-panel.md](./BUILD-023-file-explorer-panel.md)                                   |
+| `REVIEW-023` | Review: File Explorer Side Panel — Cycle 1        | —        | done   | [REVIEW-023-file-explorer-panel.md](./REVIEW-023-file-explorer-panel.md)                                 |
+| `BUILD-024`  | File Explorer Mutations + Context Menu + Nudge    | High     | done   | [BUILD-024-file-explorer-mutations.md](./BUILD-024-file-explorer-mutations.md)                           |
+| `REVIEW-024` | Review: File Explorer Mutations + Nudge           | —        | done   | [REVIEW-024-file-explorer-mutations.md](./REVIEW-024-file-explorer-mutations.md)                         |
+| `BUILD-025`  | Guard the File Explorer glyphs against drift      | Normal   | done   | [BUILD-025-file-explorer-icon-guard.md](./BUILD-025-file-explorer-icon-guard.md)                         |
+| `BUILD-026`  | Export bot text content renderer (BotMessageText) | Normal   | done   | [BUILD-026-export-bot-message-text.md](./BUILD-026-export-bot-message-text.md)                           |
+| `BUILD-027`  | Unified Chat Heading Bar (ChatHeader)             | High     | done   | [BUILD-027-unified-chat-header.md](./BUILD-027-unified-chat-header.md)                                   |
+| `REVIEW-027` | Review: Unified Chat Heading Bar                  | —        | done   | [REVIEW-027-unified-chat-header.md](./REVIEW-027-unified-chat-header.md)                                 |
+| `BUILD-028`  | Chat-kit Composer (SDK footer rewrite)            | High     | draft  | [BUILD-028-chat-kit-composer.md](./BUILD-028-chat-kit-composer.md)                                       |
+| `BUILD-029`  | File Explorer Cycle 3 — watch + lifecycle         | High     | done   | [BUILD-029-file-explorer-watch-and-lifecycle.md](./BUILD-029-file-explorer-watch-and-lifecycle.md)       |
+| `BUILD-030`  | Stop generation suspends the background run       | High     | done   | [BUILD-030-stop-generation-suspend-run.md](./BUILD-030-stop-generation-suspend-run.md)                   |
+| `REVIEW-030` | Review: Stop generation suspends background run   | —        | done   | [REVIEW-030-stop-generation-suspend-run.md](./REVIEW-030-stop-generation-suspend-run.md)                 |
+| `BUILD-031`  | Dock run-chrome panels outside thread scroll box  | High     | done   | [BUILD-031-docked-run-chrome-out-of-scroll-box.md](./BUILD-031-docked-run-chrome-out-of-scroll-box.md)   |
+| `REVIEW-031` | Review: Dock run-chrome outside thread scroll box | —        | done   | [REVIEW-031-docked-run-chrome-out-of-scroll-box.md](./REVIEW-031-docked-run-chrome-out-of-scroll-box.md) |
+| `BUILD-032`  | Carry payload on the NUDGE outbound               | High     | done   | [BUILD-032-nudge-payload.md](./BUILD-032-nudge-payload.md)                                               |
+| `REVIEW-032` | Review: Carry payload on the NUDGE outbound       | —        | done   | [REVIEW-032-nudge-payload.md](./REVIEW-032-nudge-payload.md)                                             |
+| `BUILD-033`  | Refuse a nudge while a run holds the channel      | High     | done   | [BUILD-033-nudge-busy-guard.md](./BUILD-033-nudge-busy-guard.md)                                         |
+| `REVIEW-033` | Review: Refuse a nudge while a run holds channel  | —        | done   | [REVIEW-033-nudge-busy-guard.md](./REVIEW-033-nudge-busy-guard.md)                                       |
+| `BUILD-034`  | Hoist the run indicator out of the footer         | High     | done   | [BUILD-034-hoist-run-indicator-out-of-footer.md](./BUILD-034-hoist-run-indicator-out-of-footer.md)       |
+| `BUILD-035`  | Wire sandboxPhase into init/restore join paths    | High     | done   | [BUILD-035-sandbox-phase-join-paths.md](./BUILD-035-sandbox-phase-join-paths.md)                         |
+| `REVIEW-035` | Review: sandboxPhase into init/restore join paths | —        | done   | [REVIEW-035-sandbox-phase-join-paths.md](./REVIEW-035-sandbox-phase-join-paths.md)                       |
+| `BUILD-036`  | Materialize a replayed tool-call from complete    | High     | done   | [BUILD-036-tool-call-complete-replay.md](./BUILD-036-tool-call-complete-replay.md)                       |
+| `REVIEW-036` | Review: Materialize replayed tool-call            | —        | done   | [REVIEW-036-tool-call-complete-replay.md](./REVIEW-036-tool-call-complete-replay.md)                     |
+| `BUILD-037`  | Rebuild the client on a StrictMode remount        | High     | done   | [BUILD-037-strictmode-client-detach.md](./BUILD-037-strictmode-client-detach.md)                         |
+| `BUILD-038`  | Localize File Explorer, replace native prompts    | High     | done   | [BUILD-038-file-explorer-i18n.md](./BUILD-038-file-explorer-i18n.md)                                     |
+| `REVIEW-038` | Review: Localize File Explorer, replace prompts   | —        | done   | [REVIEW-038-file-explorer-i18n.md](./REVIEW-038-file-explorer-i18n.md)                                   |
+| `BUILD-039`  | Export theme type surface + wire phantom tokens   | High     | done   | [BUILD-039-theme-api-and-token-wiring.md](./BUILD-039-theme-api-and-token-wiring.md)                     |
+| `REVIEW-039` | Review: Theme type surface + phantom tokens       | —        | done   | [REVIEW-039-theme-api-and-token-wiring.md](./REVIEW-039-theme-api-and-token-wiring.md)                   |
+| `BUILD-040`  | Anchor chat column rows; allow a null header      | Normal   | draft  | [BUILD-040-explicit-grid-rows.md](./BUILD-040-explicit-grid-rows.md)                                     |
+| `REVIEW-040` | Review: Explicit chat column rows                 | —        | draft  | [REVIEW-040-explicit-grid-rows.md](./REVIEW-040-explicit-grid-rows.md)                                   |
+| `BUILD-041`  | Let a resumed subagent read as running again      | High     | done   | [BUILD-041-resumed-subagent-reads-running.md](./BUILD-041-resumed-subagent-reads-running.md)             |
+| `REVIEW-041` | Review: Resumed subagent reads as running         | —        | done   | [REVIEW-041-resumed-subagent-reads-running.md](./REVIEW-041-resumed-subagent-reads-running.md)           |
+| `BUILD-042`  | Export user text renderer (UserMessageText)       | Normal   | done   | [BUILD-042-export-user-message-text.md](./BUILD-042-export-user-message-text.md)                         |
+| `REVIEW-042` | Review: Export user text content renderer         | —        | done   | [REVIEW-042-export-user-message-text.md](./REVIEW-042-export-user-message-text.md)                       |
+| `BUILD-043`  | Let `locale` reach every part of the chatbot      | Normal   | done   | [BUILD-043-locale-reaches-file-explorer.md](./BUILD-043-locale-reaches-file-explorer.md)                 |
+| `REVIEW-043` | Review: Let `locale` reach the whole chatbot      | —        | done   | [REVIEW-043-locale-reaches-file-explorer.md](./REVIEW-043-locale-reaches-file-explorer.md)               |
+| `BUILD-044`  | Route remaining hardcoded strings through i18n    | Normal   | done   | [BUILD-044-i18n-remaining-strings.md](./BUILD-044-i18n-remaining-strings.md)                             |
+| `REVIEW-044` | Review: Route remaining strings through i18n      | —        | done   | [REVIEW-044-i18n-remaining-strings.md](./REVIEW-044-i18n-remaining-strings.md)                           |
+| `BUILD-045`  | Give ApiKeyInput a supplied locale                | Normal   | done   | [BUILD-045-api-key-input-locale.md](./BUILD-045-api-key-input-locale.md)                                 |
+| `REVIEW-045` | Review: Give ApiKeyInput a supplied locale        | —        | done   | [REVIEW-045-api-key-input-locale.md](./REVIEW-045-api-key-input-locale.md)                               |
+| `BUILD-046`  | deepMerge treats undefined as no opinion          | Normal   | done   | [BUILD-046-deep-merge-undefined.md](./BUILD-046-deep-merge-undefined.md)                                 |
+| `REVIEW-046` | Review: deepMerge undefined semantics             | —        | done   | [REVIEW-046-deep-merge-undefined.md](./REVIEW-046-deep-merge-undefined.md)                               |
+| `BUILD-047`  | Chat column inset scales with its own width       | Normal   | done   | [BUILD-047-chat-column-gutter.md](./BUILD-047-chat-column-gutter.md)                                     |
+| `BUILD-048`  | Stop break-all from splitting English words       | Normal   | done   | [BUILD-048-word-break-splits-english.md](./BUILD-048-word-break-splits-english.md)                       |
+| `BUILD-049`  | Fix two self-referencing theme color defaults     | Normal   | done   | [BUILD-049-theme-token-self-reference.md](./BUILD-049-theme-token-self-reference.md)                     |
+| `BUILD-050`  | Lock every loading spinner to a shared phase      | Normal   | done   | [BUILD-050-phase-locked-spinner.md](./BUILD-050-phase-locked-spinner.md)                                 |
+| `REVIEW-050` | Review: Lock loading spinners to a shared phase   | —        | done   | [REVIEW-050-phase-locked-spinner.md](./REVIEW-050-phase-locked-spinner.md)                               |
+| `BUILD-051`  | Prompt suggestion placeholder + Tab adopt         | Normal   | done   | [BUILD-051-prompt-suggestion-placeholder.md](./BUILD-051-prompt-suggestion-placeholder.md)               |
+| `REVIEW-051` | Review: Prompt suggestion placeholder + Tab adopt | —        | done   | [REVIEW-051-prompt-suggestion-placeholder.md](./REVIEW-051-prompt-suggestion-placeholder.md)             |
+| `BUILD-052`  | QUESTION template as a fillable card              | Normal   | done   | [BUILD-052-question-template.md](./BUILD-052-question-template.md)                                       |
+| `REVIEW-052` | Review: QUESTION template as a fillable card      | —        | done   | [REVIEW-052-question-template.md](./REVIEW-052-question-template.md)                                     |
+| `BUILD-053`  | Toolbar new-file and rename actions               | Normal   | done   | [BUILD-053-toolbar-new-file-and-rename.md](./BUILD-053-toolbar-new-file-and-rename.md)                   |
+| `REVIEW-053` | Review: Toolbar new-file and rename actions       | —        | done   | [REVIEW-053-toolbar-new-file-and-rename.md](./REVIEW-053-toolbar-new-file-and-rename.md)                 |
+| `BUILD-054`  | File viewer download action                       | Normal   | done   | [BUILD-054-file-view-download.md](./BUILD-054-file-view-download.md)                                     |
+| `REVIEW-054` | Review: File viewer download action               | —        | done   | [REVIEW-054-file-view-download.md](./REVIEW-054-file-view-download.md)                                   |
+| `BUILD-055`  | Canvas stream events → conversation state (core)  | Normal   | done   | [BUILD-055-canvas-events-core.md](./BUILD-055-canvas-events-core.md)                                     |
+| `REVIEW-055` | Review: canvas stream events (core)               | —        | done   | [REVIEW-055-canvas-events-core.md](./REVIEW-055-canvas-events-core.md)                                   |
+| `BUILD-056`  | Canvas card: sandboxed iframe + streaming morph   | Normal   | done   | [BUILD-056-canvas-card-react.md](./BUILD-056-canvas-card-react.md)                                       |
+| `REVIEW-056` | Review: canvas card (react)                       | —        | done   | [REVIEW-056-canvas-card-react.md](./REVIEW-056-canvas-card-react.md)                                     |
+| `BUILD-057`  | Stop the File Explorer controller identity loop   | High     | done   | [BUILD-057-file-explorer-controller-identity.md](./BUILD-057-file-explorer-controller-identity.md)       |
+| `REVIEW-057` | Review: File Explorer controller identity loop    | —        | done   | [REVIEW-057-file-explorer-controller-identity.md](./REVIEW-057-file-explorer-controller-identity.md)     |
+| `BUILD-058`  | Hoist the header L3 escape hatch to Chatbot       | High     | done   | [BUILD-058-hoist-header-render-slot.md](./BUILD-058-hoist-header-render-slot.md)                         |
+| `REVIEW-058` | Review: hoist the header L3 escape hatch          | —        | done   | [REVIEW-058-hoist-header-render-slot.md](./REVIEW-058-hoist-header-render-slot.md)                       |
+| `BUILD-059`  | Close the typecheck coverage gaps                 | High     | done   | [BUILD-059-typecheck-coverage.md](./BUILD-059-typecheck-coverage.md)                                     |
+| `REVIEW-059` | Review: typecheck coverage gaps                   | —        | done   | [REVIEW-059-typecheck-coverage.md](./REVIEW-059-typecheck-coverage.md)                                   |
+| `BUILD-060`  | Standalone SourceSet volume client in core        | High     | done   | [BUILD-060-sourceset-volume-core-client.md](./BUILD-060-sourceset-volume-core-client.md)                 |
+| `REVIEW-060` | Review: SourceSet volume client in core           | —        | done   | [REVIEW-060-sourceset-volume-core-client.md](./REVIEW-060-sourceset-volume-core-client.md)               |
+| `BUILD-061`  | Mount the File Explorer on a SourceSet volume     | High     | done   | [BUILD-061-source-set-file-explorer.md](./BUILD-061-source-set-file-explorer.md)                         |
+| `REVIEW-061` | Review: File Explorer on a SourceSet volume       | —        | done   | [REVIEW-061-source-set-file-explorer.md](./REVIEW-061-source-set-file-explorer.md)                       |

@@ -20,6 +20,8 @@ export interface FileViewProps {
   readFile?: FsReadFile;
   /** Save content (≈ `PUT fs/file`); debounced by this component. */
   onSaveFile?: FsSaveFile;
+  /** Show the source, but never an editable buffer (F-025). */
+  readOnly?: boolean;
   /** Watch this file (≈ `fs/watch` SSE) so an agent-side write reloads the view (AC3). */
   watchFile?: FsWatchFile;
   /** Report editing / unsaved-changes state so the host can guard mid-edit panel yanks (F-021 AC10). */
@@ -58,11 +60,31 @@ function kindOf(ext: string): FileKind {
  */
 export function FileView(props: FileViewProps): ReactNode {
   const { locale = 'en-US' } = useAsgardTemplateContext();
-  const { sandboxName, file, readFile, onSaveFile, watchFile, onDirtyChange, onDownload, downloadDisabled, onBack } =
-    props;
+  const {
+    sandboxName,
+    file,
+    readFile,
+    onSaveFile,
+    watchFile,
+    onDirtyChange,
+    onDownload,
+    downloadDisabled,
+    onBack,
+    readOnly,
+  } = props;
   const ext = extOf(file.name);
   const kind = kindOf(ext);
   const canToggle = kind !== 'image';
+  /**
+   * Under `readOnly` the toggle still opens the source — reading is not mutating — but it stops
+   * promising an edit. Left saying "Switch to editing" (which the chat-kit prototype still does) it
+   * hands back a typable buffer whose save silently goes nowhere and whose dirty dot never clears.
+   *
+   * Deliberately keyed on `readOnly` alone, not on `onSaveFile`. A source that merely *cannot* save has
+   * the same silent-no-op problem, but fixing that would change behavior nobody asked to change; it is
+   * recorded as a finding on REVIEW-061 instead.
+   */
+  const canEdit = !readOnly;
 
   const [mode, setMode] = useState<'preview' | 'edit'>('preview');
   const [content, setContent] = useState<string | null>(null);
@@ -172,7 +194,7 @@ export function FileView(props: FileViewProps): ReactNode {
       <CodeEditor
         ext={ext}
         value={content ?? ''}
-        editable={mode === 'edit'}
+        editable={mode === 'edit' && canEdit}
         onChange={val => {
           setContent(val);
           setDirty(true);
@@ -204,8 +226,18 @@ export function FileView(props: FileViewProps): ReactNode {
             <button
               type="button"
               onClick={() => setMode(m => (m === 'preview' ? 'edit' : 'preview'))}
-              aria-label={t(locale, mode === 'preview' ? 'fileExplorer.switchToEdit' : 'fileExplorer.switchToPreview')}
-              title={t(locale, mode === 'preview' ? 'fileExplorer.edit' : 'fileExplorer.preview')}
+              aria-label={t(
+                locale,
+                mode !== 'preview'
+                  ? 'fileExplorer.switchToPreview'
+                  : canEdit
+                  ? 'fileExplorer.switchToEdit'
+                  : 'fileExplorer.switchToSource',
+              )}
+              title={t(
+                locale,
+                mode !== 'preview' ? 'fileExplorer.preview' : canEdit ? 'fileExplorer.edit' : 'fileExplorer.source',
+              )}
               className={styles.actionBtn}
             >
               {mode === 'preview' ? <CodeIcon size={15} /> : <EyeIcon size={15} />}

@@ -296,8 +296,9 @@ export function FileExplorerView(): ReactNode {
       sandboxName={activeSourceId}
       file={openFile}
       readFile={providers.readFile}
-      // Withholding the saver is how the viewer is told not to offer editing; `readOnly` is about
-      // permission, so it wins over whatever the source can technically do.
+      // Both: `readOnly` changes what the viewer offers, and withholding the saver makes a stray save
+      // impossible even if something slipped past that.
+      readOnly={readOnly}
       onSaveFile={readOnly ? undefined : providers.saveFile}
       watchFile={providers.watchFile}
       onDirtyChange={controller.setEditingDirty}
