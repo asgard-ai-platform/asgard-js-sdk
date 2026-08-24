@@ -119,6 +119,24 @@ describe('runSse pacing (BUILD-068)', () => {
     expect(onSseMessage).not.toHaveBeenCalled();
   });
 
+  it('R6: a stream error surfaces once and does not deliver the window it interrupted', () => {
+    const onSseMessage = vi.fn();
+    const onSseError = vi.fn();
+    const onSseCompleted = vi.fn();
+
+    startRun(makeClient(), { onSseMessage, onSseError, onSseCompleted });
+
+    source.next(canvasDelta('interrupted'));
+    source.error(new Error('transport failed'));
+    vi.advanceTimersByTime(WINDOW_MS * 4);
+
+    expect(onSseError).toHaveBeenCalledTimes(1);
+    expect(onSseCompleted).not.toHaveBeenCalled();
+    // An interrupted window is dropped rather than applied: the frames in it belong to a run that just
+    // failed, and the per-frame pipeline discarded its queue on error the same way.
+    expect(onSseMessage).not.toHaveBeenCalled();
+  });
+
   it('R5: `delayTime` sets the window, and 0 removes the wait', () => {
     const slow = vi.fn();
     const immediate = vi.fn();
