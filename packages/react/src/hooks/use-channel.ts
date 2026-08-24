@@ -26,6 +26,8 @@ export interface UseChannelProps {
   client: AsgardServiceClient | null;
   customChannelId: string;
   customMessageId?: string;
+  /** SSE batch window in ms, forwarded to `FetchSseOptions.delayTime` (default 50; `0` = no wait). */
+  delayTime?: number;
   initMessages?: ConversationMessage[];
   /** Seed for the channel title store (F-016) — e.g. from `GET /channel/metadata` (wired by F-015). */
   channelTitle?: string | null;
@@ -124,6 +126,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     resetPayload,
     customChannelId,
     customMessageId,
+    delayTime,
     initMessages,
     channelTitle: channelTitleSeed,
     autoResetChannel,
@@ -222,6 +225,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
             onSseError?.(error);
           },
+          delayTime,
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, {
               conversation,
@@ -242,6 +246,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       client,
       customChannelId,
       customMessageId,
+      delayTime,
       initMessages,
       channelTitleSeed,
       onSseMessage,
@@ -325,6 +330,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
               onSseError?.(error);
             },
+            delayTime,
             onSseMessage(response: SseResponse<EventType>) {
               onSseMessage?.(response, {
                 conversation,
@@ -348,6 +354,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       client,
       customChannelId,
       customMessageId,
+      delayTime,
       onSseMessage,
       onAuthError,
       onSseError,
@@ -380,6 +387,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       await channel?.sendMessage(
         { ...payload, customMessageId },
         {
+          delayTime,
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, {
               conversation,
@@ -401,7 +409,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         },
       );
     },
-    [channel, customMessageId, onSseMessage, onAuthError, onSseError, conversation],
+    [channel, delayTime, customMessageId, onSseMessage, onAuthError, onSseError, conversation],
   );
 
   const clearPromptSuggestion = useCallback((): void => {
@@ -430,6 +438,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       await channel?.replyToolCallConsents(
         answers,
         {
+          delayTime,
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, {
               conversation,
@@ -439,13 +448,14 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         payload,
       );
     },
-    [channel, client, onSseMessage, conversation],
+    [channel, delayTime, client, onSseMessage, conversation],
   );
 
   const nudge = useCallback(
     async (payload?: FetchSsePayload['payload']): Promise<void> => {
       await channel?.nudge(
         {
+          delayTime,
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, { conversation });
           },
@@ -453,7 +463,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         payload,
       );
     },
-    [channel, onSseMessage, conversation],
+    [channel, delayTime, onSseMessage, conversation],
   );
 
   // F-015 — metadata-gated join-init. On mount, gate on `GET /channel/metadata` instead of unconditionally

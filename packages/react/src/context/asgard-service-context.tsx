@@ -190,6 +190,10 @@ export interface AsgardServiceContextProviderProps {
   allowedDocumentMimeTypes?: string[];
   customChannelId: string;
   customMessageId?: string;
+  /**
+   * How long (ms) SSE frames are gathered before being applied. Defaults to 50; `0` removes the
+   * wait. See `FetchSseOptions.delayTime` in `@asgard-js/core`.
+   */
   delayTime?: number;
   initMessages?: ConversationMessage[];
   /** Seed for the channel title store (F-016) — e.g. from `GET /channel/metadata` (wired by F-015). */
@@ -247,6 +251,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     allowedImageMimeTypes,
     allowedDocumentMimeTypes,
     customChannelId,
+    delayTime,
     initMessages,
     channelTitle: channelTitleSeed,
     onSseMessage,
@@ -321,6 +326,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
   } = useChannel({
     client,
     customChannelId,
+    delayTime,
     initMessages,
     channelTitle: channelTitleSeed,
     autoResetChannel,
