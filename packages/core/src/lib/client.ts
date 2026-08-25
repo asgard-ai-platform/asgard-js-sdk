@@ -22,9 +22,15 @@ import {
 import { HttpError } from '../types/http-error';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { createSseObservable } from './create-sse-observable';
-import { concatMap, delay, finalize, Observable, of, Subject, Subscription, takeUntil } from 'rxjs';
+import { bufferTime, filter, finalize, Observable, Subject, Subscription, takeUntil } from 'rxjs';
 import { EventType } from '../constants/enum';
 import { EventEmitter } from './event-emitter';
+
+/**
+ * How long `runSse` gathers SSE frames before handing them on. One window is the whole latency the SDK
+ * adds, no matter how many frames land in it — see the rationale on the `bufferTime` call below.
+ */
+const DEFAULT_SSE_BATCH_WINDOW_MS = 50;
 
 export default class AsgardServiceClient implements IAsgardServiceClient {
   private apiKey?: string;
@@ -278,20 +284,37 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
         // No RxJS-level retry: re-subscribing would re-POST and the backend would re-dispatch a duplicate
         // run. Mid-stream resume is the library's job (native Last-Event-ID reconnect in
         // create-sse-observable); a no-cursor failure surfaces via `error` below.
-        concatMap(event => of(event).pipe(delay(options?.delayTime ?? 50))),
+        //
+        // **Gate on a window, not on every frame.** This used to be
+        // `concatMap(event => of(event).pipe(delay(delayTime ?? 50)))`. `concatMap` is strictly serial,
+        // so the cost grew with the *number* of frames rather than the amount of data or the backend's
+        // speed — and stream deltas are token-sized. A canvas fragment arrives as hundreds of frames
+        // (measured: a 2.6KB drawing = 372 frames of ~7 characters), which made the SDK alone add
+        // ~19s at 51.7ms per frame before the conversation held the whole fragment. That is precisely
+        // the "stare at a blank card, then it pops in" F-030 exists to avoid.
+        //
+        // `bufferTime` keeps the reason the delay was here — never push hundreds of separate updates
+        // at a consumer, one microtask apart — but the latency it adds is one window total, no matter
+        // how many frames land in it. Frames are still delivered individually and in order below, so
+        // nothing downstream can tell the difference apart from the timing.
+        bufferTime(options?.delayTime ?? DEFAULT_SSE_BATCH_WINDOW_MS),
+        // An idle stream still ticks an empty buffer every window; do not wake the consumer for nothing.
+        filter(batch => batch.length > 0),
         takeUntil(this.destroy$),
         // Settle the run accounting on every termination path — complete, error, AND a user-initiated
         // unsubscribe (stop-generation aborts the connection without a terminal event).
         finalize(() => this.onRunSettled()),
       )
       .subscribe({
-        next: response => {
+        next: batch => {
           // Once detached the connection is kept open only so the backend can
           // finish the run; the owning component is gone, so stop notifying it.
           if (this.detached) return;
 
-          options?.onSseMessage?.(response);
-          this.handleEvent(response);
+          for (const response of batch) {
+            options?.onSseMessage?.(response);
+            this.handleEvent(response);
+          }
         },
         error: error => {
           if (!this.detached) options?.onSseError?.(error);
