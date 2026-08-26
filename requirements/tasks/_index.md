@@ -254,3 +254,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-067` | Review: replayed user attachment metadata               | —        | done   | [REVIEW-067-rejoin-attachment-metadata.md](./REVIEW-067-rejoin-attachment-metadata.md)                   |
 | `BUILD-068`  | Stop the SSE pacing from serializing stream deltas      | High     | done   | [BUILD-068-sse-pacing-serializes-deltas.md](./BUILD-068-sse-pacing-serializes-deltas.md)                 |
 | `REVIEW-068` | Review: SSE pacing no longer serializes deltas          | —        | done   | [REVIEW-068-sse-pacing-serializes-deltas.md](./REVIEW-068-sse-pacing-serializes-deltas.md)               |
+| `BUILD-069`  | SourceSet File Explorer batch upload                    | L        | done   | [BUILD-069-sourceset-explorer-batch-upload.md](./BUILD-069-sourceset-explorer-batch-upload.md)           |
+| `REVIEW-069` | Review: SourceSet File Explorer batch upload            | —        | done   | [REVIEW-069-sourceset-explorer-batch-upload.md](./REVIEW-069-sourceset-explorer-batch-upload.md)         |
