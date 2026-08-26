@@ -136,6 +136,15 @@ const ACTION_ORDER = [
   'sourceSetExplorer.refresh',
 ] as const;
 
+/**
+ * The same set as the context menu renders it (BUG-008 R1). Upload is one toolbar button that opens a
+ * menu, because the file picker and the folder picker genuinely see different things; the context menu
+ * lists those two rows flat rather than nesting a second menu inside itself.
+ */
+const MENU_ORDER = ACTION_ORDER.flatMap(key =>
+  key === 'sourceSetExplorer.upload' ? ['sourceSetExplorer.uploadFiles', 'sourceSetExplorer.uploadFolder'] : [key],
+);
+
 const SIMPLE: FakeVolume = {
   dirs: { '': [dir('notes'), file('a.txt')], notes: [file('todo.md')] },
   files: { 'a.txt': 'hi', 'notes/todo.md': '# todo' },
@@ -210,7 +219,7 @@ describe('F-025 R5 — toolbar and context menu offer one set of actions', () =>
       .getAllByRole('menuitem')
       .map(item => item.textContent);
 
-    expect(new Set(labels)).toEqual(new Set(ACTION_ORDER.map(key => t('en-US', key))));
+    expect(new Set(labels)).toEqual(new Set(MENU_ORDER.map(key => t('en-US', key))));
   });
 
   it('disables selection-dependent actions rather than hiding them', async () => {
@@ -432,7 +441,7 @@ describe('BUILD-064 — host extension points', () => {
     await screen.findByRole('menu');
 
     expect(menuLabels()).toEqual([
-      ...ACTION_ORDER.slice(0, -1).map(key => t('en-US', key)),
+      ...MENU_ORDER.slice(0, -1).map(key => t('en-US', key)),
       'Pull from external source',
       t('en-US', 'sourceSetExplorer.refresh'),
     ]);

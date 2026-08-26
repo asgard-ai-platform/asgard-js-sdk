@@ -1,7 +1,28 @@
-import { CSSProperties, MouseEvent, ReactNode, useCallback, useMemo, useRef, useState } from 'react';
+import {
+  CSSProperties,
+  DragEvent,
+  MouseEvent,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { AsgardSourceSetClient } from '@asgard-js/core';
 import { ContextMenu, type ContextMenuItem } from '../file-explorer/context-menu';
 import type { FsEntry } from '../file-explorer/types';
+import {
+  formatUploadSize,
+  isFileDrag,
+  planFromDataTransfer,
+  planFromFileList,
+  UploadConflictDialog,
+  UploadProgress,
+  type UploadLabels,
+  type UploadPlanSource,
+  type UploadReason,
+} from '../upload-queue';
 import { type Locale, t } from '../../i18n';
 import { Spinner } from '../spinner';
 import { SourceSetFileView } from './file-view';
@@ -14,6 +35,7 @@ import {
   DownloadIcon,
   FilePlusIcon,
   FolderPlusIcon,
+  FolderUpIcon,
   PencilIcon,
   RefreshIcon,
   ScissorsIcon,
@@ -62,6 +84,15 @@ export interface SourceSetFileExplorerProps {
   theme?: SourceSetExplorerTheme;
   /** Ceiling on one directory's auto-paging walk (F-026). */
   maxEntries?: number;
+  /**
+   * Ceiling on concurrent uploads within one batch — the upper bound the back-off works below, not a
+   * fixed rate. Defaults to 3.
+   *
+   * There is no batch endpoint: two hundred files is two hundred `PUT volume/file` requests, and firing
+   * them at once is what a relay in front of the volume cannot survive. Injected rather than fixed
+   * because a BFF relay and the edge server tolerate different amounts.
+   */
+  uploadConcurrency?: number;
   /**
    * Host-supplied context-menu actions, rendered as their own section after `Rename` / `Delete` and
    * before `Refresh`. Called with the currently selected entry, or `null` when nothing is selected —
@@ -142,6 +173,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     locale = 'en-US',
     theme,
     maxEntries,
+    uploadConcurrency,
     extraEntryActions,
     entryBadge,
     onError,
@@ -167,18 +199,104 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     initialPath,
     locale,
     maxEntries,
+    uploadConcurrency,
     readOnly,
     onError,
     requestInput,
     requestConfirm,
   });
 
+  const rootRef = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  /** The folder picker. Reaches every file in a tree, but never an empty folder — only a drag can. */
+  const dirInput = useRef<HTMLInputElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [uploadMenu, setUploadMenu] = useState<{ x: number; y: number } | null>(null);
+  const [dropping, setDropping] = useState(false);
 
-  const { selected, clipboard, openFile } = explorer;
+  const { selected, clipboard, openFile, targetDir, uploads, startUpload } = explorer;
   const hasSelection = selected != null;
   const selectedIsFile = hasSelection && !selected.isDir;
+
+  // `webkitdirectory` is not a React DOM attribute; setting it on the element avoids both a cast and an
+  // unknown-prop warning, and `HTMLInputElement` declares it, so this stays fully typed.
+  useEffect(() => {
+    if (dirInput.current) dirInput.current.webkitdirectory = true;
+  }, []);
+
+  /**
+   * Where this batch lands. Read when the picker opens rather than when it returns: `targetDir` follows
+   * the selection, and the destination the user asked for is the one that was current when they asked.
+   */
+  const uploadDir = useRef(rootPath);
+
+  const openPicker = useCallback(
+    (input: HTMLInputElement | null): void => {
+      uploadDir.current = targetDir;
+      input?.click();
+    },
+    [targetDir],
+  );
+
+  /**
+   * Reads a picked `FileList` and starts the batch.
+   *
+   * The copy on the first line is not incidental. `input.files` is **live**: clearing `input.value`
+   * empties the very `FileList` you are holding, so reading it afterwards finds nothing and the batch
+   * silently never starts. And the value does have to be cleared, or picking the same file twice in a
+   * row fires no `change` at all. Copy first, then clear.
+   */
+  const takePicked = useCallback(
+    (input: HTMLInputElement, source: UploadPlanSource): void => {
+      const picked = input.files ? Array.from(input.files) : [];
+
+      input.value = '';
+      if (picked.length === 0) return;
+
+      startUpload(uploadDir.current, planFromFileList(picked, source));
+    },
+    [startUpload],
+  );
+
+  /**
+   * "Files or folder?" — asked rather than assumed, because the two pickers see different things: a
+   * folder pick reaches every file in the tree but no empty folder, and a file pick sees no folders at
+   * all. One definition, rendered both as the toolbar button's menu and as two flat context-menu rows.
+   */
+  const uploadEntries = useMemo(
+    (): ContextMenuItem[] =>
+      readOnly
+        ? []
+        : [
+            {
+              key: 'upload-files',
+              label: t(locale, 'sourceSetExplorer.uploadFiles'),
+              icon: <UploadIcon size={15} />,
+              onSelect: () => openPicker(fileInput.current),
+            },
+            {
+              key: 'upload-folder',
+              label: t(locale, 'sourceSetExplorer.uploadFolder'),
+              icon: <FolderUpIcon size={15} />,
+              onSelect: () => openPicker(dirInput.current),
+            },
+          ],
+    [readOnly, locale, openPicker],
+  );
+
+  /**
+   * Anchored off the toolbar button's own ref rather than a click event, so `ExplorerAction.run` stays
+   * the plain `() => void` every other action is — the context menu renders those same functions and has
+   * no event to hand them.
+   */
+  const uploadButton = useRef<HTMLButtonElement>(null);
+  const openUploadMenu = useCallback((): void => {
+    const button = uploadButton.current?.getBoundingClientRect();
+    const bounds = rootRef.current?.getBoundingClientRect();
+    if (!button) return;
+
+    setUploadMenu({ x: button.left - (bounds?.left ?? 0), y: button.bottom - (bounds?.top ?? 0) + 2 });
+  }, []);
 
   /**
    * The one action table (R5). The toolbar and the context menu both render *this*, so the two cannot
@@ -207,7 +325,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
         key: 'upload',
         labelKey: 'sourceSetExplorer.upload',
         icon: <UploadIcon size={15} />,
-        run: () => fileInput.current?.click(),
+        run: openUploadMenu,
         disabled: false,
         mutating: true,
       },
@@ -272,7 +390,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     ];
 
     return readOnly ? all.filter(action => !action.mutating) : all;
-  }, [explorer, readOnly, hasSelection, selectedIsFile, clipboard, locale]);
+  }, [explorer, readOnly, hasSelection, selectedIsFile, clipboard, locale, openUploadMenu]);
 
   const labelOf = useCallback((action: ExplorerAction): string => action.label ?? t(locale, action.labelKey), [locale]);
 
@@ -304,22 +422,152 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     // that returns nothing drops out through the same filter every built-in group goes through.
     const extra = !readOnly && extraEntryActions ? extraEntryActions(selected) : [];
 
+    // Upload is the one action the toolbar renders as a menu rather than a command, so here it expands
+    // into its two rows instead of nesting a second menu inside this one. Same two `uploadEntries` the
+    // toolbar menu shows, so the pair cannot drift.
     return [
-      group(['newFile', 'newFolder', 'upload']),
+      [...group(['newFile', 'newFolder']), ...uploadEntries],
       group(['download', 'copy', 'cut', 'paste']),
       group(['rename', 'delete']),
       extra,
       group(['refresh']),
     ].filter(section => section.length > 0);
-  }, [actions, labelOf, readOnly, extraEntryActions, selected]);
+  }, [actions, labelOf, readOnly, extraEntryActions, selected, uploadEntries]);
+
+  /**
+   * This explorer's copy for the shared upload UI, drawn from `sourceSetExplorer.*`.
+   *
+   * The components themselves hold no strings: the chat explorer mounts the same ones against
+   * `fileExplorer.*`, so neither namespace can be baked in (F-025).
+   */
+  const uploadLabels = useMemo<UploadLabels>(
+    () => ({
+      region: t(locale, 'sourceSetExplorer.uploadProgress'),
+      uploading: t(locale, 'sourceSetExplorer.uploading'),
+      cancelled: t(locale, 'sourceSetExplorer.uploadCancelled'),
+      doneWithFailures: t(locale, 'sourceSetExplorer.uploadDoneWithFailures'),
+      done: t(locale, 'sourceSetExplorer.uploadDone'),
+      cancel: t(locale, 'sourceSetExplorer.cancel'),
+      retry: (count): string => t(locale, 'sourceSetExplorer.uploadRetry', { count: String(count) }),
+      dismiss: t(locale, 'sourceSetExplorer.uploadDismiss'),
+      throttled: (limit, max): string =>
+        t(locale, 'sourceSetExplorer.uploadThrottled', { limit: String(limit), max: String(max) }),
+      emptyDirsHint: t(locale, 'sourceSetExplorer.uploadEmptyDirsHint'),
+      reason: (reason: UploadReason): string => {
+        switch (reason.code) {
+          // Unreachable while this explorer injects no cap — the volume streams writes and has none. It
+          // is rendered anyway because the cap is a queue parameter, so a host that ever sets one gets a
+          // sentence rather than a blank cell.
+          case 'too-large':
+            return t(locale, 'sourceSetExplorer.uploadTooLarge', {
+              max: formatUploadSize(reason.maxBytes),
+              size: formatUploadSize(reason.size),
+            });
+          case 'exists-skipped':
+            return t(locale, 'sourceSetExplorer.uploadExistsSkipped');
+          case 'cancelled':
+            return t(locale, 'sourceSetExplorer.uploadCancelled');
+          default:
+            if (reason.status === 403) return t(locale, 'sourceSetExplorer.uploadForbidden');
+
+            if (reason.status === 413) return t(locale, 'sourceSetExplorer.uploadTooLargeForServer');
+
+            if (reason.status === 429) return t(locale, 'sourceSetExplorer.uploadServerBusy');
+
+            if (reason.status !== undefined && reason.status >= 500) {
+              return t(locale, 'sourceSetExplorer.uploadServerError', { status: String(reason.status) });
+            }
+
+            return reason.message || t(locale, 'sourceSetExplorer.uploadUnknownError');
+        }
+      },
+      conflictTitle: t(locale, 'sourceSetExplorer.uploadConflictTitle'),
+      skip: t(locale, 'sourceSetExplorer.uploadSkip'),
+      keepBoth: t(locale, 'sourceSetExplorer.uploadKeepBoth'),
+      overwrite: t(locale, 'sourceSetExplorer.uploadOverwrite'),
+      applyToRest: (count): string => t(locale, 'sourceSetExplorer.uploadApplyToRest', { count: String(count) }),
+      allSkip: t(locale, 'sourceSetExplorer.uploadAllSkip'),
+      allKeepBoth: t(locale, 'sourceSetExplorer.uploadAllKeepBoth'),
+      allOverwrite: t(locale, 'sourceSetExplorer.uploadAllOverwrite'),
+      cancelBatch: t(locale, 'sourceSetExplorer.uploadCancelBatch'),
+    }),
+    [locale],
+  );
+
+  /**
+   * Accepts files dragged in **from outside the browser** only. Dragging nodes around inside the tree
+   * stays unsupported (moving is cut-and-paste, F-025), which is also why the highlight covers the whole
+   * body rather than the row under the cursor.
+   *
+   * Spread on the panel root so the toolbar and the progress panel behave like the tree does — the
+   * progress panel covers the tree's own bottom edge mid-batch, and it is as much "the explorer" to the
+   * person dragging.
+   */
+  const dropZone = useMemo(() => {
+    /** Will this panel serve the drag? Only a served drag is claimed; anything else passes through. */
+    const serves = (event: DragEvent<HTMLElement>): boolean => !readOnly && !openFile && isFileDrag(event.dataTransfer);
+
+    /**
+     * Take the event out of circulation. `preventDefault()` alone only suppresses the browser default —
+     * the event keeps bubbling, and a host page around this panel may be a drop target of its own
+     * (asgard-js-sdk#446 was exactly that on the chat side: one drop both uploaded and attached).
+     */
+    const claim = (event: DragEvent<HTMLElement>): void => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    return {
+      onDragEnter: (event: DragEvent<HTMLElement>): void => {
+        if (!serves(event)) return;
+
+        claim(event);
+        setDropping(true);
+      },
+      onDragOver: (event: DragEvent<HTMLElement>): void => {
+        if (!serves(event)) return;
+
+        claim(event);
+        setDropping(true);
+      },
+      onDragLeave: (event: DragEvent<HTMLElement>): void => {
+        if (!serves(event)) return;
+
+        // Claimed before the guard below, not after: moving between two rows inside the panel also fires
+        // `dragleave`, and letting that reach a host would decrement a counter this panel never let it
+        // increment — leaving the host's own overlay stuck on.
+        claim(event);
+
+        // Only the container's own leave counts; bubbling from a child row would flicker the state.
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+
+        setDropping(false);
+      },
+      onDrop: (event: DragEvent<HTMLElement>): void => {
+        if (!serves(event)) return;
+
+        claim(event);
+        setDropping(false);
+
+        const dir = targetDir;
+        // `DataTransfer` does not survive the await inside, so hand it over synchronously.
+        const dataTransfer = event.dataTransfer;
+
+        void planFromDataTransfer(dataTransfer).then(plan => startUpload(dir, plan));
+      },
+    };
+  }, [readOnly, openFile, targetDir, startUpload]);
 
   return (
-    <div className={styles.root} style={themeStyle(theme)}>
+    // The drop zone is the whole panel, not the tree alone: the handlers decide for themselves whether
+    // this panel serves the drag, and a drop it does not serve passes through untouched.
+    <div className={styles.root} style={themeStyle(theme)} ref={rootRef} {...dropZone}>
       <div className={styles.toolbar} role="toolbar" aria-label={t(locale, 'sourceSetExplorer.toolbar')}>
         {actions.map(action => (
           <button
             key={action.key}
             type="button"
+            ref={action.key === 'upload' ? uploadButton : undefined}
             className={`${styles.toolBtn} ${action.danger ? styles.toolBtnDanger : ''}`}
             // R5: an action that needs a selection goes inert, it does not disappear — a toolbar whose
             // buttons come and go makes the user hunt for the one they just used.
@@ -349,7 +597,12 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
         </div>
       )}
 
-      <div className={styles.body}>
+      <div className={`${styles.body} ${dropping ? styles.bodyDropping : ''}`}>
+        {dropping && (
+          <div className={styles.dropOverlay}>
+            {t(locale, 'sourceSetExplorer.dropToUpload', { dir: targetDir === '' ? '/' : `/${targetDir}` })}
+          </div>
+        )}
         {openFile ? (
           <SourceSetFileView
             // Keyed on the refresh token so the toolbar's refresh re-reads the open file too (R8).
@@ -378,20 +631,44 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
         )}
       </div>
 
+      {/* Docked below the tree rather than over it: browsing while a batch runs is the normal case. */}
+      <UploadProgress
+        items={uploads.items}
+        running={uploads.running}
+        cancelled={uploads.cancelled}
+        limit={uploads.limit}
+        ceiling={uploads.ceiling}
+        source={uploads.source}
+        labels={uploadLabels}
+        onCancel={uploads.cancel}
+        onRetryFailed={uploads.retryFailed}
+        onDismiss={uploads.dismiss}
+      />
+
+      {uploads.conflict && (
+        <UploadConflictDialog ask={uploads.conflict} labels={uploadLabels} onAnswer={uploads.answerConflict} />
+      )}
+
       {menu && <ContextMenu x={menu.x} y={menu.y} sections={menuSections} onClose={closeMenu} />}
 
+      {uploadMenu && (
+        <ContextMenu x={uploadMenu.x} y={uploadMenu.y} sections={[uploadEntries]} onClose={() => setUploadMenu(null)} />
+      )}
+
+      {/* The multi-file picker stays first: it is the one an assembly reaches for by element type. */}
       <input
         ref={fileInput}
         type="file"
         multiple
         className={styles.fileInput}
-        onChange={event => {
-          const picked = event.target.files;
-          if (picked && picked.length > 0) void explorer.upload(picked);
-
-          // Reset so picking the same file twice in a row still fires `change`.
-          event.target.value = '';
-        }}
+        onChange={event => takePicked(event.target, 'files')}
+      />
+      <input
+        ref={dirInput}
+        type="file"
+        multiple
+        className={styles.fileInput}
+        onChange={event => takePicked(event.target, 'directory')}
       />
 
       {dialog}
