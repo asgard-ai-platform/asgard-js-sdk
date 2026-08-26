@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AsgardSourceSetClient } from '@asgard-js/core';
 import type { FsEntry } from '../file-explorer/types';
+import {
+  isUploadPlanEmpty,
+  useUploadQueue,
+  type UploadPlan,
+  type UploadQueue,
+  type UploadWrite,
+} from '../upload-queue';
 import { type Locale, t } from '../../i18n';
 import { blobToDataUrl, blobToText, isImageName, saveBlob } from './blob';
 import { isConflict, volumeErrorMessage } from './errors';
@@ -33,6 +40,8 @@ export interface SourceSetExplorerOptions {
   locale: Locale;
   /** Ceiling for one directory's auto-paging walk. */
   maxEntries?: number;
+  /** Ceiling on concurrent uploads (the AIMD upper bound). Defaults to the queue's own 3. */
+  uploadConcurrency?: number;
   readOnly: boolean;
   onError?: (error: unknown) => void;
   /** Ask the user for a name; resolves `null` when dismissed. */
@@ -60,7 +69,17 @@ export interface SourceSetExplorerController {
   refresh: () => void;
   newFile: () => Promise<void>;
   newFolder: () => Promise<void>;
-  upload: (files: FileList | File[]) => Promise<void>;
+  /**
+   * The batch upload queue (BUG-008): worker pool, AIMD back-off, collision prompts, cancellation.
+   *
+   * Deliberately the same `useUploadQueue` the chat explorer drives rather than a second limiter — see
+   * `components/upload-queue/index.ts`. The batch therefore does **not** go through `mutate()`: its
+   * progress lives in the queue's own panel, and routing it through `busy` would report the same thing
+   * twice, in less detail.
+   */
+  uploads: UploadQueue;
+  /** Start a batch into `dir`. An empty plan (dismissed picker, drop carrying nothing) is a no-op. */
+  startUpload: (dir: string, plan: UploadPlan) => void;
   download: () => Promise<void>;
   copy: () => void;
   cut: () => void;
@@ -105,8 +124,18 @@ function ancestorDirs(root: string, path: string): string[] {
  * export surface with nothing to plug into it.
  */
 export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceSetExplorerController {
-  const { client, rootPath, initialPath, locale, maxEntries, readOnly, onError, requestInput, requestConfirm } =
-    options;
+  const {
+    client,
+    rootPath,
+    initialPath,
+    locale,
+    maxEntries,
+    uploadConcurrency,
+    readOnly,
+    onError,
+    requestInput,
+    requestConfirm,
+  } = options;
 
   const [listings, setListings] = useState<Record<string, DirListing>>({});
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set([rootPath]));
@@ -319,30 +348,62 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     await mutate('sourceSetExplorer.opNewFolder', () => client.mkdir(joinPath(dir, name)), [dir]);
   }, [requestInput, locale, targetDir, mutate, client]);
 
-  const upload = useCallback(
-    async (files: FileList | File[]): Promise<void> => {
-      const picked = Array.from(files);
-      if (picked.length === 0) return;
+  // --- batch upload (BUG-008) ---
+  //
+  // Every file is its own `PUT volume/file`; the volume has no batch endpoint. The shared queue owns the
+  // pacing, the collision prompts and cancellation, and this layer only turns a plan-relative path into a
+  // volume path. Recorded when the batch starts rather than read live, so changing the selection while
+  // two hundred files are in flight cannot move the destination out from under them.
+  const uploadDirRef = useRef(rootPath);
 
-      const dir = targetDir;
-      await mutate(
-        'sourceSetExplorer.opUpload',
-        async () => {
-          for (const file of picked) {
-            try {
-              await client.write(joinPath(dir, file.name), file, { createOnly: true });
-            } catch (e) {
-              // Same choice as new-file: never overwrite silently, name the collision.
-              if (isConflict(e)) throw new Error(t(locale, 'sourceSetExplorer.errorNameTaken', { name: file.name }));
-
-              throw e;
-            }
-          }
-        },
-        [dir],
-      );
+  /**
+   * Writes one file of a batch.
+   *
+   * No `mkdir` for the intermediate levels of `a/b/c.txt`: `PUT volume/file` creates the parent
+   * directories itself, so pre-creating them would be one extra round trip per level per file.
+   */
+  const uploadWrite = useCallback<UploadWrite>(
+    async (relPath, file, { createOnly, signal }) => {
+      await client.write(joinPath(uploadDirRef.current, relPath), file, { createOnly, signal });
     },
-    [targetDir, mutate, client, locale],
+    [client],
+  );
+
+  /** Only the drag path can ever report an empty directory; this is what preserves it. */
+  const uploadMkdir = useCallback(
+    async (relPath: string, { signal }: { signal: AbortSignal }): Promise<void> => {
+      await client.mkdir(joinPath(uploadDirRef.current, relPath), { signal });
+    },
+    [client],
+  );
+
+  // One re-list for the whole batch, not one per file: `mutate()` invalidates per action, which is right
+  // for a single mutation and wrong by two hundred for a folder upload. Cancellation lands here too —
+  // whatever did get written is already on the volume and has to show up.
+  const onUploadSettled = useCallback((): void => {
+    const dir = uploadDirRef.current;
+
+    setExpanded(prev => (prev.has(dir) ? prev : new Set(prev).add(dir)));
+    void listDir(dir);
+  }, [listDir]);
+
+  const uploads = useUploadQueue({
+    write: uploadWrite,
+    mkdir: uploadMkdir,
+    // No `maxBytes`. The volume streams writes in chunks and has no per-file cap — the in-sandbox one is
+    // a different backend's limit, and carrying it across would reject files this volume accepts.
+    concurrency: uploadConcurrency,
+    onSettled: onUploadSettled,
+  });
+
+  const startUpload = useCallback(
+    (dir: string, plan: UploadPlan): void => {
+      if (isUploadPlanEmpty(plan)) return;
+
+      uploadDirRef.current = dir;
+      uploads.start(plan);
+    },
+    [uploads],
   );
 
   const download = useCallback(async (): Promise<void> => {
@@ -489,7 +550,8 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     refresh,
     newFile,
     newFolder,
-    upload,
+    uploads,
+    startUpload,
     download,
     copy,
     cut,

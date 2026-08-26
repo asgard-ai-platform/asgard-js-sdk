@@ -103,15 +103,32 @@ export function FileExplorerToggle({ controller }: { controller: FileExplorerCon
 }
 
 /**
+ * The sandbox edge server's own per-file write limit (`FileWriteMaxBytes`).
+ *
+ * Supplied here rather than inside the shared upload queue on purpose: F-031 AC17 keeps cap, concurrency
+ * and copy injected so one orchestrator can serve both a sandbox and a SourceSet volume (which streams in
+ * chunks and has no cap at all). That constraint is on the orchestrator, not on a host that knows which
+ * backend it is talking to — and this aside always talks to a sandbox.
+ *
+ * Overridable through `<Chatbot fileExplorerMaxUploadBytes>` so a policy change on the server does not
+ * require an SDK release. Note the deployed limit is still lower than this pending `asgard-core#230`;
+ * anything between the two is caught by the server's own 413 and reported as such, which is the safe
+ * direction to be wrong in — a cap set too low would reject files the volume would have taken.
+ */
+export const SANDBOX_MAX_UPLOAD_BYTES = 64 * 1024 * 1024;
+
+/**
  * The built-in File Explorer aside (F-021 AC6). Reads the live channel + client from context, drives the
  * panel from `launchedSandboxes$` (F-019) and the shared controller, and wires the core fs client.
  */
 export function ChatbotFileExplorerAside({
   controller,
   basePath,
+  maxUploadBytes = SANDBOX_MAX_UPLOAD_BYTES,
 }: {
   controller: FileExplorerController;
   basePath?: string;
+  maxUploadBytes?: number;
 }): ReactNode {
   const { client, channel, nudge, isRunning, pendingConsent } = useAsgardContext();
   const sandboxes = useLaunchedSandboxes(channel);
@@ -137,6 +154,12 @@ export function ChatbotFileExplorerAside({
       copy={providers.copy}
       move={providers.move}
       upload={providers.upload}
+      // Without `uploadMany` the panel falls back to the single-file `upload`, whose signature carries
+      // neither `createOnly` nor `signal` — so the batch degrades to concurrency 1, overwrites silently
+      // instead of asking, and cannot be interrupted. Consumers assembling their own `FileExplorer.Provider`
+      // pass the whole `providers` object and never saw this; the built-in aside listed props by hand.
+      uploadMany={providers.uploadMany}
+      maxUploadBytes={maxUploadBytes}
       download={providers.download}
       onNudge={nudge}
       // A nudge is a turn, so the channel refuses one while a run holds it (F-023 AC6) — and this
