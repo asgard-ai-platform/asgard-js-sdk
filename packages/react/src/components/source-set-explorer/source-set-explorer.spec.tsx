@@ -581,3 +581,125 @@ describe('BUILD-064 — host extension points', () => {
     expect(hook(null)).toHaveLength(1);
   });
 });
+
+/**
+ * BUG-009 — the selection was only ever an entrance on this side too. The hook already accepted `null`
+ * and already fell `targetDir` back to the volume root; what was missing was any UI that called it, so
+ * these drive the two exits the bug asks for and pin the overlay precedence Esc has to respect.
+ */
+describe('BUG-009 — the SourceSet explorer can clear its selection', () => {
+  const selectedRow = (): HTMLElement | undefined =>
+    screen.getAllByRole('treeitem').find(row => row.getAttribute('aria-selected') === 'true');
+
+  const explorerRoot = (container: HTMLElement): HTMLElement => {
+    const root = container.firstElementChild;
+    if (!(root instanceof HTMLElement)) throw new Error('the explorer root is missing');
+
+    return root;
+  };
+
+  it('E1 clears the selection when the tree background is clicked', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.click(await screen.findByText('notes'));
+    expect(selectedRow()?.textContent).toBe('notes');
+
+    fireEvent.click(screen.getByRole('tree'));
+
+    expect(selectedRow()).toBeUndefined();
+  });
+
+  it('E1 keeps the selection when the click lands on a row rather than the background', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    fireEvent.click(await screen.findByText('a.txt'));
+
+    expect(selectedRow()?.textContent).toBe('a.txt');
+  });
+
+  it('E2 clears the selection on Escape', async () => {
+    installVolume(SIMPLE);
+    const { container } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.click(await screen.findByText('notes'));
+
+    fireEvent.keyDown(explorerRoot(container), { key: 'Escape' });
+
+    expect(selectedRow()).toBeUndefined();
+  });
+
+  it('E2 leaves the selection alone when Escape closes an open dialog', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.click(await screen.findByText('notes'));
+    fireEvent.click(requireToolButton('sourceSetExplorer.newFile'));
+
+    fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(selectedRow()?.textContent).toBe('notes');
+  });
+
+  it('E2 leaves the selection alone when Escape closes the context menu', async () => {
+    installVolume(SIMPLE);
+    const { container } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.contextMenu(await screen.findByText('notes'));
+    await screen.findByRole('menu');
+
+    fireEvent.keyDown(explorerRoot(container), { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(selectedRow()?.textContent).toBe('notes');
+  });
+
+  it('E3 lands the next directory action back at the volume root once the selection is cleared', async () => {
+    const probe = installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.click(await screen.findByText('notes'));
+
+    fireEvent.click(requireToolButton('sourceSetExplorer.newFile'));
+    fireEvent.change(screen.getByRole('dialog').querySelector('input') as HTMLInputElement, {
+      target: { value: 'one.txt' },
+    });
+    fireEvent.click(within(screen.getByRole('dialog')).getByText(t('en-US', 'sourceSetExplorer.confirm')));
+    await waitFor(() => expect(probe.calls.some(c => c.url.searchParams.get('path') === 'notes/one.txt')).toBe(true));
+
+    fireEvent.click(screen.getByRole('tree'));
+    fireEvent.click(requireToolButton('sourceSetExplorer.newFile'));
+    fireEvent.change(screen.getByRole('dialog').querySelector('input') as HTMLInputElement, {
+      target: { value: 'two.txt' },
+    });
+    fireEvent.click(within(screen.getByRole('dialog')).getByText(t('en-US', 'sourceSetExplorer.confirm')));
+
+    await waitFor(() => expect(probe.calls.some(c => c.url.searchParams.get('path') === 'two.txt')).toBe(true));
+  });
+
+  it('E2 leaves the selection alone when Escape is pressed while a file is open', async () => {
+    installVolume(SIMPLE);
+    const { container } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    const row = await screen.findByText('a.txt');
+    fireEvent.click(row);
+    fireEvent.doubleClick(row);
+    await waitFor(() => expect(screen.queryByRole('tree')).toBeNull());
+
+    fireEvent.keyDown(explorerRoot(container), { key: 'Escape' });
+    fireEvent.click(screen.getByTitle(t('en-US', 'sourceSetExplorer.backToTree')));
+
+    await waitFor(() => expect(screen.queryByRole('tree')).not.toBeNull());
+    expect(selectedRow()?.textContent).toBe('a.txt');
+  });
+
+  it('E4 returns the selection-only toolbar actions to disabled', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.click(await screen.findByText('notes'));
+    expect(requireToolButton('sourceSetExplorer.rename').disabled).toBe(false);
+
+    fireEvent.click(screen.getByRole('tree'));
+
+    for (const key of ['download', 'copy', 'cut', 'rename', 'delete']) {
+      expect(requireToolButton(`sourceSetExplorer.${key}`).disabled).toBe(true);
+    }
+  });
+});
