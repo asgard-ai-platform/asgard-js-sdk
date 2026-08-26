@@ -231,13 +231,19 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   // `UploadConflictDialog` both call `stopPropagation` on Escape and never reach this handler, while
   // `ContextMenu` closes from a `document` keydown listener that runs *after* React's handler here — so
   // without this guard one Esc would close the menu *and* clear the selection.
+  //
+  // `openFile` is guarded for a different reason: while the file view has the body, the tree and the
+  // toolbar are both unmounted, so clearing changes nothing visible — it only shows up later as a
+  // selection the user never dropped having gone missing on the way back.
+  //
+  // Nothing here calls `stopPropagation`: an Esc this handler ignores must still reach the host.
   const onExplorerKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>): void => {
-      if (event.key !== 'Escape' || menu || uploadMenu) return;
+      if (event.key !== 'Escape' || menu || uploadMenu || openFile) return;
 
       clearSelection();
     },
-    [menu, uploadMenu, clearSelection],
+    [menu, uploadMenu, openFile, clearSelection],
   );
 
   // `webkitdirectory` is not a React DOM attribute; setting it on the element avoids both a cast and an

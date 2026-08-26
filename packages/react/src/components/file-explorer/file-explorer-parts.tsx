@@ -54,6 +54,7 @@ export function FileExplorerRoot({
     dropZoneProps,
     menu,
     uploadMenu,
+    openFile,
     clearSelection,
   } = useFileExplorer();
 
@@ -65,8 +66,15 @@ export function FileExplorerRoot({
   // `stopPropagation` on Escape and never reaches this handler. The context menu does not: it closes from
   // a `document` keydown listener, which runs *after* React's handler here, so without this guard one Esc
   // would close the menu *and* clear the selection.
+  //
+  // `openFile` is guarded for a different reason: while the FileView has the body, neither the tree nor
+  // the toolbar is mounted, so clearing here changes nothing anyone can see — it only surfaces later, as
+  // a selection the user never dropped having gone missing when they come back.
+  //
+  // Nothing here calls `stopPropagation`: an Esc this handler ignores must still reach whatever the host
+  // wrapped around the explorer.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== 'Escape' || menu || uploadMenu) return;
+    if (event.key !== 'Escape' || menu || uploadMenu || openFile) return;
 
     clearSelection();
   };

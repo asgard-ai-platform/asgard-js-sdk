@@ -140,6 +140,23 @@ describe('BUG-009 — the chat-side File Explorer can clear its selection', () =
     expect(isSelectionHeld()).toBe(true);
   });
 
+  it('E2 leaves the selection alone when Escape is pressed while a file is open', async () => {
+    // The tree and the toolbar are both gone while the FileView has the body, so clearing here is a
+    // change nobody can see until they come back — and coming back to a selection they never dropped
+    // reads as the explorer losing their place.
+    const { container } = render(<Harness providers={{ listDir, readFile, move: vi.fn() }} />);
+    const row = await screen.findByText('a.txt');
+    fireEvent.click(row);
+    fireEvent.doubleClick(row);
+    await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
+
+    fireEvent.keyDown(explorerRoot(container), { key: 'Escape' });
+    fireEvent.click(screen.getByTitle(t('en-US', 'fileExplorer.backToTree')));
+
+    await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeNull());
+    expect(isSelectionHeld()).toBe(true);
+  });
+
   it('E3 lands the next directory action back at the root once the selection is cleared', async () => {
     const saveFile = vi.fn(async (): Promise<void> => undefined);
     render(<Harness providers={{ listDir, readFile, saveFile, move: vi.fn() }} />);

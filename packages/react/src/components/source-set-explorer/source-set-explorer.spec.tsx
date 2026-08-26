@@ -675,6 +675,21 @@ describe('BUG-009 — the SourceSet explorer can clear its selection', () => {
     await waitFor(() => expect(probe.calls.some(c => c.url.searchParams.get('path') === 'two.txt')).toBe(true));
   });
 
+  it('E2 leaves the selection alone when Escape is pressed while a file is open', async () => {
+    installVolume(SIMPLE);
+    const { container } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    const row = await screen.findByText('a.txt');
+    fireEvent.click(row);
+    fireEvent.doubleClick(row);
+    await waitFor(() => expect(screen.queryByRole('tree')).toBeNull());
+
+    fireEvent.keyDown(explorerRoot(container), { key: 'Escape' });
+    fireEvent.click(screen.getByTitle(t('en-US', 'sourceSetExplorer.backToTree')));
+
+    await waitFor(() => expect(screen.queryByRole('tree')).not.toBeNull());
+    expect(selectedRow()?.textContent).toBe('a.txt');
+  });
+
   it('E4 returns the selection-only toolbar actions to disabled', async () => {
     installVolume(SIMPLE);
     render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
