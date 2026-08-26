@@ -107,6 +107,13 @@ export interface FileExplorerContextValue {
   bumpRefresh: () => void;
   toggleExpand: (path: string) => void;
   onSelect: (entry: FsEntry) => void;
+  /**
+   * Drops the selection back to "nothing selected", so the directory actions fall back to the tree
+   * root (BUG-009). A sibling of {@link onSelect} rather than a widened `onSelect`: this type is
+   * public, and taking `FsEntry | null` where callers hand over `FsEntry` breaks assignment for
+   * anyone who supplies a handler of their own.
+   */
+  clearSelection: () => void;
   actNewFile: (dir: string) => Promise<void>;
   actNewFolder: (dir: string) => Promise<void>;
   actRename: (entry: FsEntry) => Promise<void>;
@@ -276,6 +283,11 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
 
   const onSelect = useCallback(
     (entry: FsEntry): void => updateView(prev => ({ ...prev, selectedPath: entry.path, selectedEntry: entry })),
+    [updateView],
+  );
+
+  const clearSelection = useCallback(
+    (): void => updateView(prev => ({ ...prev, selectedPath: null, selectedEntry: null })),
     [updateView],
   );
 
@@ -762,6 +774,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       bumpRefresh,
       toggleExpand,
       onSelect,
+      clearSelection,
       actNewFile,
       actNewFolder,
       actRename,
@@ -808,6 +821,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       bumpRefresh,
       toggleExpand,
       onSelect,
+      clearSelection,
       actNewFile,
       actNewFolder,
       actRename,

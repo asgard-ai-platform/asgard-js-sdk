@@ -126,7 +126,7 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }): ReactNod
  * that switch themselves.
  */
 export function FileExplorerTree(): ReactNode {
-  const { openFile, rootPath, activeSourceId, refreshKey, openContext } = useFileExplorer();
+  const { openFile, rootPath, activeSourceId, refreshKey, openContext, clearSelection } = useFileExplorer();
 
   // No source means nothing to list. `rootPath` alone is not enough: a `basePath` override supplies one
   // even when the source list is empty, and `DirChildren` would then sit on its initial loading state
@@ -135,7 +135,16 @@ export function FileExplorerTree(): ReactNode {
   if (openFile || rootPath === null || !activeSourceId) return null;
 
   return (
-    <div className={styles.tree} onContextMenu={e => openContext(e, { kind: 'background' })}>
+    <div
+      className={styles.tree}
+      onContextMenu={e => openContext(e, { kind: 'background' })}
+      // Clearing on the container itself, not on anything inside it: the rows are this element's own
+      // children, so a click that reached a row has a different `target` and must not be undone here
+      // (BUG-009 E1). The right-click background target above already treats this element the same way.
+      onClick={e => {
+        if (e.target === e.currentTarget) clearSelection();
+      }}
+    >
       <DirChildren key={`${activeSourceId}:${rootPath}:${refreshKey}`} dirPath={rootPath} depth={0} />
     </div>
   );

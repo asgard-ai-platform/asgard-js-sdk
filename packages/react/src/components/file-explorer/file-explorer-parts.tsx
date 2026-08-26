@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { KeyboardEvent, ReactNode, useEffect } from 'react';
 import { t } from '../../i18n';
 import { Spinner } from '../spinner';
 import { ContextMenu, ContextMenuItem } from './context-menu';
@@ -52,7 +52,24 @@ export function FileExplorerRoot({
     dialog,
     uploadOverlay,
     dropZoneProps,
+    menu,
+    uploadMenu,
+    clearSelection,
   } = useFileExplorer();
+
+  // Esc is the keyboard half of "deselect" (BUG-009 E2). It sits on the root rather than the tree so it
+  // still answers after a background click, which lands focus here — `tabIndex={-1}` below is what makes
+  // this element the nearest focusable ancestor.
+  //
+  // Precedence is not symmetric between the two overlays, so it cannot be left implicit. The dialog calls
+  // `stopPropagation` on Escape and never reaches this handler. The context menu does not: it closes from
+  // a `document` keydown listener, which runs *after* React's handler here, so without this guard one Esc
+  // would close the menu *and* clear the selection.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Escape' || menu || uploadMenu) return;
+
+    clearSelection();
+  };
 
   // `webkitdirectory` is not a React DOM attribute, and setting it on the element avoids both a cast
   // and an unknown-prop warning — `HTMLInputElement` declares it, so this stays fully typed.
@@ -63,7 +80,13 @@ export function FileExplorerRoot({
   return (
     // The drop zone is the whole panel, not the tree alone: the handlers decide for themselves whether
     // this panel serves the drag, and a drop it does not serve passes through untouched.
-    <div className={`${styles.root} ${chrome === 'flush' ? styles.flush : ''}`} ref={rootRef} {...dropZoneProps}>
+    <div
+      className={`${styles.root} ${chrome === 'flush' ? styles.flush : ''}`}
+      ref={rootRef}
+      {...dropZoneProps}
+      tabIndex={-1}
+      onKeyDown={onKeyDown}
+    >
       {children}
 
       {/* The multi-file picker stays first: it is the one an assembly reaches for by element type. */}

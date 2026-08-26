@@ -17,6 +17,8 @@ export interface SourceSetTreeProps {
   onOpen: (entry: FsEntry) => void;
   /** Right-click anywhere in the tree; the row handler selects its entry first. */
   onContextMenu: (event: MouseEvent) => void;
+  /** Left-click on the tree's own background — the way out of a selection (BUG-009 E1). */
+  onClearSelection: () => void;
   /** Host decoration for the right of a row's name; `null` leaves the row untouched. */
   entryBadge?: (entry: FsEntry) => ReactNode;
 }
@@ -31,8 +33,19 @@ const INDENT_REM = 0.85;
  * walk pages, and a walk that stopped short says by how much instead of quietly showing fewer files.
  */
 export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
-  const { listings, expanded, selected, rootPath, locale, onSelect, onToggle, onOpen, onContextMenu, entryBadge } =
-    props;
+  const {
+    listings,
+    expanded,
+    selected,
+    rootPath,
+    locale,
+    onSelect,
+    onToggle,
+    onOpen,
+    onContextMenu,
+    onClearSelection,
+    entryBadge,
+  } = props;
 
   function renderDirBody(path: string, depth: number): ReactNode {
     const listing = listings[path];
@@ -134,7 +147,16 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
   }
 
   return (
-    <div className={styles.tree} role="tree" onContextMenu={onContextMenu}>
+    <div
+      className={styles.tree}
+      role="tree"
+      onContextMenu={onContextMenu}
+      // Only a click on this element itself counts as "the background": every row sits in a `.node`
+      // wrapper below, so a click that reached one has a different `target` and keeps its selection.
+      onClick={event => {
+        if (event.target === event.currentTarget) onClearSelection();
+      }}
+    >
       {renderDirBody(rootPath, 0)}
     </div>
   );

@@ -1,6 +1,7 @@
 import {
   CSSProperties,
   DragEvent,
+  KeyboardEvent,
   MouseEvent,
   ReactNode,
   useCallback,
@@ -217,6 +218,27 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   const { selected, clipboard, openFile, targetDir, uploads, startUpload } = explorer;
   const hasSelection = selected != null;
   const selectedIsFile = hasSelection && !selected.isDir;
+
+  // BUG-009 — the two ways out of a selection. The hook has accepted `null` since F-025 and already
+  // falls `targetDir` back to `rootPath`; only the callers were missing.
+  const { select } = explorer;
+  const clearSelection = useCallback((): void => select(null), [select]);
+
+  // Esc sits on the root rather than the tree so it still answers after a background click, which lands
+  // focus here — that is what `tabIndex={-1}` on the root is for.
+  //
+  // The two overlays differ, so the precedence cannot be left implicit: `dialog.tsx` and
+  // `UploadConflictDialog` both call `stopPropagation` on Escape and never reach this handler, while
+  // `ContextMenu` closes from a `document` keydown listener that runs *after* React's handler here — so
+  // without this guard one Esc would close the menu *and* clear the selection.
+  const onExplorerKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>): void => {
+      if (event.key !== 'Escape' || menu || uploadMenu) return;
+
+      clearSelection();
+    },
+    [menu, uploadMenu, clearSelection],
+  );
 
   // `webkitdirectory` is not a React DOM attribute; setting it on the element avoids both a cast and an
   // unknown-prop warning, and `HTMLInputElement` declares it, so this stays fully typed.
@@ -561,7 +583,14 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   return (
     // The drop zone is the whole panel, not the tree alone: the handlers decide for themselves whether
     // this panel serves the drag, and a drop it does not serve passes through untouched.
-    <div className={styles.root} style={themeStyle(theme)} ref={rootRef} {...dropZone}>
+    <div
+      className={styles.root}
+      style={themeStyle(theme)}
+      ref={rootRef}
+      {...dropZone}
+      tabIndex={-1}
+      onKeyDown={onExplorerKeyDown}
+    >
       <div className={styles.toolbar} role="toolbar" aria-label={t(locale, 'sourceSetExplorer.toolbar')}>
         {actions.map(action => (
           <button
@@ -626,6 +655,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
             onToggle={explorer.toggleExpand}
             onOpen={explorer.open}
             onContextMenu={openMenu}
+            onClearSelection={clearSelection}
             entryBadge={entryBadge}
           />
         )}
