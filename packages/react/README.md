@@ -1832,21 +1832,43 @@ capability the volume API does not have today.
 
 ### Props
 
-| Prop                | Type                            | Default            | Description                                                             |
-| ------------------- | ------------------------------- | ------------------ | ----------------------------------------------------------------------- |
-| `sourceSetEndpoint` | `string`                        | —                  | **Required.** The `…/volume` endpoint. A trailing slash is tolerated.   |
-| `apiKey`            | `string`                        | —                  | Sent as `X-API-KEY`. Direct-to-edge only.                               |
-| `customHeaders`     | `Record<string, string>`        | —                  | Merged into every request, e.g. `Authorization`.                        |
-| `rootPath`          | `string`                        | `''` (volume root) | Locks the tree to a subtree; the user cannot browse above it.           |
-| `initialPath`       | `string`                        | —                  | Expanded and selected on mount.                                         |
-| `readOnly`          | `boolean`                       | `false`            | Removes every mutating action, including the viewer's edit entry point. |
-| `locale`            | `'en-US' \| 'ja-JP' \| 'zh-TW'` | `'en-US'`          | UI language.                                                            |
-| `theme`             | `SourceSetExplorerTheme`        | —                  | Overrides for the `--asg-*` tokens the component paints with.           |
-| `maxEntries`        | `number`                        | `10000`            | Ceiling on one directory's auto-paging walk.                            |
-| `onError`           | `(error: unknown) => void`      | —                  | Called on every failed operation, alongside the in-component message.   |
+| Prop                | Type                                            | Default            | Description                                                                                                                                                                                                                                                                                                                                      |
+| ------------------- | ----------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sourceSetEndpoint` | `string`                                        | —                  | **Required.** The `…/volume` endpoint. A trailing slash is tolerated.                                                                                                                                                                                                                                                                            |
+| `apiKey`            | `string`                                        | —                  | Sent as `X-API-KEY`. Direct-to-edge only.                                                                                                                                                                                                                                                                                                        |
+| `customHeaders`     | `Record<string, string>`                        | —                  | Merged into every request, e.g. `Authorization`.                                                                                                                                                                                                                                                                                                 |
+| `rootPath`          | `string`                                        | `''` (volume root) | Locks the tree to a subtree; the user cannot browse above it.                                                                                                                                                                                                                                                                                    |
+| `initialPath`       | `string`                                        | —                  | Expanded and selected on mount.                                                                                                                                                                                                                                                                                                                  |
+| `readOnly`          | `boolean`                                       | `false`            | Removes every mutating action, including the viewer's edit entry point.                                                                                                                                                                                                                                                                          |
+| `locale`            | `'en-US' \| 'ja-JP' \| 'zh-TW'`                 | `'en-US'`          | UI language.                                                                                                                                                                                                                                                                                                                                     |
+| `theme`             | `SourceSetExplorerTheme`                        | —                  | Overrides for the `--asg-*` tokens the component paints with.                                                                                                                                                                                                                                                                                    |
+| `maxEntries`        | `number`                                        | `10000`            | Ceiling on one directory's auto-paging walk.                                                                                                                                                                                                                                                                                                     |
+| `onError`           | `(error: unknown) => void`                      | —                  | Called on every failed operation, alongside the in-component message.                                                                                                                                                                                                                                                                            |
+| `uploadConcurrency` | `number`                                        | `3`                | Ceiling on writes in flight during a batch upload. The pool backs off on its own when the volume answers `429`, then eases back up; this is the ceiling it eases back up _to_. There is no batch endpoint — two hundred files is two hundred requests — so a BFF relay in front of the volume may want a lower number than the edge server does. |
+| `extraEntryActions` | `(entry: FsEntry \| null) => ContextMenuItem[]` | —                  | Host rows appended to the right-click menu, above `Refresh`. Called with the selected entry, or `null` when nothing is selected. Not called at all while `readOnly`.                                                                                                                                                                             |
+| `entryBadge`        | `(entry: FsEntry) => ReactNode`                 | —                  | Host decoration for the right of a row's name; return `null` to leave the row untouched. Purely visual — it adds no click target, so a click still reaches the row — and unlike `extraEntryActions` it keeps rendering while `readOnly`.                                                                                                         |
 
 Paths are **volume-relative and the root is the empty string** — `notes/todo.md`, never `/notes/todo.md`.
 A leading slash, a trailing slash, a doubled slash or a `.` / `..` segment is rejected by the volume.
+
+### Uploading
+
+The toolbar's upload button opens a two-row menu — **files** or **folder** — because the two pickers
+genuinely see different things: the folder picker walks a whole tree but can never return an empty
+directory, while a drag from the desktop preserves empty folders. Both land in the same queue, and the
+panel as a whole is the drop target, not just the tree.
+
+A batch runs through a worker pool (see `uploadConcurrency`) that backs off when the volume answers
+`429` and eases back up afterwards. Progress is a docked panel below the tree rather than an overlay —
+browsing while a batch runs is the normal case — showing `n / N`, per-file state, and a cancel that
+interrupts requests already in flight rather than just refusing to start new ones.
+
+A name collision does **not** abort the rest of the batch. The queue asks once, offers
+overwrite / skip / rename, and can apply that answer to every remaining conflict in the same batch.
+
+Where a batch lands follows the selection: the selected directory, else the tree root. Click the tree's
+empty space or press `Esc` to drop the selection and send the next batch to the root — the same gesture
+also returns the selection-only toolbar actions (download / copy / cut / rename / delete) to disabled.
 
 ### Large directories
 
