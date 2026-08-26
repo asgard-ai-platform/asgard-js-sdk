@@ -258,3 +258,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-068` | Review: SSE pacing no longer serializes deltas          | —        | done   | [REVIEW-068-sse-pacing-serializes-deltas.md](./REVIEW-068-sse-pacing-serializes-deltas.md)               |
 | `BUILD-069`  | SourceSet File Explorer batch upload                    | L        | done   | [BUILD-069-sourceset-explorer-batch-upload.md](./BUILD-069-sourceset-explorer-batch-upload.md)           |
 | `REVIEW-069` | Review: SourceSet File Explorer batch upload            | —        | done   | [REVIEW-069-sourceset-explorer-batch-upload.md](./REVIEW-069-sourceset-explorer-batch-upload.md)         |
+| `BUILD-070`  | Let the File Explorer clear its selection               | M        | done   | [BUILD-070-file-explorer-clear-selection.md](./BUILD-070-file-explorer-clear-selection.md)               |
+| `REVIEW-070` | Review: let the File Explorer clear its selection       | —        | done   | [REVIEW-070-file-explorer-clear-selection.md](./REVIEW-070-file-explorer-clear-selection.md)             |
