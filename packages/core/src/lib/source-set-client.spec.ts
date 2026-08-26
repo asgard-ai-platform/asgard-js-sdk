@@ -287,6 +287,39 @@ describe('AsgardSourceSetClient — mutations (F-024 R6)', () => {
   });
 });
 
+describe('AsgardSourceSetClient — cancellation (BUG-008 R5)', () => {
+  it('hands `write` its caller signal so an aborted batch stops the request in flight', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeJsonResponse(200, { data: { bytesWritten: 5 } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new AbortController();
+    await makeClient().write('a.txt', 'hello', { createOnly: true, signal: controller.signal });
+
+    // Identity, not merely presence: a batch cancel is one controller shared by every worker, so the
+    // signal that reaches `fetch` has to be the one the caller can abort.
+    expect(lastCall(fetchMock).init.signal).toBe(controller.signal);
+  });
+
+  it('hands `mkdir` its caller signal too — the empty-directory pass runs inside the same batch', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeJsonResponse(200, { isSuccess: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new AbortController();
+    await makeClient().mkdir('notes/sub', { signal: controller.signal });
+
+    expect(lastCall(fetchMock).init.signal).toBe(controller.signal);
+  });
+
+  it('leaves `signal` undefined when no caller asked for one', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeJsonResponse(200, { data: { bytesWritten: 5 } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await makeClient().write('a.txt', 'hello');
+
+    expect(lastCall(fetchMock).init.signal).toBeUndefined();
+  });
+});
+
 describe('AsgardSourceSetClient.listAll (F-026 R7)', () => {
   it('walks every page until it has paging.total', async () => {
     const fetchMock = vi.fn(async (url: string) => {

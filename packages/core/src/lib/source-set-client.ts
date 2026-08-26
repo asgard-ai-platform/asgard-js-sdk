@@ -8,6 +8,7 @@ import type {
   SourceSetListAllResult,
   SourceSetListOptions,
   SourceSetListResult,
+  SourceSetMkdirOptions,
   SourceSetPaging,
   SourceSetReadOptions,
   SourceSetReadResult,
@@ -76,11 +77,17 @@ export default class AsgardSourceSetClient {
   }
 
   /** Issue one volume request, turning any non-2xx into {@link HttpError} (409 included, see R8). */
-  private async request(op: string, method: string, query: Record<string, string>, body?: BodyInit): Promise<Response> {
+  private async request(
+    op: string,
+    method: string,
+    query: Record<string, string>,
+    body?: BodyInit,
+    signal?: AbortSignal,
+  ): Promise<Response> {
     const url = new URL(`${this.endpoint}/${op}`);
     Object.entries(query).forEach(([key, value]) => url.searchParams.set(key, value));
 
-    const response = await fetch(url.toString(), { method, headers: this.headers(), body });
+    const response = await fetch(url.toString(), { method, headers: this.headers(), body, signal });
 
     if (!response.ok) {
       throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
@@ -215,7 +222,7 @@ export default class AsgardSourceSetClient {
     const form = new FormData();
     form.append('file', content instanceof Blob ? content : new Blob([content]));
 
-    const response = await this.request('file', 'PUT', query, form);
+    const response = await this.request('file', 'PUT', query, form, options?.signal);
     const json: Envelope<SourceSetWriteResult> = await response.json();
     const data = json.data ?? (json as SourceSetWriteResult);
 
@@ -223,8 +230,8 @@ export default class AsgardSourceSetClient {
   }
 
   /** Create a directory and any missing parents (`POST volume/mkdir?path=`). */
-  async mkdir(path: string): Promise<void> {
-    await this.request('mkdir', 'POST', { path: assertVolumePath(path) });
+  async mkdir(path: string, options?: SourceSetMkdirOptions): Promise<void> {
+    await this.request('mkdir', 'POST', { path: assertVolumePath(path) }, undefined, options?.signal);
   }
 
   /** Delete a file or empty directory (`DELETE volume/item?path=`). */

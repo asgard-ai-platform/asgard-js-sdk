@@ -122,6 +122,20 @@ export interface SourceSetWriteOptions {
   mode?: number;
   /** Fail with 409 instead of overwriting when the path already exists. */
   createOnly?: boolean;
+  /**
+   * Aborts the request in flight.
+   *
+   * A batch upload is a few hundred of these, and cancelling it has to stop the ones already sent —
+   * not merely decline to send more. Without a signal reaching `fetch`, "cancel" leaves every
+   * in-flight write running to completion against a volume the user has finished with.
+   */
+  signal?: AbortSignal;
+}
+
+/** Options for `POST volume/mkdir`. */
+export interface SourceSetMkdirOptions {
+  /** Aborts the request in flight; see {@link SourceSetWriteOptions.signal}. */
+  signal?: AbortSignal;
 }
 
 /** `PUT volume/file` result. */
