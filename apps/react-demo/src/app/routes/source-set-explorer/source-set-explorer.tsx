@@ -1,8 +1,8 @@
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SourceSetFileExplorer, type ContextMenuItem, type FsEntry } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
-import { installMockVolume, MOCK_ENDPOINT } from './volume-mock';
+import { installMockVolume, MOCK_ENDPOINT, NO_FAULTS, type VolumeFaults } from './volume-mock';
 import styles from './source-set-explorer.module.scss';
 
 /**
@@ -39,6 +39,15 @@ export function SourceSetExplorerRoute(): ReactNode {
   const [locale, setLocale] = useState<DemoLocale>('en-US');
   const [rootPath, setRootPath] = useState('');
   const [hostExtras, setHostExtras] = useState(true);
+  // Batch upload (BUG-008) needs a volume that is slow enough to watch and rude enough to back off from.
+  const [slowWrites, setSlowWrites] = useState(true);
+  const [throttle, setThrottle] = useState(false);
+  const faults = useRef<VolumeFaults>(NO_FAULTS);
+  faults.current = {
+    writeLatencyMs: slowWrites ? 700 : 0,
+    // Enough to halve the ceiling twice over, so the panel's "slowed to N" line is unmissable.
+    throttleFirst: throttle ? 4 : 0,
+  };
   // Which directories a pretend syncer writes into. `notes` starts mounted so the badge and the greyed-out
   // menu item are both on screen without setting anything up first.
   const [pulled, setPulled] = useState<Record<string, string>>({ notes: 'nightly-docs' });
@@ -89,7 +98,9 @@ export function SourceSetExplorerRoute(): ReactNode {
   useEffect(() => {
     if (!usingMock) return;
 
-    const restore = installMockVolume();
+    // Read per request, not captured: flipping a fault control must not tear the volume down and lose
+    // everything already uploaded into it.
+    const restore = installMockVolume(() => faults.current);
     setReady(true);
 
     return (): void => {
@@ -125,6 +136,16 @@ export function SourceSetExplorerRoute(): ReactNode {
           </label>
 
           <label className={styles.control}>
+            <input type="checkbox" checked={slowWrites} onChange={event => setSlowWrites(event.target.checked)} />
+            slow writes (700ms)
+          </label>
+
+          <label className={styles.control}>
+            <input type="checkbox" checked={throttle} onChange={event => setThrottle(event.target.checked)} />
+            volume pushes back (429 × 4)
+          </label>
+
+          <label className={styles.control}>
             locale
             <select value={locale} onChange={event => setLocale(event.target.value as DemoLocale)}>
               {LOCALES.map(value => (
@@ -155,6 +176,14 @@ export function SourceSetExplorerRoute(): ReactNode {
           <code>empty/</code> for the empty-directory state · <code>paged/</code> for a 1,200-entry directory that pages
           twice and still loads completely · <code>overclaimed/</code> for one where the volume claims more than it
           serves, which is where the “not loaded” notice appears.
+        </p>
+
+        <p className={styles.hint}>
+          Batch upload: the toolbar’s upload button asks <code>files</code> or <code>folder</code>, and you can also
+          drag either in from the desktop. With <code>slow writes</code> on, the progress panel below the tree stays up
+          long enough to read the <code>n / N</code> count and to hit Cancel; <code>volume pushes back</code> makes the
+          first four writes answer <code>429</code>, which is what brings the concurrency ceiling down and puts the
+          “slowed to N” line on screen. Upload something named <code>README.md</code> to reach the conflict dialog.
         </p>
 
         {hostExtras && (

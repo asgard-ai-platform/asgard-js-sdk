@@ -20,6 +20,43 @@ export const MOCK_ENDPOINT = 'https://source-set-mock.invalid/v1/source-set/demo
  */
 const MOCK_LATENCY_MS = 120;
 
+/**
+ * Fault injection for the batch upload (BUG-008).
+ *
+ * Neither the worker pool nor the back-off is visible against a volume that answers in 120ms: the batch
+ * is over before the progress panel has drawn a second frame, and a ceiling that never comes down cannot
+ * be seen coming down. These exist so both are exercisable by hand, the way the paging latency above
+ * exists so a loading node is.
+ */
+export interface VolumeFaults {
+  /** Extra delay on every write. A few hundred ms is enough to watch the pool refill and to hit Cancel. */
+  writeLatencyMs: number;
+  /** Answer this many writes with 429 before letting them through — the AIMD path. */
+  throttleFirst: number;
+}
+
+export const NO_FAULTS: VolumeFaults = { writeLatencyMs: 0, throttleFirst: 0 };
+
+/** Rejects the way an aborted `fetch` does, so a cancelled batch really does drop its open requests. */
+function abortable(signal: AbortSignal | null | undefined): Promise<never> {
+  return new Promise((_, reject) => {
+    const fail = (): void => reject(new DOMException('The operation was aborted.', 'AbortError'));
+    if (!signal) return;
+
+    if (signal.aborted) {
+      fail();
+
+      return;
+    }
+
+    signal.addEventListener('abort', fail, { once: true });
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /** Value is the file's text; `null` marks a directory. */
 type Node = string | null;
 
@@ -100,16 +137,20 @@ function error(status: number, message: string): Response {
 /**
  * Install the mock. Returns a teardown that restores the previous `fetch`, so a route can install it in
  * an effect without leaking the patch into the rest of the demo.
+ *
+ * `readFaults` is read per request rather than captured, so flipping a control does not tear the volume
+ * down and lose everything already uploaded into it.
  */
-export function installMockVolume(): () => void {
+export function installMockVolume(readFaults: () => VolumeFaults = () => NO_FAULTS): () => void {
   const fs = seed();
   const original = window.fetch.bind(window);
+  let throttledSoFar = 0;
 
   const handler = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     if (!raw.startsWith(MOCK_ENDPOINT)) return original(input, init);
 
-    await new Promise(resolve => setTimeout(resolve, MOCK_LATENCY_MS));
+    await Promise.race([sleep(MOCK_LATENCY_MS), abortable(init?.signal)]);
 
     const url = new URL(raw);
     const op = url.pathname.split('/').pop() ?? '';
@@ -164,6 +205,19 @@ export function installMockVolume(): () => void {
     }
 
     if (op === 'file' && method === 'PUT') {
+      const faults = readFaults();
+      if (faults.writeLatencyMs > 0) await Promise.race([sleep(faults.writeLatencyMs), abortable(init?.signal)]);
+
+      // Rearmed by switching the control off and on again, so the back-off can be watched more than once
+      // without reinstalling the volume and losing everything already uploaded into it.
+      if (faults.throttleFirst === 0) throttledSoFar = 0;
+
+      if (throttledSoFar < faults.throttleFirst) {
+        throttledSoFar += 1;
+
+        return error(429, 'too many requests');
+      }
+
       if (url.searchParams.get('create_only') === 'true' && fs.has(path)) {
         return error(409, 'already exists');
       }
@@ -171,6 +225,14 @@ export function installMockVolume(): () => void {
       const form = init?.body instanceof FormData ? init.body : null;
       const picked = form?.get('file');
       const text = picked instanceof Blob ? await picked.text() : '';
+      // `MkdirAll` semantics, matching the real volume: writing `docs/sub/a.txt` brings the levels above
+      // it into existence. Without this a folder upload lands files the tree cannot show, because the
+      // listing walks by parent and no entry for `docs` exists.
+      for (let slash = path.indexOf('/'); slash > 0; slash = path.indexOf('/', slash + 1)) {
+        const parent = path.slice(0, slash);
+        if (!fs.has(parent)) fs.set(parent, null);
+      }
+
       fs.set(path, text);
 
       return json({ data: { bytesWritten: text.length } });
