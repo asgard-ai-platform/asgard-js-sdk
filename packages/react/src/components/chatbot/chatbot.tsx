@@ -113,6 +113,11 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   autoRevealOnOpenFileCard?: boolean;
   /** Override the File Explorer tree root (absolute path) instead of the sandbox `workingDirectory` (F-021 AC2). */
   fileExplorerBasePath?: string;
+  /**
+   * Per-file upload cap for the built-in aside, in bytes. Defaults to the sandbox edge server's own
+   * limit; supply your own when that policy changes, rather than waiting on an SDK release.
+   */
+  fileExplorerMaxUploadBytes?: number;
 
   // Auth state props
   authState?: AuthState;
@@ -311,6 +316,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     fileExplorer = 'builtin',
     autoRevealOnOpenFileCard = true,
     fileExplorerBasePath,
+    fileExplorerMaxUploadBytes,
     autoResetChannel,
     keepConnectionOnUnmount = false,
     userIdentityHint,
@@ -599,7 +605,11 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                   </div>
                   {builtinFileExplorer && fileExplorerController.open && (
                     <aside className={styles.chatbot__file_explorer_aside}>
-                      <ChatbotFileExplorerAside controller={fileExplorerController} basePath={fileExplorerBasePath} />
+                      <ChatbotFileExplorerAside
+                        controller={fileExplorerController}
+                        basePath={fileExplorerBasePath}
+                        maxUploadBytes={fileExplorerMaxUploadBytes}
+                      />
                     </aside>
                   )}
                   <DropZoneOverlay />
