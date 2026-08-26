@@ -141,13 +141,13 @@ demo routes already mounted a narrow and a full-bleed shell side by side, so no 
   `event.target === event.currentTarget`
 - `src/components/file-explorer/file-explorer-parts.tsx` — `FileExplorerRoot` gains `tabIndex={-1}` and
   the `Escape` handler, placed after the `{...dropZoneProps}` spread
-- `src/components/file-explorer/clear-selection.spec.tsx` — **new**, 6 cases (4 red before the change;
+- `src/components/file-explorer/clear-selection.spec.tsx` — **new**, 7 cases (5 red before the change;
   the other 2 are the "must not clear" guards, which pass either way by construction)
 - `src/components/source-set-explorer/tree.tsx` — `onClearSelection` prop + the same guarded background
   `onClick`
 - `src/components/source-set-explorer/source-set-file-explorer.tsx` — `clearSelection` /
   `onExplorerKeyDown`, wired to the tree and to the root
-- `src/components/source-set-explorer/source-set-explorer.spec.tsx` — 7 cases appended (4 red before);
+- `src/components/source-set-explorer/source-set-explorer.spec.tsx` — 8 cases appended (5 red before);
   reuses the file's existing `installVolume` rather than growing a third fake volume in this package
 
 ---
@@ -171,6 +171,11 @@ corrected or a separate prototype task opened.
 
 - 2026-08-26: BUILD task created from https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/89 (Status: `draft`).
 - 2026-08-26: Plan confirmed; prototype scope decided as SDK-only (Status: `draft → ready`).
+- 2026-08-26: Follow-up found while assessing merge confidence — the `Esc` guard covered the two overlays
+  but not the FileView. With a file open neither the tree nor the toolbar is mounted, so an `Esc` there
+  cleared the selection invisibly and only surfaced on the way back. Confirmed against a control (Esc →
+  rename disabled; no Esc → still enabled), so it was introduced here rather than pre-existing. `openFile`
+  added to both guards, one case per side. 385 react tests pass.
 - 2026-08-26: All R# verified. Static gates green in the order lint → format → typecheck → **build** →
   test (build last on purpose: `typecheck` restores `packages/core/dist` from the Nx cache, and the react
   Vitest run resolves to that dist). 383 tests pass, 0 regressions. Browser walk done on both routes at

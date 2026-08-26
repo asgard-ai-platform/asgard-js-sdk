@@ -162,6 +162,19 @@ None.
 
 None.
 
+### Post-review follow-up (fixed)
+
+**The `Esc` guard did not cover the FileView.** Found while assessing merge confidence, after this review
+had been written. While a file has the body, neither the tree nor the toolbar is mounted, so `Esc` cleared
+the selection with no visible feedback; it surfaced only on returning to the tree, as a selection the user
+never dropped having gone missing and the next upload landing at the root. Verified against a control
+before fixing — with `Esc` during the file view, rename came back `disabled`; without it, still enabled —
+so this was introduced by BUILD-070, not pre-existing. `openFile` is now part of both guards, with one
+regression case per side (react suite: 383 → 385).
+
+This is recorded rather than folded silently into §3: the R# matrix above was accurate for what it
+covered, and what it missed was a state the walkthrough never entered.
+
 ### Minor (nice to have)
 
 1. **The two explorers each carry their own copy of the guard and the handler.** Deliberate, and the only
