@@ -218,23 +218,26 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
       openingRef.current = true;
 
-      const conversation = new Conversation({
-        messages: new Map(initMessages?.map(message => [message.messageId, message])),
-      });
-
-      setIsResetting(true);
-      setIsConnecting(true);
-
-      const resolvedPayload = onBeforeSendMessage
-        ? onBeforeSendMessage({ text: payload?.text ?? '', payload: payload?.payload })
-        : payload;
-
-      const start = mode === 'reset' ? Channel.reset : Channel.open;
       // Set by the SSE error handler below so the catch can tell the two failure kinds apart without
       // re-reporting the same error twice.
       let openingRunFailed = false;
 
+      // Everything after the ref is set lives in the try, `finally` included: `onBeforeSendMessage` is
+      // consumer code and may throw, and a throw between here and the try would strand the ref at
+      // `true` — leaving reset permanently dead for this component, silently.
       try {
+        const conversation = new Conversation({
+          messages: new Map(initMessages?.map(message => [message.messageId, message])),
+        });
+
+        setIsResetting(true);
+        setIsConnecting(true);
+
+        const resolvedPayload = onBeforeSendMessage
+          ? onBeforeSendMessage({ text: payload?.text ?? '', payload: payload?.payload })
+          : payload;
+
+        const start = mode === 'reset' ? Channel.reset : Channel.open;
         const channel = await start(
           {
             client,

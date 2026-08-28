@@ -305,6 +305,42 @@ describe('useChannel — deleteChannel and the two-step reset (F-032)', () => {
     act(() => scripted.finishRun());
   });
 
+  it('R2: a throwing onBeforeSendMessage does not strand the re-entrancy guard', async () => {
+    // The guard is a ref, so nothing resets it on a re-render: a throw before the try would leave reset
+    // permanently dead for this component, and silently — the second click simply does nothing.
+    const scripted = deleteAwareClient({ metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] } });
+    let explode = true;
+    const { result } = renderHook(() =>
+      useChannel({
+        client: scripted.client,
+        customChannelId: 'ch',
+        onBeforeSendMessage: () => {
+          if (explode) throw new Error('consumer callback blew up');
+
+          return { text: '' };
+        },
+      }),
+    );
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await Promise.resolve();
+    });
+    expect(scripted.deleted).toEqual([]);
+
+    // The callback recovers; the next reset must still work.
+    explode = false;
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
+    });
+
+    act(() => scripted.finishRun());
+  });
+
   it('R7: a failed delete surfaces to the caller of the exposed deleteChannel', async () => {
     const scripted = deleteAwareClient({
       metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] },
