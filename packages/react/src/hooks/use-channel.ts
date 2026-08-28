@@ -317,7 +317,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   );
 
   const resetChannel = useCallback(
-    (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => {
+    (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>): void => {
       void startChannel('reset', payload);
     },
     [startChannel],
@@ -325,7 +325,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
   /** Mount-time opening of a channel that does not exist yet (F-015 R3 / UC-025) — no delete (F-032). */
   const openChannel = useCallback(
-    (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => {
+    (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>): void => {
       void startChannel('open', payload);
     },
     [startChannel],

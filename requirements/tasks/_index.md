@@ -263,4 +263,4 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `BUILD-070`  | Let the File Explorer clear its selection               | M        | done   | [BUILD-070-file-explorer-clear-selection.md](./BUILD-070-file-explorer-clear-selection.md)               |
 | `REVIEW-070` | Review: let the File Explorer clear its selection       | —        | done   | [REVIEW-070-file-explorer-clear-selection.md](./REVIEW-070-file-explorer-clear-selection.md)             |
 | `BUILD-071`  | Wire `deleteChannel` and retire `RESET_CHANNEL`         | High     | done   | [BUILD-071-delete-channel-and-reset-retirement.md](./BUILD-071-delete-channel-and-reset-retirement.md)   |
-| `REVIEW-071` | Review: wire `deleteChannel` and retire `RESET_CHANNEL` | —        | ready  | [REVIEW-071-delete-channel-and-reset-retirement.md](./REVIEW-071-delete-channel-and-reset-retirement.md) |
+| `REVIEW-071` | Review: wire `deleteChannel` and retire `RESET_CHANNEL` | —        | done   | [REVIEW-071-delete-channel-and-reset-retirement.md](./REVIEW-071-delete-channel-and-reset-retirement.md) |
