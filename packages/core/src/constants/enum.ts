@@ -1,4 +1,14 @@
 export enum FetchSseAction {
+  /**
+   * @deprecated The SDK no longer sends this (F-032). It bundles "delete the channel" and "post the
+   * first message" into one request, and blobs belong to the channel that was live when they were
+   * uploaded — so the delete strips them and the accompanying `blobIds` resolve to nothing, silently.
+   * The backend now answers `400` to `RESET_CHANNEL` carrying a non-empty `blobIds`.
+   *
+   * To clear a conversation and start over on the same id, call `client.deleteChannel(customChannelId)`
+   * and then open with `action: NONE` — `Channel.reset()` does exactly that. Retained (and still
+   * accepted by the backend) so existing type references keep compiling.
+   */
   RESET_CHANNEL = 'RESET_CHANNEL',
   NONE = 'NONE',
   RESPONSE_TOOL_CALL_CONSENT = 'RESPONSE_TOOL_CALL_CONSENT',

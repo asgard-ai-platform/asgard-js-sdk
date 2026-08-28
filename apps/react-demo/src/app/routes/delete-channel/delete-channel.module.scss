@@ -1,0 +1,154 @@
+// DemoWrapper's content area is a ROW flex, so the route needs one column child — otherwise the
+// controls and the chatbots sit side by side and the shells get squeezed to zero width.
+.stack {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.button,
+.buttonActive {
+  padding: 6px 12px;
+  border: 1px solid #888;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.buttonActive {
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.primary {
+  padding: 6px 14px;
+  border: 1px solid #1677ff;
+  border-radius: 6px;
+  background: #1677ff;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.hostBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.hostHint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.logPanel {
+  width: 100%;
+  max-width: 720px;
+  flex-shrink: 0;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.logHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.logEmpty {
+  font-size: 12px;
+  opacity: 0.45;
+}
+
+.logList {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.logTime {
+  display: inline-block;
+  min-width: 72px;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+// Both shells keep their honest height (the narrow one is a hard 375×640), so on a short window the row
+// is taller than the space left over — the demo shell's own `main` scrolls, which is enough.
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  padding-bottom: 24px;
+}
+
+.sizeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.chatbotWide {
+  flex: 1;
+  min-width: 0;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+// `min-height: 0` matters: without it the shell refuses to shrink below its content and pushes the
+// composer below the fold.
+.wideBox {
+  flex: 1;
+  min-height: 0;
+}
+
+.chatbotNarrow {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// The SDK's own default: a fixed 375×640 shell. The wrapper must be at least that tall — a shorter box
+// does not clip it, the shell simply paints outside and covers whatever follows.
+.narrowBox {
+  width: 375px;
+  height: 640px;
+  flex-shrink: 0;
+}

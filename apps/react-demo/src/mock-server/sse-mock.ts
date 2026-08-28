@@ -9,6 +9,7 @@ interface ParsedPayload {
   customMessageId?: string;
   text?: string;
   action?: string;
+  blobIds?: string[];
 }
 
 function readBody(req: IncomingMessage): Promise<ParsedPayload> {
@@ -156,6 +157,18 @@ function emptyFact(): Record<string, unknown> {
   };
 }
 
+// F-032 — the SDK no longer sends `RESET_CHANNEL`. Both the mount-time opening of a channel that does
+// not exist and the header's reset (after its own `DELETE /channel`) now arrive as a plain `NONE` with
+// no text, which is exactly what a real backend sees. The showcase routes still need to tell "this is
+// the opening run, replay the whole script" apart from "the user typed something afterwards", so they
+// ask this instead of matching on the action. `RESET_CHANNEL` is still recognized so a consumer pinned
+// to an older SDK keeps working against the mock.
+function isOpeningTurn(payload: ParsedPayload): boolean {
+  if (payload.action === 'RESET_CHANNEL') return true;
+
+  return payload.action === 'NONE' && !(payload.text ?? '').trim();
+}
+
 export async function handleMockSse(req: IncomingMessage, res: ServerResponse): Promise<void> {
   // F-014 — GET /message/sse is the transcript cold-start rejoin: replay the collapsed history
   // (message.user + self-sufficient *.complete), each frame carrying an `id:` cursor.
@@ -263,7 +276,7 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
   // <Chatbot> at once: run indicator (F-003), sandbox Launch HUD (F-018), channel title update (F-016/017), thinking (F-001),
   // tool-call variants + grouping + diff + isError + expand (F-004/006/007/008/009), the docked Task
   // (F-010) and Subagent (F-012) panels, and the assembled answer (F-011). Auto-plays on the mount
-  // RESET_CHANNEL; a later plain send gets a short reply so the page stays interactive.
+  // opening turn; a later plain send gets a short reply so the page stays interactive.
   if (customChannelId === 'all-features-demo') {
     await handleAllFeaturesMock(res, payload);
 
@@ -281,6 +294,14 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
         ? 'tall'
         : 'chrome';
     await handleDockedRunChromeMock(res, payload, customChannelId, variant);
+
+    return;
+  }
+
+  // F-032 — the delete-channel demo channels. Every reply reads back the mock's own server-side state,
+  // so "the screen cleared" and "the conversation was really deleted" can be told apart.
+  if (customChannelId.startsWith('delete-channel-')) {
+    await handleDeleteChannelMock(res, payload, customChannelId);
 
     return;
   }
@@ -685,7 +706,7 @@ async function handleCanvasMock(res: ServerResponse, payload: ParsedPayload, cus
     ? CANVAS_ROGUE_HTML + CANVAS_SCRIPT
     : CANVAS_FRAGMENT;
   const title = tall ? '排程執行紀錄' : CANVAS_TITLE;
-  // The mount frame (RESET_CHANNEL, empty text) must not draw: otherwise every reload paints a canvas
+  // The opening frame (empty text) must not draw: otherwise every reload paints a canvas
   // nobody asked for, and the three scripts below can never be observed in isolation.
   const wantsCanvas = text.trim() !== '';
 
@@ -973,7 +994,7 @@ async function handlePromptSuggestionMock(
   const replyTo = payload.customMessageId ?? '';
   const messageId = randomUUID();
   const text = payload.text ?? '';
-  // The opening run (mount RESET_CHANNEL, empty text) carries no suggestion — there is no previous turn
+  // The opening run (mount, empty text) carries no suggestion — there is no previous turn
   // to predict from, which is also what a reload looks like: the event is live-only and never replayed.
   const silent = text.trim() === '' || text.includes('沉默') || text.toLowerCase().includes('silent');
   const twice = text.includes('兩則') || text.toLowerCase().includes('twice');
@@ -1226,6 +1247,120 @@ async function handleNudgeMock(res: ServerResponse, customChannelId: string): Pr
 // ---------------------------------------------------------------------------------------------------
 
 const suspendRequests = new Map<string, { suspended: boolean; force: boolean }>();
+
+// ---------------------------------------------------------------------------------------------------
+// F-032 — `DELETE /channel?custom_channel_id=…` plus the scripted channels the /delete-channel route
+// drives. What the route has to make visible is that the delete really happened: the mock therefore
+// keeps a per-channel server-side transcript, and every reply reads it back. A reset that only cleared
+// the browser would show an empty thread too — the give-away is the turn counter carrying on.
+// ---------------------------------------------------------------------------------------------------
+
+interface MockChannelState {
+  /** Turns the mock believes this channel has seen since it last came into existence. */
+  turns: string[];
+  /** How many times this id has been deleted — proof the DELETE reached the server. */
+  deletes: number;
+}
+
+const deleteDemoChannels = new Map<string, MockChannelState>();
+
+function channelState(customChannelId: string): MockChannelState {
+  const existing = deleteDemoChannels.get(customChannelId);
+
+  if (existing) return existing;
+
+  const fresh: MockChannelState = { turns: [], deletes: 0 };
+  deleteDemoChannels.set(customChannelId, fresh);
+
+  return fresh;
+}
+
+/** A slow teardown, standing in for the backend waiting on a live Sandbox pod (up to ~60s for real). */
+const SLOW_TEARDOWN_MS = 6_000;
+
+export async function handleMockChannelDelete(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== 'DELETE') {
+    res.statusCode = 405;
+    res.end();
+
+    return;
+  }
+
+  const url = new URL(req.url ?? '', 'http://localhost');
+  const customChannelId = url.searchParams.get('custom_channel_id');
+
+  // The real endpoint answers 400 when the query parameter is missing (verified on dev).
+  if (!customChannelId) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'custom_channel_id query parameter is required', errorCode: 'INVALID_ARGUMENT' }));
+
+    return;
+  }
+
+  // A teardown that fails. The SDK must NOT open a new conversation on top of it — the old one is still
+  // there on the server, and a cleared screen would be a lie.
+  if (customChannelId.startsWith('delete-channel-fail')) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'mock teardown failure' }));
+
+    return;
+  }
+
+  if (customChannelId.startsWith('delete-channel-slow')) {
+    await sleep(SLOW_TEARDOWN_MS);
+  }
+
+  const state = channelState(customChannelId);
+  state.turns = [];
+  state.deletes += 1;
+
+  // 204, and only once the teardown is done — never a scheduled "we'll get to it". Deleting a channel
+  // that never existed is a success too, which is why there is no 404 branch here.
+  res.statusCode = 204;
+  res.end();
+}
+
+async function handleDeleteChannelMock(
+  res: ServerResponse,
+  payload: ParsedPayload,
+  customChannelId: string,
+): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+  const replyTo = payload.customMessageId ?? '';
+  const state = channelState(customChannelId);
+  const text = (payload.text ?? '').trim();
+  const attachments = payload.blobIds ?? [];
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+
+  state.turns.push(text || '(開場)');
+
+  const reply = isOpeningTurn(payload)
+    ? `新對話已開始。這個 channel 被刪過 ${state.deletes} 次，目前的伺服器端對話有 ${state.turns.length} 輪 —— ` +
+      '若上面看得到先前的訊息，那就是只清了畫面、沒清後端。' +
+      (attachments.length > 0 ? `\n\n（本次開場帶了 ${attachments.length} 個附件：${attachments.join('、')}）` : '')
+    : `收到「${text}」。伺服器端這個 channel 目前累積 ${state.turns.length} 輪、被刪過 ${state.deletes} 次。` +
+      (attachments.length > 0
+        ? `\n\n附件 ${attachments.length} 個都收到了：${attachments.join('、')} —— 這正是 RESET_CHANNEL 做不到的：` +
+          '它會先刪掉 channel，剛上傳的 blob 跟著消失，訊息帶的 blobIds 於是查無此物、還不會報錯。'
+        : '');
+
+  const mid = randomUUID();
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+  await sleep(120);
+  writeEvent(res, messageFrame(header, 'asgard.message.complete', mid, replyTo, reply, TEXT_TEMPLATE(reply)));
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+  res.end();
+}
 
 export async function handleMockSuspend(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'POST') {
@@ -1684,7 +1819,7 @@ async function handleMockTranscriptRejoin(req: IncomingMessage, res: ServerRespo
 // ---------------------------------------------------------------------------------------------------
 // F-015 — channel metadata gate. `GET /channel/metadata?custom_channel_id=…` is the join-init existence
 // check: 200 (+ title/runState) = exists → restore; 404 = not exists → per autoResetChannel; other = error.
-// Default is 404 so every other demo channel keeps its pre-F-015 mount behavior (404 → RESET_CHANNEL).
+// Default is 404 so every other demo channel keeps its pre-F-015 mount behavior (404 → open with NONE).
 // The /join-init route uses the scoped ids below to drive the three branches (+ the error fallback).
 // ---------------------------------------------------------------------------------------------------
 
@@ -2215,8 +2350,8 @@ async function handleAllFeaturesMock(res: ServerResponse, payload: ParsedPayload
     Connection: 'keep-alive',
   });
 
-  // A later plain send (action=NONE) just gets a short reply so the page stays interactive after the show.
-  if (payload.action !== 'RESET_CHANNEL') {
+  // A later plain send just gets a short reply so the page stays interactive after the show.
+  if (!isOpeningTurn(payload)) {
     const mid = randomUUID();
     writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
     const ack = '這是「全功能展示」頁 —— 重整頁面即可重看整段串流（進房 RESET 會重播全部功能）。';
@@ -2648,7 +2783,7 @@ async function handleDockedRunChromeMock(
   });
 
   // A later plain send just gets a short reply so the page stays interactive after the run.
-  if (payload.action !== 'RESET_CHANNEL') {
+  if (!isOpeningTurn(payload)) {
     const mid = randomUUID();
     writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
     const ack = '重整頁面即可重播這段長串流（進房 RESET 會重跑整段）。';

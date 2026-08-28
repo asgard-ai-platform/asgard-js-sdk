@@ -18,7 +18,7 @@ export function AutoResetChannel(): ReactNode {
   return (
     <DemoWrapper
       title="Auto Reset Channel"
-      description="Control whether the channel is automatically reset on mount. When disabled, history messages from initMessages are preserved without sending RESET_CHANNEL."
+      description="Control whether a channel that does not exist yet is opened automatically on mount. When disabled, history messages from initMessages are preserved and no SSE request is sent."
     >
       <div className={styles.controls}>
         <h3>Channel Settings</h3>
@@ -41,8 +41,8 @@ export function AutoResetChannel(): ReactNode {
           <h4>Behavior</h4>
           <p className={styles.description}>
             {autoResetChannel
-              ? 'Channel will be reset on mount (sends RESET_CHANNEL action). This is the default behavior.'
-              : 'Channel is created without sending RESET_CHANNEL. History messages from initMessages are preserved, and new messages can still be sent.'}
+              ? 'A channel that does not exist is opened on mount (one action=NONE turn, no delete). This is the default behavior.'
+              : 'The channel is created with no SSE request at all. History messages from initMessages are preserved, and new messages can still be sent.'}
           </p>
         </div>
       </div>

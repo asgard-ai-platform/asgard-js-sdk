@@ -231,7 +231,7 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   /** Custom renderer for tool call group. Return null to hide, or return custom JSX. */
   renderToolCallGroup?: AsgardTemplateContextValue['renderToolCallGroup'];
 
-  /** Whether to automatically reset channel on mount. Defaults to true. When false, the channel is created without sending RESET_CHANNEL, allowing history messages to be preserved via initMessages. */
+  /** Whether to open the conversation on mount when the channel does not exist yet. Defaults to true. When false, the channel is created without any SSE request, allowing history messages to be preserved via initMessages. An existing channel is always restored either way. */
   autoResetChannel?: boolean;
 
   /**

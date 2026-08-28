@@ -335,7 +335,7 @@ config: {
 - **className?**: `string` - Custom CSS class name applied to the chatbot container element.
 - **style?**: `CSSProperties` - Custom inline styles applied to the chatbot container element.
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
-- **autoResetChannel?**: `boolean` - Whether to automatically reset channel on mount. Defaults to `true`. When set to `false`, the channel is created without sending `RESET_CHANNEL`, preserving history messages loaded via `initMessages`. See [Auto Reset Channel](#auto-reset-channel) section for details.
+- **autoResetChannel?**: `boolean` - Whether to open the conversation automatically when the channel does not exist yet. Defaults to `true`. When set to `false`, the channel is created without any SSE request, preserving history messages loaded via `initMessages`. An **existing** channel is always restored regardless of this flag. See [Auto Reset Channel](#auto-reset-channel) section for details.
 - **userIdentityHint?**: `string` - Optional user identity hint. When provided, all requests (SSE and file upload) will include the `X-ASGARD-USER-IDENTITY-HINT` header with this value.
 - **onMessageSent?**: `() => void` - Callback fired after a message is successfully sent. Useful for tracking message count or triggering side effects.
 - **onChannelReady?**: `() => void` - Callback fired once the chat channel is ready to accept messages. Use this instead of polling for `sendMessage` availability when you need to send an initial message right after the chatbot mounts. Re-fires after channel reset. See [On Channel Ready](#on-channel-ready) section for details.
@@ -699,7 +699,8 @@ function MyCustomFooter() {
 | Property                     | Type                                                              | Description                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sendMessage`                | `((params: SendMessageParams) => Promise<void>) \| undefined`     | Send a message through the channel. `undefined` while the channel is not yet ready or in preview mode — always guard with `?.()`.                                                                                                                                                                                                                                                                                           |
-| `resetChannel`               | `(() => void) \| undefined`                                       | Reset the channel (triggers a new welcome message from the bot).                                                                                                                                                                                                                                                                                                                                                            |
+| `resetChannel`               | `(() => void) \| undefined`                                       | Clear the conversation and start over on the same id: `DELETE /channel`, then an opening turn that triggers a new welcome message. If the delete fails nothing is sent and the current conversation stays on screen (the error reaches `onSseError`).                                                                                                                                                                       |
+| `deleteChannel`              | `(() => Promise<void>) \| undefined`                              | Delete the channel and nothing else — no opening turn, and the on-screen conversation is left as it is. This is what makes "clear, then send with an attachment" possible: `deleteChannel()` → `client.uploadFile()` → `sendMessage({ blobIds })`. Resolves once the backend confirms the teardown (up to about a minute if a Sandbox has to terminate); rejects if it fails.                                               |
 | `closeChannel`               | `(() => void) \| undefined`                                       | Close the SSE connection without resetting.                                                                                                                                                                                                                                                                                                                                                                                 |
 | `stopGeneration`             | `((options?: { force?: boolean }) => Promise<void>) \| undefined` | Ask the backend to stop the in-flight run. Resolving means _accepted_, not _stopped_; rejects if the request failed. Gate on `canStop`.                                                                                                                                                                                                                                                                                     |
 | `replyToolCallConsents`      | `((answers, payload?) => Promise<void>) \| undefined`             | Reply to the pending tool-call consent prompt (see `pendingConsent`). Used to build a custom consent UI. `undefined` before the channel is ready.                                                                                                                                                                                                                                                                           |
@@ -1317,12 +1318,12 @@ The `onBeforeSendMessage` prop allows you to modify outbound parameters before t
 
 It is not only user sends. The callback runs on **four** paths:
 
-| Path                                       | `params.text`   | Notes                                                                        |
-| ------------------------------------------ | --------------- | ---------------------------------------------------------------------------- |
-| `sendMessage`                              | the user's text | The only path carrying real user input.                                      |
-| `resetChannel`                             | `''`            | Includes the automatic reset on mount — `autoResetChannel` defaults to true. |
-| Tool-call consent reply (Allow / Deny)     | `''`            |                                                                              |
-| `nudge` — wake an idle sandbox (invisible) | `''`            |                                                                              |
+| Path                                       | `params.text`   | Notes                                                                           |
+| ------------------------------------------ | --------------- | ------------------------------------------------------------------------------- |
+| `sendMessage`                              | the user's text | The only path carrying real user input.                                         |
+| `resetChannel`                             | `''`            | Also the automatic opening turn on mount — `autoResetChannel` defaults to true. |
+| Tool-call consent reply (Allow / Deny)     | `''`            |                                                                                 |
+| `nudge` — wake an idle sandbox (invisible) | `''`            |                                                                                 |
 
 On the three textless paths `params.blobIds` is `undefined` and **only the returned `payload` is used** — `text` / `blobIds` from your return value are dropped there. They are not distinguishable from one another inside the callback.
 
@@ -1678,17 +1679,20 @@ const App = () => {
 
 ### Auto Reset Channel
 
-By default, the Chatbot sends a `RESET_CHANNEL` action on mount, which resets the server-side channel state and clears previous conversation history. Set `autoResetChannel={false}` to skip this reset, allowing you to load history messages via `initMessages` and continue the conversation.
+On mount the Chatbot first asks `GET /channel/metadata` whether the channel exists. An **existing** channel is always restored — its history is never wiped, whatever this flag says. Only when the channel does **not** exist does `autoResetChannel` apply: `true` (the default) opens the conversation with an `action=NONE` turn so the server can send a welcome message, and `false` skips that, letting you load history via `initMessages` and continue.
+
+> The opening turn used to be a `RESET_CHANNEL` action. It no longer is: `RESET_CHANNEL` is deprecated and the SDK never sends it. Opening a channel that does not exist needs no delete, and the header's reset button now issues an explicit `DELETE /channel` before it opens. Nothing in this prop's name or meaning changed — only the wire.
 
 #### Behavior Comparison
 
-|                      | `autoResetChannel={true}` (default)            | `autoResetChannel={false}`          |
-| -------------------- | ---------------------------------------------- | ----------------------------------- |
-| On mount             | Sends `RESET_CHANNEL` via SSE                  | Creates channel without SSE request |
-| Server state         | Channel is reset, server sends welcome message | Channel state is preserved          |
-| Display              | `initMessages` + server welcome message        | Only `initMessages` (history)       |
-| First SSE connection | Immediately on mount                           | When user sends the first message   |
-| Header reset button  | Works (calls `resetChannel()`)                 | Still works (manual reset)          |
+|                      | `autoResetChannel={true}` (default)           | `autoResetChannel={false}`          |
+| -------------------- | --------------------------------------------- | ----------------------------------- |
+| On mount, exists     | Restores (title seed + transcript replay)     | Restores — identical                |
+| On mount, not exists | Opens with `action=NONE` via SSE (no delete)  | Creates channel without SSE request |
+| Server state         | New channel, server sends a welcome message   | Channel state is preserved          |
+| Display              | `initMessages` + server welcome message       | Only `initMessages` (history)       |
+| First SSE connection | Immediately on mount                          | When user sends the first message   |
+| Header reset button  | Works (`DELETE /channel`, then `action=NONE`) | Still works (manual reset)          |
 
 #### Usage Example
 
@@ -1738,7 +1742,7 @@ those two moments the channel is in `isStopping`.
    yet, and sending would leave two concurrent runs writing to the same transcript. Keep the user's
    draft — do not clear it.
 2. **Only show a stop control when `canStop`.** `isConnecting` is true for four unrelated things: the
-   user's own turn, the `RESET_CHANNEL` welcome, a transcript rejoin, and an invisible nudge. Only the
+   user's own turn, the opening welcome run, a transcript rejoin, and an invisible nudge. Only the
    first is stoppable. `canStop` encodes exactly that.
 
 ```typescript

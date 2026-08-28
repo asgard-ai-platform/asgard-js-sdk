@@ -58,6 +58,9 @@ function makeHarness(options?: {
     rejoinSse: (_customChannelId, sseOptions) => start(undefined, sseOptions),
   };
 
+  // F-032 — `Channel.reset` deletes before it opens, so the harness has to be able to delete.
+  client.deleteChannel = async (): Promise<void> => undefined;
+
   if (!options?.omitSuspend) {
     client.suspendChannel = async (customChannelId, opts): Promise<void> => {
       suspendCalls.push({ customChannelId, requestId: opts?.requestId, force: opts?.force });
@@ -363,7 +366,28 @@ describe('stopGeneration — force stop after the timeout (F-023 AC7)', () => {
 });
 
 describe('run kinds (F-023 AC8/AC9)', () => {
-  it('marks a RESET_CHANNEL run as `reset`, and refuses to suspend it', async () => {
+  // F-032 — the opening turn is a plain `action=NONE` now, but its run kind must stay `reset`: it is
+  // still not a turn the user dispatched, so no stop control belongs on it. Both entry points are pinned,
+  // because it is the run kind (not the action) that gates stop-generation.
+  it('marks an opening run as `reset`, and refuses to suspend it', async () => {
+    const harness = makeHarness();
+    const conversation = new Conversation({ messages: new Map() });
+    let channel: Channel | undefined;
+
+    void Channel.open({ client: harness.client, customChannelId: 'ch', conversation }, undefined, undefined, c => {
+      channel = c;
+    });
+
+    expect(harness.current().payload?.action).toBe(FetchSseAction.NONE);
+    expect(statusOf(channel as Channel)).toMatchObject({ kind: 'reset', stopPhase: 'idle' });
+
+    await (channel as Channel).stopGeneration();
+
+    expect(harness.suspendCalls).toHaveLength(0);
+    expect(harness.current().unsubscribed).toBe(false);
+  });
+
+  it('marks the run that follows a reset delete as `reset` too', async () => {
     const harness = makeHarness();
     const conversation = new Conversation({ messages: new Map() });
     let channel: Channel | undefined;
@@ -371,13 +395,16 @@ describe('run kinds (F-023 AC8/AC9)', () => {
     void Channel.reset({ client: harness.client, customChannelId: 'ch', conversation }, undefined, undefined, c => {
       channel = c;
     });
+    // The delete is awaited first, so the channel only exists after the microtask queue drains.
+    await Promise.resolve();
+    await Promise.resolve();
 
+    expect(harness.current().payload?.action).toBe(FetchSseAction.NONE);
     expect(statusOf(channel as Channel)).toMatchObject({ kind: 'reset', stopPhase: 'idle' });
 
     await (channel as Channel).stopGeneration();
 
     expect(harness.suspendCalls).toHaveLength(0);
-    expect(harness.current().unsubscribed).toBe(false);
   });
 
   it('marks an invisible nudge as `nudge`, and refuses to suspend it', async () => {

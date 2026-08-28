@@ -117,6 +117,10 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
 
     if (headerActions) list.push(...headerActions);
 
+    // F-032 — unchanged on the surface, but `isResetting` now also spans the `DELETE /channel` that
+    // precedes the opening turn, which can take up to about a minute while a Sandbox terminates. The
+    // button must stay busy for all of it: a second reset mid-teardown would delete the channel the
+    // first one is already re-opening.
     list.push({
       id: 'reset',
       icon: <RefreshIcon size={18} />,

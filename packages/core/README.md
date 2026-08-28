@@ -141,10 +141,11 @@ The main client class for interacting with the Asgard AI platform.
 
 #### Methods
 
-- **fetchSse(payload, options?)**: Send a message via Server-Sent Events. `payload.action` is a `FetchSseAction` value — `NONE` for a normal message, `RESET_CHANNEL` to (re)initialize the channel, `RESPONSE_TOOL_CALL_CONSENT` to answer a consent prompt
+- **fetchSse(payload, options?)**: Send a message via Server-Sent Events. `payload.action` is a `FetchSseAction` value — `NONE` for a normal message (and for the opening turn of a new conversation), `RESPONSE_TOOL_CALL_CONSENT` to answer a consent prompt, `NUDGE` for an invisible sandbox wake. `RESET_CHANNEL` is **deprecated** and no longer sent by the SDK — see `deleteChannel` below
 - **uploadFile(file, customChannelId)**: Upload file to Blob API and return BlobUploadResponse
 - **downloadChannelHomeFile(relativePath, customChannelId)**: `Promise<ChannelHomeDownloadResult>` - Download a file from the channel's Channel Home file-exchange plane (backs `channel-home://` URI actions); resolves to `{ blob, filename }`
 - **rejoinSse(customChannelId, options?)**: Cold-start transcript rejoin — a `GET /message/sse` with an empty `Last-Event-ID` that replays the channel's collapsed history through the same reducer, so a returning user sees their prior conversation without re-POSTing. Optional on `IAsgardServiceClient` for backward compatibility
+- **deleteChannel(customChannelId)**: `Promise<void>` - End the conversation and release everything the channel holds — the in-flight run, transcript, uploaded blobs, tool-call allow-list, Sandbox and Channel Home — via `DELETE /channel`. Resolves once the teardown is **done** (up to about a minute when a live Sandbox has to terminate first, so do not impose a shorter timeout), after which the same `customChannelId` is a blank slate. Deleting a channel that does not exist is a success. Optional on `IAsgardServiceClient` for backward compatibility
 - **channelMetadata(customChannelId)**: `Promise<ChannelMetadata | null>` - Join-init existence + restore gate — `GET /channel/metadata`; resolves to the metadata on `200`, `null` on `404` (channel does not exist), and rejects on any other error. `ChannelMetadata` is `{ title: string | null; runState: 'RUNNING' | 'IDLE'; lastActivityAt?: string }`. Optional on `IAsgardServiceClient` for backward compatibility
 - **suspendChannel(customChannelId, options?)**: `Promise<void>` - Ask the backend to stop the channel's background run — `POST /message/suspend?custom_channel_id=…`, with optional `requestId` (stop only that run) and `force` (abandon it rather than let it wind down). Resolves on any 2xx **and** on `404` (channel never created = nothing to stop); rejects with `HttpError` otherwise. Resolving means _accepted_, not _stopped_ — see [Stopping generation](#stopping-generation). Optional on `IAsgardServiceClient` for backward compatibility
 - **on(event, handler)**: Listen to a specific SSE event. `event` must be an `EventType` value (e.g. `EventType.MESSAGE`), not a plain string; registering a listener for an event replaces any previous one
@@ -172,7 +173,8 @@ Higher-level abstraction for managing a conversation channel with reactive state
 
 #### Static Methods
 
-- **Channel.reset(config, payload?, options?)**: `Promise<Channel>` - Create a channel and send `RESET_CHANNEL`, starting a fresh conversation (the server replies with a welcome message)
+- **Channel.reset(config, payload?, options?)**: `Promise<Channel>` - Clear an **existing** conversation and start over on the same id: `client.deleteChannel()` first, and only once that resolves, a fresh channel opened with an `action=NONE` turn (the server replies with a welcome message). Nothing local is built until the delete succeeds, so a failed teardown leaves your current channel and conversation untouched. Rejects if the client cannot delete
+- **Channel.open(config, payload?, options?)**: `Promise<Channel>` - Open a channel that does not exist yet with the same `action=NONE` turn, **without** deleting anything — the mount-time path for a `404` from `channelMetadata`
 - **Channel.restore(config, options?)**: `Promise<Channel>` - Join an **existing** channel without resetting it — seeds the title from `config.channelTitle` and replays the server transcript via `rejoinSse`, preserving history / session / title. This is the join-without-wiping path behind the metadata-gated mount (F-015)
 - **Channel.create(config)**: `Channel` - Create a channel and subscribe to its state without any SSE request (no reset, no rejoin); the first connection happens when you call `sendMessage`
 
@@ -254,7 +256,7 @@ interface RunStatus {
 ```
 
 **Only a `user` run is stoppable.** `isConnecting` is true for four unrelated things — the user's own
-turn, the `RESET_CHANNEL` welcome, a transcript rejoin, and an invisible nudge — and `kind` is what
+turn, the opening welcome run, a transcript rejoin, and an invisible nudge — and `kind` is what
 tells them apart. `stopGeneration()` is a no-op for every kind but `user`. A `replay` (rejoining a
 channel whose run already finished) is loading history, not generating, so it should not show a
 run-in-progress indicator either.

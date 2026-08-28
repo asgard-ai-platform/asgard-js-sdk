@@ -5,7 +5,7 @@ import { DemoWrapper } from '../../components/demo-wrapper';
 import styles from './join-init.module.scss';
 
 // F-015 — join-init orchestration. Every Chatbot mount now gates on `GET /channel/metadata` before doing
-// anything: an EXISTING channel is always restored (title seed + history replay, never RESET_CHANNEL), a
+// anything: an EXISTING channel is always restored (title seed + history replay, never re-opened), a
 // non-existent one follows `autoResetChannel`, and an indeterminate (non-404) metadata error falls back
 // safely. The scoped mock ids below drive each branch; switching scenario remounts the Chatbot (via key)
 // so its mount gate re-runs.
@@ -28,14 +28,14 @@ const SCENARIOS: Scenario[] = [
     label: '① 已存在頻道 → restore（不 reset）',
     customChannelId: 'join-existing-demo',
     placeholder: '還原完成後即可送新訊息…',
-    note: 'metadata 回 200 → 一律 restore：標題由 metadata seed（頂端出現「庫存分析（已存在的頻道）」）、GET /message/sse 重播歷史對話、絕不送 RESET_CHANNEL。重播期間輸入停用，收到 terminal 才放行。',
+    note: 'metadata 回 200 → 一律 restore：標題由 metadata seed（頂端出現「庫存分析（已存在的頻道）」）、GET /message/sse 重播歷史對話、不刪不開場。重播期間輸入停用，收到 terminal 才放行。',
   },
   {
     key: 'new-autoreset',
     label: '② 不存在 + autoReset（預設）→ 開場',
     customChannelId: 'join-new-autoreset-demo',
     placeholder: '開場串流中…',
-    note: 'metadata 回 404 + autoResetChannel 預設 true → 送 RESET_CHANNEL 開場，串出一段歡迎回覆（等同 F-015 前的進房行為）。',
+    note: 'metadata 回 404 + autoResetChannel 預設 true → 送 action=NONE 開場，串出一段歡迎回覆。房不存在就沒有東西要刪，所以這條路徑不會呼叫 deleteChannel（F-032）。',
   },
   {
     key: 'new-noreset',
@@ -60,7 +60,7 @@ export function JoinInitRoute(): ReactNode {
   return (
     <DemoWrapper
       title="Join-Init Orchestration + metadata gate (F-015)"
-      description="進房初始化改成 metadata-gated：mount 先打 GET /channel/metadata，存在→一律 restore（永不 reset、修掉「進已存在的房就砍歷史」的資料流失），不存在→依 autoResetChannel（預設 reset 開場 / 關閉則停空狀態），非 404 錯誤→安全 fallback。切換下方情境會重掛 Chatbot，重跑一次進房流程。"
+      description="進房初始化改成 metadata-gated：mount 先打 GET /channel/metadata，存在→一律 restore（永不 reset、修掉「進已存在的房就砍歷史」的資料流失），不存在→依 autoResetChannel（預設以 action=NONE 開場 / 關閉則停空狀態），非 404 錯誤→安全 fallback。切換下方情境會重掛 Chatbot，重跑一次進房流程。"
     >
       <div className={styles.controls}>
         {SCENARIOS.map(s => (

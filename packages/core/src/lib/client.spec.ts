@@ -126,6 +126,52 @@ describe('AsgardServiceClient.channelMetadata (F-015)', () => {
   });
 });
 
+// F-032 — deleteChannel is the explicit "end this conversation" call: DELETE /channel?custom_channel_id=…
+// Any 2xx (the backend answers 204, and does so for an id that never existed) resolves; everything else
+// throws. There is deliberately no 404 special case — unlike suspendChannel, this endpoint never answers
+// one, and swallowing a status would let a failed teardown pass for a completed one.
+describe('AsgardServiceClient.deleteChannel (F-032)', () => {
+  it('R1: DELETEs {base}/channel with the custom_channel_id query and the api key header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(204, ''));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(makeClient().deleteChannel('ch-1')).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.example.com/ns/x/bot-provider/y/channel?custom_channel_id=ch-1');
+    expect(init.method).toBe('DELETE');
+    expect(init.headers['X-API-KEY']).toBe('test-key');
+  });
+
+  it('R1: the channel id is url-encoded into the query, not concatenated raw', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(204, ''));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await makeClient().deleteChannel('tenant a/ch#1');
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.example.com/ns/x/bot-provider/y/channel?custom_channel_id=tenant+a%2Fch%231',
+    );
+  });
+
+  it('R1: a non-2xx rejects with an HttpError carrying the status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(500, 'teardown failed')));
+
+    const error = await makeClient()
+      .deleteChannel('ch-2')
+      .catch((e: unknown) => e);
+
+    expect(isHttpError(error)).toBe(true);
+    expect(isHttpError(error) && error.status).toBe(500);
+  });
+
+  it('R1: a network failure rejects rather than resolving as "deleted"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+
+    await expect(makeClient().deleteChannel('ch-3')).rejects.toThrow('network down');
+  });
+});
+
 // F-020 / UC-034 — generateSandboxBrowserOpenUrl POSTs to the sandbox browser open-url endpoint and returns
 // the one-time openURL. Contract confirmed against asgard-core edgeserver GenerateSandboxBrowserOpenUrl:
 // POST {botProviderEndpoint}/sandbox/{sandbox_name}/browser/open-url, path params only, { data: { openURL } }.

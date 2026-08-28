@@ -7,7 +7,7 @@ import styles from './all-features.module.scss';
 
 // All-features showcase — one real <Chatbot> whose mock (customChannelId `all-features-demo`) streams
 // every roadmap feature in a single run. On mount the F-015 gate hits GET /channel/metadata → 404 →
-// RESET_CHANNEL → the mock replays the whole showcase, so loading the page = watch everything stream live.
+// The mount opening turn → the mock replays the whole showcase, so loading the page = watch everything stream live.
 const config = {
   botProviderEndpoint: `${typeof window !== 'undefined' ? window.location.origin : ''}/mock-asgard`,
 };
