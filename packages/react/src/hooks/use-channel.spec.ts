@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { EventType } from '@asgard-js/core';
+import { ChannelBusyError, EventType } from '@asgard-js/core';
 import type {
   AsgardServiceClient,
   ChannelMetadata,
@@ -309,6 +309,32 @@ describe('useChannel — deleteChannel and the two-step reset (F-032)', () => {
 
     expect(scripted.deleted).toEqual(['ch']);
 
+    act(() => scripted.finishRun());
+  });
+
+  it('R2: sendMessage rejects while reset is waiting for channel deletion', async () => {
+    let releaseDelete: (() => void) | undefined;
+    const scripted = deleteAwareClient({
+      metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] },
+      onDelete: () => new Promise<void>(resolve => (releaseDelete = resolve)),
+    });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    act(() => result.current.resetChannel?.());
+    await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
+
+    const sendMessage = result.current.sendMessage;
+
+    if (!sendMessage) throw new Error('expected reset channel to expose sendMessage');
+
+    await expect(sendMessage({ text: 'must not be sent' })).rejects.toBeInstanceOf(ChannelBusyError);
+    expect(scripted.sent).toEqual([]);
+
+    act(() => releaseDelete?.());
+    await waitFor(() => expect(scripted.sent).toHaveLength(1));
     act(() => scripted.finishRun());
   });
 

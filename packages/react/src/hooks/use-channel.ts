@@ -1,6 +1,7 @@
 import {
   AsgardServiceClient,
   Channel,
+  ChannelBusyError,
   ChannelMetadata,
   ChannelStates,
   Conversation,
@@ -548,6 +549,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           documentNames?: string[];
         },
     ): Promise<void> => {
+      if (openingRef.current) return Promise.reject(new ChannelBusyError('reset'));
+
       await channel?.sendMessage(
         { ...payload, customMessageId },
         {
@@ -592,6 +595,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
   const replyToolCallConsents = useCallback(
     async (answers: ToolCallConsentAnswer[], payload?: FetchSsePayload['payload']): Promise<void> => {
+      if (openingRef.current) return Promise.reject(new ChannelBusyError('reset'));
+
       if (client?.debugMode) {
         // eslint-disable-next-line no-console
         console.log(
