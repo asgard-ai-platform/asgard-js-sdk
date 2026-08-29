@@ -3,127 +3,116 @@
 ## Meta
 
 - Task ID: `REVIEW-072`
-- Status: `draft`
+- Status: `done`
 - BUILD Task: `BUILD-072`
-- Reviewed commit: `<git commit SHA>`
-- Reviewed branch: `<branch-name>`
+- Reviewed commit: `d08e9779`
+- Reviewed branch: `fix/455-reset-follow-ups`
 
 ---
 
 ## §1 Static Code Review
 
-Scan BUILD task `## Coverage` files against `FRONTEND_RULE_COMMON.md`. No server needed.
+Scope: the six files in `BUILD-072 ## Coverage`. Typecheck and lint run project-wide.
 
 ### §1.1 Checklist
 
-| Check item                                                                                                    | Rule                           | Result  |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------- |
-| SVG path strings inlined into components                                                                      | FRONTEND_RULE_COMMON §1.1      | ✅ / ❌ |
-| Inline style magic numbers (e.g., `minHeight: 'calc(...)'`)                                                   | FRONTEND_RULE_COMMON §1.2      | ✅ / ❌ |
-| Hardcoded color values (hex / rgba / oklch literal)                                                           | FRONTEND_RULE_COMMON §1.3      | ✅ / ❌ |
-| `<style>` tag injected into JSX                                                                               | FRONTEND_RULE_COMMON §1.4      | ✅ / ❌ |
-| Module-level mutable ID counters                                                                              | FRONTEND_RULE_COMMON §1.5      | ✅ / ❌ |
-| Login backdoor outside `NODE_ENV === 'development'` guard                                                     | FRONTEND_RULE_COMMON §1.6      | ✅ / ❌ |
-| Sensitive data passed through URL query strings                                                               | FRONTEND_RULE_COMMON §1.7      | ✅ / ❌ |
-| `page.tsx` is thin (params + navigation only; no main UI JSX)                                                 | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| Feature components in `src/components/{feature}/`; no `screens/` dir                                          | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| TypeScript type (`src/types/`) and API module (`src/api/`) exist before first use                             | FRONTEND_RULE_COMMON §2.2      | ✅ / ❌ |
-| API calls routed through `src/api/` domain module; no direct axios in components                              | FRONTEND_RULE_COMMON §3.2      | ✅ / ❌ |
-| Server state via TanStack Query; `isLoading` / `isError` both handled                                         | FRONTEND_RULE_COMMON §3.3 §3.4 | ✅ / ❌ |
-| Forms use RHF + Zod; no bare `useState` fields; field-level error messages                                    | FRONTEND_RULE_COMMON §3.5      | ✅ / ❌ |
-| Zustand store does not hold server data                                                                       | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| No `as any`; no `eslint-disable` / `@ts-ignore` to bypass type errors                                         | FRONTEND_RULE_COMMON §4.1 §4.2 | ✅ / ❌ |
-| Shared types centralized in `src/types/`; no duplicate interfaces across files                                | FRONTEND_RULE_COMMON §4.3 §4.4 | ✅ / ❌ |
-| Size magic numbers repeated ≥3× extracted to `src/constants/layout.ts`                                        | FRONTEND_RULE_COMMON §5.2      | ✅ / ❌ |
-| Dates use dayjs + `src/constants/formats.ts` constants                                                        | FRONTEND_RULE_COMMON §5.2      | ✅ / ❌ |
-| All user-facing text via `useTranslations()` / `t()`; synced to `messages/zh-TW.json` + `messages/en-US.json` | FRONTEND_RULE_COMMON §5.3      | ✅ / ❌ |
-| Repeated Tailwind class groups (≥3×), JSX fragments (≥3×), logic (≥2×) extracted                              | FRONTEND_RULE_COMMON §6        | ✅ / ❌ |
-| No `setTimeout` mock delays                                                                                   | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
-| No `console.log` (except error boundary logging)                                                              | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
-| No untracked TODO / FIXME                                                                                     | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
+| Check item                                                     | Rule        | Result                           |
+| -------------------------------------------------------------- | ----------- | -------------------------------- |
+| `any` / `as any`                                               | §1.1        | ✅                               |
+| `@ts-ignore` / `eslint-disable` bypassing a type or lint error | §1.2        | ✅                               |
+| `console.log` in library code, not behind a debug option       | §1.3 / §7   | ✅                               |
+| Hardcoded API key / endpoint / namespace                       | §1.4        | ✅                               |
+| Teardown for every subscription / timer                        | §1.5        | ✅                               |
+| react imports core through its public entry only               | §1.6        | ✅                               |
+| core free of react / react-dom / DOM                           | §1.6 / §2.1 | ✅                               |
+| Public-API change carries a `@deprecated` transition           | §1.7        | ✅ (n/a — no public API changed) |
+| New public types / functions exported from the entry           | §2.2        | ✅ (n/a — nothing new is public) |
+| Type / enum prerequisites exist before first use               | §2.3        | ✅                               |
+| Uses `botProviderEndpoint`                                     | §2.4        | ✅                               |
+| Exported functions declare explicit return types               | §3.1        | ✅                               |
+| Shared types centralized; no duplicate interfaces              | §3.2        | ✅                               |
+| Component props fully typed                                    | §4.1        | ✅                               |
+| No hardcoded colors                                            | §4.2        | ✅                               |
+| `react` / `react-dom` stay peerDependencies                    | §4.4        | ✅                               |
+| core and react share a version number                          | §5          | ✅ (both `0.3.75`)               |
+| Repeated logic (≥2×) extracted                                 | §6          | ⚠️ see Minor 1                   |
+| No `setTimeout` mock delays, dead code, untracked TODO / FIXME | §7          | ✅                               |
+
+**18 ✅ / 0 ❌ / 1 ⚠️.**
+
+Two things worth stating rather than just ticking:
+
+- **`@asgard-js/core` is untouched** — `git diff main...HEAD -- packages/core` is empty. The whole task
+  lives in react, which matches Decision 2 in BUILD-072 (the delete runs before any `Channel` exists, so
+  the old instance cannot know it is being torn down).
+- **No public API was added.** `refuseWhileResetting` is a local helper; the two new effects are internal.
+  `ChannelBusyError` was already exported and already documented as the programmatic-send refusal, so the
+  new rejection reuses an existing contract rather than widening one.
 
 ### §1.2 Mechanical Grep
 
-Run the commands below against directories listed in BUILD task `## Coverage`. Empty output = ✅, any output = ❌.
-
-```bash
-# §1.3 hardcoded color values
-grep -rn --include="*.tsx" --include="*.ts" '#[0-9a-fA-F]\{3,6\}\|rgba(\|oklch(' <coverage-dirs>
-
-# §1.4 <style> tag injection
-grep -rn --include="*.tsx" '<style>' <coverage-dirs>
-
-# §1.7 sensitive data in URL query strings
-grep -rn --include="*.tsx" --include="*.ts" 'router\.push.*email=\|router\.push.*token=\|router\.push.*password=\|searchParams.*token' <coverage-dirs>
-
-# §4.1 as any
-grep -rn --include="*.tsx" --include="*.ts" 'as any' <coverage-dirs>
-
-# §4.2 eslint-disable / ts-ignore
-grep -rn --include="*.tsx" --include="*.ts" 'eslint-disable\|@ts-ignore' <coverage-dirs>
-
-# §5.3 hardcoded Chinese or common UI strings in JSX
-grep -rn --include="*.tsx" '>[^\{<]*[一-鿿][^\{<]*<' <coverage-dirs>
-
-# §7 console.log
-grep -rn --include="*.tsx" --include="*.ts" 'console\.log' <coverage-dirs>
-
-# §7 setTimeout mock
-grep -rn --include="*.tsx" --include="*.ts" 'setTimeout' <coverage-dirs>
-```
-
-Grep results:
+First run produced a false all-clear: the file list was passed unquoted and the grep read it as a single
+missing path, so every check printed empty. Re-run file by file:
 
 ```
-<paste output here>
+### 1. any / as any            → (empty)
+### 2. ts-ignore / eslint-disable → 3 hits, all pre-existing `no-console` beside a `client?.debugMode`
+                                 guard (use-channel.ts:611, tool-call-consent-gate.tsx:80 and :152).
+                                 None is in the diff — the two touched files are +17 / +17 lines and do
+                                 not go near them. §1.3 permits debug-option-controlled logging.
+### 3. console.log             → the same 3, same guards.
+### 6. hardcoded colors        → 7 hits, all false positives: issue references (`#409`, `#405`, `#455`)
+                                 matching the hex pattern inside comments and test titles.
+### 7. setTimeout              → 2 hits: chat-composer.tsx:275 is the pre-existing iOS Safari focus-scroll
+                                 workaround; use-channel.spec.ts:406 is a microtask flush in a test.
+                                 Neither is a mock delay.
+### core → react reverse dep   → (empty)
+### react deep-import into core/src → (empty)
 ```
 
 ### §1.3 TypeScript and Lint
 
-```bash
-npx tsc --noEmit
-npm run lint:check （唯讀審查用 lint:check；REVIEW_RULE §1.4 對應的 npm run lint 為含 auto-fix 的變體）
 ```
-
-Results:
-
-```
-tsc:  PASS / FAIL — <paste output if any errors>
-lint: PASS / FAIL — <paste output if any errors>
+typecheck (core + react + react-demo): PASS
+lint:packages:                          PASS — 0 errors, 5 warnings, all pre-existing and in files this
+                                        task did not touch
+format:check:                           PASS
+build:core && build:react:              PASS
 ```
 
 ### §1.4 Static Review Acceptance
 
-- [ ] All §1.1 items checked and marked ✅/❌
-- [ ] All ❌ violations listed with file path and line number
-- [ ] All §1.2 grep commands run and output pasted
-- [ ] `npx tsc --noEmit` run — no TypeScript errors
-- [ ] `npm run lint:check` run — no ESLint errors
-
-Any ❌ violation → report BLOCKER to BUILD task; re-run §1 after fix.
+- [x] All §1.1 items checked
+- [x] No ❌ violations
+- [x] All §1.2 greps run — and re-run after the first pass silently returned nothing
+- [x] Typecheck clean
+- [x] Lint clean
 
 ---
 
 ## §3 Functional Validation
 
-Validate each R# from BUILD task against the running app (`npm run dev -- -p <本地 dev port，見 CLAUDE.local.md>`).
-
 ### R# Result Matrix
 
-| R#  | Description                           | Result                | Note                               |
-| --- | ------------------------------------- | --------------------- | ---------------------------------- |
-| R1  | `<criterion summary from BUILD task>` | Pass / Fail / Blocked | `<actual vs expected if not Pass>` |
-| R2  | `<criterion summary>`                 | Pass / Fail / Blocked |                                    |
-| RN  | (Browser smoke test) `<summary>`      | Pass / Fail / Blocked |                                    |
+| R#  | Description                                                              | Result                 | Note                                                                                                                                                                                                                                                                                         |
+| --- | ------------------------------------------------------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Replacing the channel drops pending attachments and revokes preview URLs | Pass                   | 2 Vitest cases including the negative (a re-render that does not change the channel keeps the attachment). Browser `/delete-channel`: an attached PNG's thumbnail is present before a reset and gone after.                                                                                  |
+| R2  | The attachment entrance is refused while a reset is in flight            | Pass                   | 2 Vitest cases. Browser: with the DELETE held open, the button reports `disabled` and computed `opacity: 0.6` (the pre-existing `:disabled` rule), and is live again once the reset settles.                                                                                                 |
+| R3  | `sendMessage` / `replyToolCallConsents` rejected with `ChannelBusyError` | Pass (partial harness) | Vitest with the delete held open: both reject with `ChannelBusyError`, `sent` stays empty, and releasing the delete lets the `NONE` opening turn through. **Browser covers only the composer half** — see Gap 1.                                                                             |
+| R4  | Replacing the channel drops the consent queue                            | Pass                   | 2 Vitest cases including the R5 negative. Browser against the **real dev consent bot**: modal open on `processId=7d1ef33d…`, reset pressed, modal gone; the modal now on screen belongs to `processId=ae9ef035…` from the new conversation, and no consent reply was submitted at any point. |
+| R5  | No regression on the ordinary paths                                      | Pass                   | The two negative cases above, plus the full suite: core 275 / react 402 green (was 275 / 395).                                                                                                                                                                                               |
+| R6  | Build + browser walk                                                     | Pass                   | Gate green in order lint → format → typecheck → build → test; both routes walked.                                                                                                                                                                                                            |
+
+**Each of the four fixes was reverted individually and the suite re-run**, confirming exactly one test
+turns red per fix. That is the check that separates "a test exists" from "a test is holding something".
 
 ### §3.1 Acceptance
 
-- [ ] All R# in BUILD task `## Coverage` executed (Step 1 static read + Step 2 browser operation + Step 3 boundary conditions)
-- [ ] Each R# marked Pass / Fail / Blocked with explanation
-- [ ] If e2e spec exists for changed routes: `npm run test:e2e` run and passed
-- [ ] Loading, error, and empty-state boundary conditions confirmed
-
-Any Fail → BLOCKER to BUILD task; describe [actual behavior] vs [expected behavior].
+- [x] Every R# executed
+- [x] Each marked with its evidence
+- [x] No e2e spec for this SDK; Vitest + demo used
+- [x] Boundary conditions: the held-open teardown window, a re-render that does not change the channel,
+      and `pendingConsent` going null on the _same_ channel (which must NOT clear the queue)
 
 ---
 
@@ -139,12 +128,25 @@ None.
 
 ### Minor (nice to have)
 
-None.
+1. **§6 — the "did the channel instance change" boilerplate now exists twice.** `chat-composer.tsx:118`
+   and `tool-call-consent-gate.tsx:44` both hold a ref, compare it to the current channel, and act. The
+   bodies differ (one clears attachments, the other resets three pieces of consent state), so what
+   repeats is the detection, not the behavior — a `useChannelChanged(channel, fn)` hook would remove
+   about four lines per site. Left alone deliberately: at two call sites in two different components the
+   indirection costs roughly what it saves, and a third site would be the point to extract. Worth
+   revisiting if one appears.
+2. **R3's programmatic half has no browser evidence.** The demo has no affordance that calls
+   `sendMessage` during a reset, and adding one purely to photograph it would be building a feature for
+   the screenshot. Vitest pins it precisely, including the error type. Recorded rather than papered over.
+3. **The mount-time opening also sets `isResetting`**, so the reset button is briefly `disabled` while a
+   channel first opens — visible on `/tool-call-consent`, where the sandbox cold start makes the window
+   several seconds long. Pre-existing (F-032 did not introduce it) and arguably correct, but the flag's
+   name suggests it only covers resets. Not in this task's scope.
 
 ---
 
 ## Execution Log
 
 - 2026-08-29: REVIEW task created, paired with BUILD-072 (Status: `draft`).
-- YYYY-MM-DD: §1 Static review started (Status: `draft → in-progress`).
-- YYYY-MM-DD: §1 complete — N ✅ / N ❌; §3 Functional validation complete — all R# Pass (Status: `in-progress → done`).
+- 2026-08-29: §1 Static review — 18 ✅ / 0 ❌ / 1 ⚠️ (§6, Minor 1). The first grep pass returned a false all-clear from an unquoted file list and was re-run per file; every remaining hit is pre-existing, debug-gated, or a false positive on an issue reference. Typecheck / lint / format / build green. `@asgard-js/core` untouched, no public API added.
+- 2026-08-29: §3 Functional validation — R1–R6 all Pass, on core 275 / react 402 plus browser walks of `/delete-channel` and `/tool-call-consent` (the latter against the real dev consent bot, which is the only way to raise a genuine consent prompt — the demo mock cannot emit one). R3's programmatic half is Vitest-only and recorded as such. 0 BLOCKERs (Status: `in-progress → done`).
