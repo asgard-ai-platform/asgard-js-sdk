@@ -1,6 +1,7 @@
 import {
   AsgardServiceClient,
   Channel,
+  ChannelBusyError,
   ChannelMetadata,
   ChannelStates,
   Conversation,
@@ -540,6 +541,16 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     await client.deleteChannel(customChannelId);
   }, [isPreviewMode, client, customChannelId]);
 
+  // A reset deletes the channel before it opens a new one, and that delete can take up to a minute. The
+  // old `Channel` is idle throughout — its own busy guard sees nothing — so a programmatic send would be
+  // dispatched against a conversation that is about to stop existing, and vanish with it. The built-in
+  // composer never reaches this (it gates on `isConnecting`); a host driving the SDK directly does.
+  // Both call sites are `async`, so throwing here surfaces as a rejection — the same shape core uses for
+  // its own busy guard, and the same one callers already handle.
+  const refuseWhileResetting = useCallback((): void => {
+    if (openingRef.current) throw new ChannelBusyError('reset');
+  }, []);
+
   const sendMessage = useCallback(
     async (
       payload: Pick<FetchSsePayload, 'text' | 'blobIds'> &
@@ -548,6 +559,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           documentNames?: string[];
         },
     ): Promise<void> => {
+      refuseWhileResetting();
+
       await channel?.sendMessage(
         { ...payload, customMessageId },
         {
@@ -573,7 +586,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         },
       );
     },
-    [channel, delayTime, customMessageId, onSseMessage, onAuthError, onSseError, conversation],
+    [channel, delayTime, customMessageId, onSseMessage, onAuthError, onSseError, conversation, refuseWhileResetting],
   );
 
   const clearPromptSuggestion = useCallback((): void => {
@@ -592,6 +605,8 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
   const replyToolCallConsents = useCallback(
     async (answers: ToolCallConsentAnswer[], payload?: FetchSsePayload['payload']): Promise<void> => {
+      refuseWhileResetting();
+
       if (client?.debugMode) {
         // eslint-disable-next-line no-console
         console.log(
@@ -612,7 +627,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         payload,
       );
     },
-    [channel, delayTime, client, onSseMessage, conversation],
+    [channel, delayTime, client, onSseMessage, conversation, refuseWhileResetting],
   );
 
   const nudge = useCallback(

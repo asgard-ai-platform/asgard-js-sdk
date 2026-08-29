@@ -54,8 +54,10 @@ export function ChatComposer({
   footerEndActions,
 }: ChatComposerProps): ReactNode {
   const {
+    channel,
     sendMessage,
     isConnecting,
+    isResetting,
     stopGeneration,
     canStop,
     isStopping,
@@ -108,6 +110,18 @@ export function ChatComposer({
     hasAttachment,
     accept,
   } = attachments;
+
+  // A blob belongs to the channel that was live when it was uploaded, so a pending attachment cannot
+  // survive that channel being replaced — a reset deletes the channel and every blob on it, and sending
+  // the id afterwards resolves to nothing without an error. Keyed on the channel instance rather than on
+  // "a reset happened", so every replacement path is covered.
+  const attachedChannelRef = useRef(channel);
+  useEffect(() => {
+    if (attachedChannelRef.current === channel) return;
+
+    attachedChannelRef.current = channel;
+    clear();
+  }, [channel, clear]);
 
   const hasContent = value.trim().length > 0 || hasAttachment;
   // #409 — while a consent prompt is pending the server only accepts a consent reply, so core rejects
@@ -347,6 +361,9 @@ export function ChatComposer({
               style={chatbot.footer?.attachmentButton?.style}
               aria-label={t(locale, 'composer.attach')}
               title={t(locale, 'composer.attach')}
+              // The teardown behind a reset can take up to a minute. Uploading into a channel that is
+              // being deleted produces a blob that is gone before it can be referenced.
+              disabled={isResetting}
               onClick={() => fileInputRef.current?.click()}
             >
               <PaperclipSvg />

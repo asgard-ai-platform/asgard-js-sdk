@@ -26,7 +26,7 @@ function toolKey(toolsetName: string, toolName: string): string {
  *      ALLOW_ALWAYS across batches, so this set is scoped per batch only.
  */
 export function ToolCallConsentGate(): ReactNode {
-  const { pendingConsent, replyToolCallConsents, client } = useAsgardContext();
+  const { channel, pendingConsent, replyToolCallConsents, client } = useAsgardContext();
 
   const [queue, setQueue] = useState<QueueState | null>(null);
   const allowAlwaysSetRef = useRef<Set<string>>(new Set());
@@ -35,6 +35,21 @@ export function ToolCallConsentGate(): ReactNode {
   // duplicate replies for the same batch — without latching forever: it is
   // cleared once the submit settles, so later batches can always be replied to.
   const submittingProcessIdRef = useRef<string | null>(null);
+
+  // The queue belongs to the conversation that raised it. A reset deletes that conversation on the
+  // backend and hands the context a new `Channel`, but `pendingConsent` merely going null leaves the
+  // queue standing — and the modal with it, since it renders from `queue`. Answering it then submits an
+  // authorization for a process that no longer exists, against a channel that never asked. Keyed on the
+  // channel instance, so every replacement path invalidates it.
+  const queueChannelRef = useRef(channel);
+  useEffect(() => {
+    if (queueChannelRef.current === channel) return;
+
+    queueChannelRef.current = channel;
+    allowAlwaysSetRef.current = new Set();
+    submittingProcessIdRef.current = null;
+    setQueue(null);
+  }, [channel]);
 
   // Initialize queue when a new consent batch arrives
   useEffect(() => {
