@@ -21,6 +21,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 /** Resting run status — nothing in flight, nothing stopping (F-023). */
 const IDLE_RUN_STATUS: RunStatus = { kind: null, stopPhase: 'idle' };
 
+/** The auth / bot-provider shape core puts on the SSE error channel; mirrored to `onAuthError`. */
+type AuthShapedError = { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown };
+
+/**
+ * Narrows an SSE error to the auth / bot-provider shape, or null for an ordinary failure. Every SSE
+ * entrance reports the same way — mirror an auth-shaped error to `onAuthError`, then hand every error
+ * to `onSseError` — so the test lives here once rather than being re-typed at each of them.
+ */
+function asAuthShapedError(error: unknown): AuthShapedError | null {
+  return error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)
+    ? (error as AuthShapedError)
+    : null;
+}
+
 export interface UseChannelProps {
   defaultIsOpen?: boolean;
   resetPayload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>;
@@ -189,6 +203,23 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   const customChannelIdRef = useRef(customChannelId);
   customChannelIdRef.current = customChannelId;
 
+  /**
+   * A consumer callback that throws must never wedge the SDK. Core notifies through these *before* it
+   * settles the run's promise, so a throw here leaves whatever is awaiting that run pending forever —
+   * `startChannel`'s `openingRef`, which is only released in `finally`, or the consent gate's in-flight
+   * marker, after which every later answer is a silent no-op.
+   */
+  const notify = useCallback((fn: (() => void) | undefined): void => {
+    if (!fn) return;
+
+    try {
+      fn();
+    } catch {
+      // Swallowed on purpose: it is the consumer's own error on their own callback, and there is no
+      // channel of ours it belongs on. Re-raising it here would break the run it was reporting.
+    }
+  }, []);
+
   const makeStatesObserver = useCallback(
     () =>
       (states: ChannelStates): void => {
@@ -244,20 +275,6 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       const isSuperseded = (): boolean =>
         generationRef.current !== startedAt || customChannelIdRef.current !== startedFor;
 
-      // A consumer callback that throws must never wedge the SDK. Core notifies through these *before*
-      // it settles the run's promise, so a throw here would leave `await start(...)` pending forever —
-      // and with it `openingRef`, which is only released in `finally`.
-      const notify = (fn: (() => void) | undefined): void => {
-        if (!fn) return;
-
-        try {
-          fn();
-        } catch {
-          // Swallowed on purpose: it is the consumer's own error on their own callback, and there is no
-          // channel of ours it belongs on. Re-raising it here would break the run it was reporting.
-        }
-      };
-
       // Everything after the ref is set lives in the try, `finally` included: `onBeforeSendMessage` is
       // consumer code and may throw, and a throw between here and the try would strand the ref at
       // `true` — leaving reset permanently dead for this component, silently.
@@ -297,17 +314,9 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
               // against a dead channel and the `!channel && isOpen` retry effect can never re-fire.
               setChannel(null);
               // Handle authentication and bot provider errors
-              if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
-                notify(() =>
-                  onAuthError?.(
-                    error as {
-                      isAuthError: boolean;
-                      isBotProviderError: boolean;
-                      errorDetail?: unknown;
-                    },
-                  ),
-                );
-              }
+              const authError = asAuthShapedError(error);
+
+              if (authError) notify(() => onAuthError?.(authError));
 
               notify(() => onSseError?.(error));
             },
@@ -384,6 +393,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       onSseError,
       onBeforeSendMessage,
       makeStatesObserver,
+      notify,
     ],
   );
 
@@ -463,15 +473,10 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
               // Restore connection failed. Drop the channel so the mount effect can re-evaluate, and
               // surface the error — never fall back to a reset (that would wipe the channel we restored).
               setChannel(null);
-              if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
-                onAuthError?.(
-                  error as {
-                    isAuthError: boolean;
-                    isBotProviderError: boolean;
-                    errorDetail?: unknown;
-                  },
-                );
-              }
+
+              const authError = asAuthShapedError(error);
+
+              if (authError) onAuthError?.(authError);
 
               onSseError?.(error);
             },
@@ -571,15 +576,9 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             });
           },
           onSseError(error) {
-            if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
-              onAuthError?.(
-                error as {
-                  isAuthError: boolean;
-                  isBotProviderError: boolean;
-                  errorDetail?: unknown;
-                },
-              );
-            }
+            const authError = asAuthShapedError(error);
+
+            if (authError) onAuthError?.(authError);
 
             onSseError?.(error);
           },
@@ -623,11 +622,23 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
               conversation,
             });
           },
+          // asgard-freyr-pm#331 — this was the one entrance with no error exit. Without it core's
+          // `options?.onSseError?.(err)` is an optional call on a missing key: a rejected reply (the
+          // backend refusing the run with a 403 / 400) produced no callback, no log, and no way for a
+          // consumer to know, while the card had already been cleared optimistically. `notify` because
+          // core reports through here before it settles the run — see the comment on `notify`.
+          onSseError(error) {
+            const authError = asAuthShapedError(error);
+
+            if (authError) notify(() => onAuthError?.(authError));
+
+            notify(() => onSseError?.(error));
+          },
         },
         payload,
       );
     },
-    [channel, delayTime, client, onSseMessage, conversation, refuseWhileResetting],
+    [channel, delayTime, client, onSseMessage, onAuthError, onSseError, conversation, notify, refuseWhileResetting],
   );
 
   const nudge = useCallback(

@@ -35,6 +35,15 @@ export function ToolCallConsentGate(): ReactNode {
   // duplicate replies for the same batch — without latching forever: it is
   // cleared once the submit settles, so later batches can always be replied to.
   const submittingProcessIdRef = useRef<string | null>(null);
+  // The batch whose reply was refused (asgard-freyr-pm#331). Core puts `pendingConsent` back when that
+  // happens — the run is still paused server-side, so the user has to get another go. After an HTTP
+  // round trip the restore lands in a later render than the optimistic clear and the seeding effect
+  // re-fires on its own; when the failure is raised in the same batch as the request (a transport that
+  // fails synchronously) React collapses the two and that effect sees an unchanged `pendingConsent`
+  // with nothing to react to. This gives it a second key for that case.
+  // It doubles as the stop on auto-advance: a batch that needs no user input drains to empty on its
+  // own, and resubmitting it unprompted would retry against the refusal forever.
+  const [failedProcessId, setFailedProcessId] = useState<string | null>(null);
 
   // The queue belongs to the conversation that raised it. A reset deletes that conversation on the
   // backend and hands the context a new `Channel`, but `pendingConsent` merely going null leaves the
@@ -48,10 +57,12 @@ export function ToolCallConsentGate(): ReactNode {
     queueChannelRef.current = channel;
     allowAlwaysSetRef.current = new Set();
     submittingProcessIdRef.current = null;
+    setFailedProcessId(null);
     setQueue(null);
   }, [channel]);
 
-  // Initialize queue when a new consent batch arrives
+  // Initialize queue when a new consent batch arrives — or when the reply to one was refused and the
+  // same batch has to be put back on screen (#331).
   useEffect(() => {
     if (!pendingConsent) return;
 
@@ -66,7 +77,7 @@ export function ToolCallConsentGate(): ReactNode {
         answers: [],
       };
     });
-  }, [pendingConsent]);
+  }, [pendingConsent, failedProcessId]);
 
   const submit = useCallback(
     async (answers: ToolCallConsentAnswer[], submittedProcessId: string) => {
@@ -85,6 +96,18 @@ export function ToolCallConsentGate(): ReactNode {
         }
 
         await replyToolCallConsents?.(answers);
+      } catch (error) {
+        // The reply was refused (#331). Nothing is rendered from here: the error already reached the
+        // consumer through `onSseError`, and the SDK has no error surface of its own to put it on —
+        // inventing one would be a banner consumers could not theme away. What this does is stop the
+        // rejection from escaping a fire-and-forget `void submit(...)` as an unhandled rejection, and
+        // mark the batch so the effect above can put its card back.
+        setFailedProcessId(submittedProcessId);
+
+        if (client?.debugMode) {
+          // eslint-disable-next-line no-console
+          console.log(`[consent] RESPONSE_TOOL_CALL_CONSENT 被拒 · pid=${submittedProcessId} →`, error);
+        }
       } finally {
         // Release the in-flight marker so future batches (including a re-emitted
         // consent) can be replied to. Only clear it if it still points at this
@@ -113,6 +136,10 @@ export function ToolCallConsentGate(): ReactNode {
     if (!queue) return;
 
     if (queue.remaining.length === 0) {
+      // A batch the backend just refused must not resubmit itself. Only the user answering again
+      // (`handleDecide` clears this) releases it.
+      if (failedProcessId === queue.processId) return;
+
       void submit(queue.answers, queue.processId);
 
       return;
@@ -144,10 +171,14 @@ export function ToolCallConsentGate(): ReactNode {
         ],
       });
     }
-  }, [queue, submit]);
+  }, [queue, submit, failedProcessId]);
 
   const handleDecide = useCallback(
     (decision: ToolCallConsentDecision) => {
+      // The user is answering — whatever refusal preceded this is history, and the batch is allowed to
+      // submit again once it drains.
+      setFailedProcessId(null);
+
       if (client?.debugMode) {
         // eslint-disable-next-line no-console
         console.log(`[consent] 按下按鈕 → ${decision.result}`);

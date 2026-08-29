@@ -8,7 +8,7 @@ import styles from './tool-call-consent.module.scss';
 
 interface LogEntry {
   id: number;
-  kind: 'info' | 'consent' | 'reply';
+  kind: 'info' | 'consent' | 'reply' | 'error';
   text: string;
   time: string;
 }
@@ -54,6 +54,25 @@ export function ToolCallConsentDemo(): ReactNode {
     [pushLog],
   );
 
+  // asgard-freyr-pm#331 — the consent reply used to be the one entrance whose failures went nowhere.
+  // Logging it here is what makes the fix visible: refuse a RESPONSE_TOOL_CALL_CONSENT round trip and
+  // the line below appears, instead of the card simply vanishing.
+  const handleSseError = useCallback(
+    (error: unknown) => {
+      const detail = error instanceof Error ? error.message : JSON.stringify(error);
+
+      pushLog('error', `onSseError · ${detail}`);
+    },
+    [pushLog],
+  );
+
+  const handleAuthError = useCallback(
+    (error: { isAuthError: boolean; isBotProviderError: boolean }) => {
+      pushLog('error', `onAuthError · isAuthError=${error.isAuthError} isBotProviderError=${error.isBotProviderError}`);
+    },
+    [pushLog],
+  );
+
   const config = useMemo(
     () => ({
       botProviderEndpoint: endpoint,
@@ -87,6 +106,8 @@ export function ToolCallConsentDemo(): ReactNode {
             config={config}
             customChannelId="tool-call-consent-demo"
             onSseMessage={handleSseMessage}
+            onSseError={handleSseError}
+            onAuthError={handleAuthError}
           />
         </div>
 
@@ -126,6 +147,7 @@ export function ToolCallConsentDemo(): ReactNode {
                     styles.logLine,
                     entry.kind === 'consent' && styles.logLineConsent,
                     entry.kind === 'reply' && styles.logLineReply,
+                    entry.kind === 'error' && styles.logLineError,
                   )}
                 >
                   [{entry.time}] {entry.text}
