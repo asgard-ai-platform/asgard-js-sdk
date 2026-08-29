@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { EventType } from '@asgard-js/core';
+import { ChannelBusyError, EventType } from '@asgard-js/core';
 import type {
   AsgardServiceClient,
   ChannelMetadata,
@@ -434,6 +434,42 @@ describe('useChannel — deleteChannel and the two-step reset (F-032)', () => {
       result.current.resetChannel?.();
       await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
     });
+  });
+
+  it('#455 R3: a programmatic send during the teardown is refused, not raced against the delete', async () => {
+    // The old Channel is idle for the whole delete — its own busy guard sees nothing — so without this
+    // the turn goes out against a conversation that is about to stop existing, taking the message and
+    // its optimistic bubble with it. The built-in composer never gets here; a host driving the SDK does.
+    let releaseDelete: (() => void) | undefined;
+    const scripted = deleteAwareClient({
+      metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] },
+      onDelete: () => new Promise<void>(resolve => (releaseDelete = resolve)),
+    });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
+    });
+
+    await expect(result.current.sendMessage?.({ text: '趁刪除中插一則' })).rejects.toBeInstanceOf(ChannelBusyError);
+    await expect(
+      result.current.replyToolCallConsents?.([{ toolCallId: 'call-1', result: 'ALLOW_ONCE', denyReason: '' }]),
+    ).rejects.toBeInstanceOf(ChannelBusyError);
+    expect(scripted.sent).toEqual([]);
+
+    // Releasing the delete lets the opening turn through — the refusal is scoped to the window, not a
+    // latch. (That it lifts afterwards is covered by every other test here, which sends normally.)
+    await act(async () => {
+      releaseDelete?.();
+      await waitFor(() => expect(scripted.sent).toHaveLength(1));
+    });
+    expect(scripted.sent[0].action).toBe('NONE');
+
+    act(() => scripted.finishRun());
   });
 
   it('R7: a failed delete surfaces to the caller of the exposed deleteChannel', async () => {
