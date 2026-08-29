@@ -179,6 +179,14 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   // be wired up, and every path uses it.
   // One opening flow at a time — see the guard in `startChannel`.
   const openingRef = useRef(false);
+  // Bumped whenever an in-flight opening flow must be considered superseded: an explicit
+  // `closeChannel()`, or unmount. The delete can take up to a minute, and anything that resolves after
+  // one of those must not be adopted — see `isSuperseded` in `startChannel`.
+  const generationRef = useRef(0);
+  // The live prop, so a flow that started under one channel id can tell that the consumer has since
+  // pointed the component at another one.
+  const customChannelIdRef = useRef(customChannelId);
+  customChannelIdRef.current = customChannelId;
 
   const makeStatesObserver = useCallback(
     () =>
@@ -221,6 +229,33 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       // Set by the SSE error handler below so the catch can tell the two failure kinds apart without
       // re-reporting the same error twice.
       let openingRunFailed = false;
+      // The channel this flow adopted, if it got that far. A failed DELETE never builds one, so this is
+      // what distinguishes "nothing happened, leave the caller's channel alone" from "we created a
+      // channel and then failed", which must not leave a closed instance sitting in state.
+      let adopted: Channel | null = null;
+
+      // The awaited work can outlive the reason for doing it: the DELETE alone can take a minute, and in
+      // that window the consumer may close the channel, unmount, or point the component at a different
+      // `customChannelId`. Adopting the result afterwards would revive a closed channel, or worse, leave
+      // the context advertising one id while sends go to another.
+      const startedAt = generationRef.current;
+      const startedFor = customChannelId;
+      const isSuperseded = (): boolean =>
+        generationRef.current !== startedAt || customChannelIdRef.current !== startedFor;
+
+      // A consumer callback that throws must never wedge the SDK. Core notifies through these *before*
+      // it settles the run's promise, so a throw here would leave `await start(...)` pending forever —
+      // and with it `openingRef`, which is only released in `finally`.
+      const notify = (fn: (() => void) | undefined): void => {
+        if (!fn) return;
+
+        try {
+          fn();
+        } catch {
+          // Swallowed on purpose: it is the consumer's own error on their own callback, and there is no
+          // channel of ours it belongs on. Re-raising it here would break the run it was reporting.
+        }
+      };
 
       // Everything after the ref is set lives in the try, `finally` included: `onBeforeSendMessage` is
       // consumer code and may throw, and a throw between here and the try would strand the ref at
@@ -238,6 +273,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           : payload;
 
         const start = mode === 'reset' ? Channel.reset : Channel.open;
+
         const channel = await start(
           {
             client,
@@ -261,29 +297,51 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
               setChannel(null);
               // Handle authentication and bot provider errors
               if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
-                onAuthError?.(
-                  error as {
-                    isAuthError: boolean;
-                    isBotProviderError: boolean;
-                    errorDetail?: unknown;
-                  },
+                notify(() =>
+                  onAuthError?.(
+                    error as {
+                      isAuthError: boolean;
+                      isBotProviderError: boolean;
+                      errorDetail?: unknown;
+                    },
+                  ),
                 );
               }
 
-              onSseError?.(error);
+              notify(() => onSseError?.(error));
             },
             delayTime,
             onSseMessage(response: SseResponse<EventType>) {
-              onSseMessage?.(response, {
-                conversation,
-              });
+              notify(() =>
+                onSseMessage?.(response, {
+                  conversation,
+                }),
+              );
             },
           },
           // Adopt the channel as soon as it exists — before the opening run completes — so a
           // tool_call.consent emitted during it can be replied to (otherwise `channel` is still null
           // and the reply is dropped).
-          setChannel,
+          created => {
+            adopted = created;
+
+            if (isSuperseded()) {
+              created.close();
+
+              return;
+            }
+
+            setChannel(created);
+          },
         );
+
+        if (isSuperseded()) {
+          // Closed, or aimed at another channel, while we were waiting. Nothing may be published; the
+          // instance we just built is ours to dispose of, or it leaks its subscription and its run.
+          channel.close();
+
+          return;
+        }
 
         setIsOpen(true);
         setChannel(channel);
@@ -296,8 +354,17 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         setIsResetting(false);
         setIsConnecting(false);
 
+        // A channel was built and then something failed (a throwing `payload` function, for instance,
+        // which core resolves after adopting the channel). `Channel.open` has already closed it, so it
+        // must not stay in state: a truthy-but-dead channel makes every later send a silent no-op and
+        // stops the retry effect from ever re-firing. A failed DELETE never gets here — nothing was
+        // adopted, and the caller's existing channel is left exactly as it was.
+        if (adopted && !openingRunFailed) {
+          setChannel(null);
+        }
+
         if (!openingRunFailed) {
-          onSseError?.(error);
+          notify(() => onSseError?.(error));
         }
       } finally {
         openingRef.current = false;
@@ -440,6 +507,9 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   );
 
   const closeChannel = useCallback(() => {
+    // Supersede any opening flow still awaiting its DELETE, so it disposes of what it builds instead of
+    // publishing it and undoing this close a minute from now.
+    generationRef.current += 1;
     setChannel((prevChannel: Channel | null) => {
       prevChannel?.close();
 
@@ -654,6 +724,10 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   channelRef.current = channel;
   useEffect(() => {
     return (): void => {
+      // Same reason as `closeChannel`: this closes the channel that exists at unmount, and an opening
+      // flow still waiting on its DELETE would otherwise build one after it and leak the subscription
+      // and its run.
+      generationRef.current += 1;
       channelRef.current?.close();
     };
   }, []);
