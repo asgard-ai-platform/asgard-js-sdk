@@ -60,6 +60,7 @@ import { ChannelTitleUiRoute } from './routes/channel-title-ui';
 import { ChatHeaderRoute } from './routes/chat-header';
 import { ComposerRoute } from './routes/composer';
 import { PromptSuggestionRoute } from './routes/prompt-suggestion';
+import { DeleteChannelRoute } from './routes/delete-channel';
 import { AttachmentRejoinRoute } from './routes/attachment-rejoin';
 import { QuestionTemplateRoute } from './routes/question-template';
 import { CanvasCardRoute } from './routes/canvas-card';
@@ -135,6 +136,7 @@ export function App(): React.ReactElement {
         <Route path="/chat-header" element={<ChatHeaderRoute />} />
         <Route path="/composer" element={<ComposerRoute />} />
         <Route path="/prompt-suggestion" element={<PromptSuggestionRoute />} />
+        <Route path="/delete-channel" element={<DeleteChannelRoute />} />
         <Route path="/join-init" element={<JoinInitRoute />} />
         <Route path="/stop-generation" element={<StopGenerationRoute />} />
         <Route path="/all-features" element={<AllFeaturesRoute />} />

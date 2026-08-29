@@ -314,7 +314,7 @@ describe('Channel — sandbox phase store (F-018)', () => {
 });
 
 // F-015 — join restore. Channel.restore adopts an existing channel via GET rejoinSse (F-014) and never
-// sends RESET_CHANNEL, so an existing channel's history / title are preserved on join.
+// opens a new conversation, so an existing channel's history / title are preserved on join.
 
 function restoreMockClient(rejoinEvents: SseResponse<EventType>[], fetchSse?: () => void): IAsgardServiceClient {
   return {
@@ -356,7 +356,7 @@ function consentEvent(processId: string, traceId?: string): SseResponse<EventTyp
 }
 
 describe('Channel — join restore (F-015)', () => {
-  it('R2: seeds the title from metadata, replays history, and never sends RESET_CHANNEL', async () => {
+  it('R2: seeds the title from metadata, replays history, and never opens a new conversation', async () => {
     const fetchSseSpy = vi.fn();
     let states: ChannelStates | undefined;
 
@@ -541,12 +541,17 @@ describe('Channel — send guard while a consent is pending (#404)', () => {
     channel.close();
   });
 
-  // #411 — `resetChannel` is deliberately NOT guarded: asgard-core's `prepareChannel` runs
-  // `DeleteChannel` → `EnsureChannel` before posting the turn, so the pause is gone by the time it
-  // lands. That asymmetry carries the whole design, and is exactly what a future reader would "fix" by
-  // adding the guard here too. Pin it so that change fails loudly instead of silently breaking reset.
-  it('still allows a channel reset while a consent is pending', async () => {
+  // #411 — `resetChannel` is deliberately NOT guarded: the pause lives on the channel, and the reset
+  // deletes the channel before opening a new conversation on the same id, so it is gone by the time the
+  // opening turn lands. That asymmetry carries the whole design, and is exactly what a future reader
+  // would "fix" by adding the guard here too. Pin it so that change fails loudly instead of silently
+  // breaking reset.
+  //
+  // F-032 moved the delete out of the backend's `prepareChannel` and into an explicit `DELETE /channel`
+  // the SDK awaits itself, so the assertion is now the two-step order rather than one RESET_CHANNEL.
+  it('still allows a channel reset while a consent is pending — delete first, then a NONE opening turn', async () => {
     const sent: FetchSsePayload[] = [];
+    const deleted: string[] = [];
     const client = {
       fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void {
         sent.push(payload);
@@ -556,6 +561,11 @@ describe('Channel — send guard while a consent is pending (#404)', () => {
         options?.onSseStart?.();
         options?.onSseMessage?.(consentEvent('proc-1'));
         options?.onSseCompleted?.();
+      },
+      async deleteChannel(customChannelId: string): Promise<void> {
+        // The delete must land before the opening turn, never after it.
+        expect(sent).toEqual([]);
+        deleted.push(customChannelId);
       },
     } as unknown as IAsgardServiceClient;
 
@@ -573,7 +583,8 @@ describe('Channel — send guard while a consent is pending (#404)', () => {
       conversation: new Conversation({ messages: new Map() }),
     });
 
-    expect(sent.map(p => p.action)).toEqual([FetchSseAction.RESET_CHANNEL]);
+    expect(deleted).toEqual(['ch']);
+    expect(sent.map(p => p.action)).toEqual([FetchSseAction.NONE]);
     reset.close();
   });
 
@@ -610,8 +621,8 @@ describe('Channel — send guard while a consent is pending (#404)', () => {
   });
 
   // #406 — a nudge takes the same `PostUserMessage` path as a plain turn (`IsTrigger: false`; `IsNudge`
-  // is a separate field), so the paused channel rejects it too. `RESET_CHANNEL` escapes only because
-  // the backend deletes and re-ensures the channel before posting, which clears the pause.
+  // is a separate field), so the paused channel rejects it too. A reset escapes only because it deletes
+  // the channel outright first, which clears the pause along with everything else.
   it('rejects nudge while a consent is pending', async () => {
     const { channel, sent } = await restoredWithPendingConsent();
 
@@ -955,6 +966,190 @@ describe('Channel — nudge (F-021 AC4)', () => {
     await channel.nudge(undefined, () => ({ agent_hub: { working_directory: '/work/proj' } }));
 
     expect(sent[0].payload).toEqual({ agent_hub: { working_directory: '/work/proj' } });
+    channel.close();
+  });
+});
+
+// F-032 — the reset button is now two requests, in this order and never bundled: DELETE the channel
+// (the backend releases the run, transcript, blobs, consent allow-list, Sandbox and Channel Home before
+// answering), then a plain `action=NONE` opening turn on the now-empty id. `RESET_CHANNEL` did both in
+// one request, which is why it could never carry attachments — the delete stripped the blobs the message
+// referenced, silently. Nothing on the SDK side may emit it any more.
+describe('Channel.reset / Channel.open (F-032)', () => {
+  function harness(deleteImpl?: (customChannelId: string) => Promise<void>): {
+    client: IAsgardServiceClient;
+    sent: FetchSsePayload[];
+    deleted: string[];
+  } {
+    const sent: FetchSsePayload[] = [];
+    const deleted: string[] = [];
+    const client = {
+      fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void {
+        sent.push(payload);
+        options?.onSseStart?.();
+        options?.onSseCompleted?.();
+      },
+      async deleteChannel(customChannelId: string): Promise<void> {
+        deleted.push(customChannelId);
+
+        if (deleteImpl) await deleteImpl(customChannelId);
+      },
+    } as unknown as IAsgardServiceClient;
+
+    return { client, sent, deleted };
+  }
+
+  it('R2: deletes the channel first, then dispatches exactly one NONE opening turn', async () => {
+    const { client, sent, deleted } = harness(async () => {
+      // Ordering, not just membership: the opening turn must not be in flight while the delete is.
+      expect(sent).toEqual([]);
+    });
+
+    const channel = await Channel.reset({
+      client,
+      customChannelId: 'ch-reset',
+      conversation: new Conversation({ messages: new Map() }),
+    });
+
+    expect(deleted).toEqual(['ch-reset']);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].action).toBe(FetchSseAction.NONE);
+    expect(sent[0].customChannelId).toBe('ch-reset');
+    channel.close();
+  });
+
+  it('R3: carries the caller text and payload onto that opening turn', async () => {
+    const { client, sent } = harness();
+
+    const channel = await Channel.reset(
+      { client, customChannelId: 'ch', conversation: new Conversation({ messages: new Map() }) },
+      { text: '重新開始', payload: { locale: 'zh-TW' } },
+    );
+
+    expect(sent[0].text).toBe('重新開始');
+    expect(sent[0].payload).toEqual({ locale: 'zh-TW' });
+    channel.close();
+  });
+
+  it('R3: resolves a function payload, like the other outbounds', async () => {
+    const { client, sent } = harness();
+
+    const channel = await Channel.reset(
+      { client, customChannelId: 'ch', conversation: new Conversation({ messages: new Map() }) },
+      { text: '', payload: () => ({ session: 'abc' }) },
+    );
+
+    expect(sent[0].text).toBe('');
+    expect(sent[0].payload).toEqual({ session: 'abc' });
+    channel.close();
+  });
+
+  it('R4: a failed delete dispatches nothing and never reaches the states observer', async () => {
+    const { client, sent } = harness(async () => {
+      throw new Error('teardown failed');
+    });
+    const states: ChannelStates[] = [];
+
+    await expect(
+      Channel.reset({
+        client,
+        customChannelId: 'ch',
+        conversation: new Conversation({ messages: new Map() }),
+        statesObserver: s => states.push(s),
+      }),
+    ).rejects.toThrow('teardown failed');
+
+    // No opening turn, and no Channel was ever constructed — so the caller's current channel and
+    // conversation are untouched. Clearing the screen while the backend still holds the old
+    // conversation is the one outcome this must never produce.
+    expect(sent).toEqual([]);
+    expect(states).toEqual([]);
+  });
+
+  it('R4: the channel adopted early is not handed out when the delete fails', async () => {
+    const { client } = harness(async () => {
+      throw new Error('teardown failed');
+    });
+    const adopted: Channel[] = [];
+
+    await expect(
+      Channel.reset(
+        { client, customChannelId: 'ch', conversation: new Conversation({ messages: new Map() }) },
+        undefined,
+        undefined,
+        channel => adopted.push(channel),
+      ),
+    ).rejects.toThrow('teardown failed');
+
+    expect(adopted).toEqual([]);
+  });
+
+  it('R5: Channel.open dispatches the NONE opening turn without deleting anything', async () => {
+    const { client, sent, deleted } = harness();
+
+    const channel = await Channel.open({
+      client,
+      customChannelId: 'ch-new',
+      conversation: new Conversation({ messages: new Map() }),
+    });
+
+    expect(deleted).toEqual([]);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].action).toBe(FetchSseAction.NONE);
+    channel.close();
+  });
+
+  it('R5: Channel.open adopts the channel before the opening run finishes (consent during welcome)', async () => {
+    const { client } = harness();
+    const adopted: Channel[] = [];
+
+    const channel = await Channel.open(
+      { client, customChannelId: 'ch', conversation: new Conversation({ messages: new Map() }) },
+      undefined,
+      undefined,
+      c => adopted.push(c),
+    );
+
+    expect(adopted).toEqual([channel]);
+    channel.close();
+  });
+
+  it('R1: a client that cannot delete refuses the reset instead of silently skipping it', async () => {
+    const sent: FetchSsePayload[] = [];
+    const client = {
+      fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void {
+        sent.push(payload);
+        options?.onSseCompleted?.();
+      },
+    } as unknown as IAsgardServiceClient;
+
+    await expect(
+      Channel.reset({ client, customChannelId: 'ch', conversation: new Conversation({ messages: new Map() }) }),
+    ).rejects.toThrow(/deleteChannel is not implemented/);
+
+    expect(sent).toEqual([]);
+  });
+
+  it('R9: isConnecting only turns on once the delete has resolved', async () => {
+    let resolveDelete: (() => void) | undefined;
+    const { client } = harness(() => new Promise<void>(resolve => (resolveDelete = resolve)));
+    const states: ChannelStates[] = [];
+
+    const pending = Channel.reset({
+      client,
+      customChannelId: 'ch',
+      conversation: new Conversation({ messages: new Map() }),
+      statesObserver: s => states.push(s),
+    });
+
+    // Mid-delete: nothing local has moved yet. The react layer holds `isResetting` across this window.
+    await Promise.resolve();
+    expect(states).toEqual([]);
+
+    resolveDelete?.();
+    const channel = await pending;
+
+    expect(states.length).toBeGreaterThan(0);
     channel.close();
   });
 });

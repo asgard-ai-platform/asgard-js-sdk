@@ -110,7 +110,7 @@ describe('useChannel — sandboxPhase wiring (BUG-006)', () => {
     expect(result.current.sandboxPhase).toBe('ready');
   });
 
-  it('R3 (regression): resetChannel path (metadata 404, auto-reset) still tracks sandboxPhase to ready', async () => {
+  it('R3 (regression): opening path (metadata 404, auto-reset) still tracks sandboxPhase to ready', async () => {
     const scripted = scriptedClient(null);
     const { result } = renderHook(() =>
       useChannel({ client: scripted.client, customChannelId: 'ch', resetPayload: { text: 'hi' } }),
@@ -121,5 +121,333 @@ describe('useChannel — sandboxPhase wiring (BUG-006)', () => {
 
     act(() => scripted.finishSend());
     expect(result.current.sandboxPhase).toBe('ready');
+  });
+});
+
+/**
+ * F-032 — the reset button is two requests now (`DELETE /channel`, then an `action=NONE` opening turn),
+ * and the mount-time opening of a channel that does not exist is a plain `NONE` with no delete at all.
+ * What these pin is the failure path: a delete that fails must leave the screen exactly as it was.
+ * Clearing the transcript while the backend still holds the old conversation is the one outcome the
+ * split exists to prevent, and it is invisible in a happy-path test.
+ */
+
+interface DeleteAwareClient {
+  client: AsgardServiceClient;
+  sent: FetchSsePayload[];
+  deleted: string[];
+  metadataCalls: number[];
+  finishRun(): void;
+  failRun(error: unknown): void;
+  replayMessage(text: string): void;
+  finishReplay(): void;
+}
+
+function textEvent(text: string): SseResponse<EventType> {
+  return {
+    eventType: EventType.MESSAGE_COMPLETE,
+    requestId: 'req-1',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact: { messageComplete: { message: { messageId: `m-${text}`, text } } },
+  } as unknown as SseResponse<EventType>;
+}
+
+function deleteAwareClient(options: {
+  metadata: ChannelMetadata | null;
+  onDelete?: () => Promise<void>;
+}): DeleteAwareClient {
+  const sent: FetchSsePayload[] = [];
+  const deleted: string[] = [];
+  const metadataCalls: number[] = [];
+  let runOptions: FetchSseOptions | undefined;
+  let replayOptions: FetchSseOptions | undefined;
+
+  const client = {
+    async channelMetadata(): Promise<ChannelMetadata | null> {
+      metadataCalls.push(Date.now());
+
+      return options.metadata;
+    },
+    async deleteChannel(customChannelId: string): Promise<void> {
+      deleted.push(customChannelId);
+
+      if (options.onDelete) await options.onDelete();
+    },
+    fetchSse(payload: FetchSsePayload, sseOptions?: FetchSseOptions): void {
+      sent.push(payload);
+      runOptions = sseOptions;
+      sseOptions?.onSseStart?.();
+    },
+    rejoinSse(_customChannelId: string, sseOptions?: FetchSseOptions): void {
+      replayOptions = sseOptions;
+      sseOptions?.onSseStart?.();
+    },
+  } as unknown as AsgardServiceClient;
+
+  return {
+    client,
+    sent,
+    deleted,
+    metadataCalls,
+    finishRun: () => runOptions?.onSseCompleted?.(),
+    failRun: (error: unknown) => runOptions?.onSseError?.(error),
+    replayMessage: (text: string) => replayOptions?.onSseMessage?.(textEvent(text)),
+    finishReplay: () => replayOptions?.onSseCompleted?.(),
+  };
+}
+
+describe('useChannel — deleteChannel and the two-step reset (F-032)', () => {
+  it('R5: a mount onto a non-existent channel opens with action=NONE and never deletes', async () => {
+    const scripted = deleteAwareClient({ metadata: null });
+    renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(scripted.sent).toHaveLength(1));
+
+    expect(scripted.sent[0].action).toBe('NONE');
+    expect(scripted.deleted).toEqual([]);
+
+    act(() => scripted.finishRun());
+  });
+
+  it('R2: the reset button deletes first, then opens with action=NONE', async () => {
+    const scripted = deleteAwareClient({ metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] } });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.sent).toHaveLength(1));
+    });
+
+    expect(scripted.deleted).toEqual(['ch']);
+    expect(scripted.sent[0].action).toBe('NONE');
+
+    act(() => scripted.finishRun());
+  });
+
+  it('R4: a failed delete keeps the channel and conversation, resets the flags, and reports once', async () => {
+    const errors: unknown[] = [];
+    const scripted = deleteAwareClient({
+      metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] },
+      onDelete: async () => {
+        throw new Error('teardown failed');
+      },
+    });
+    const { result } = renderHook(() =>
+      useChannel({ client: scripted.client, customChannelId: 'ch', onSseError: e => errors.push(e) }),
+    );
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => {
+      scripted.replayMessage('先前的對話');
+      scripted.finishReplay();
+    });
+    await waitFor(() => expect(result.current.conversation?.messages?.size).toBe(1));
+
+    const channelBefore = result.current.channel;
+    const conversationBefore = result.current.conversation;
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(errors).toHaveLength(1));
+    });
+
+    // The transcript is still on screen and still backed by the same live channel.
+    expect(result.current.channel).toBe(channelBefore);
+    expect(result.current.conversation).toBe(conversationBefore);
+    expect(result.current.conversation?.messages?.size).toBe(1);
+    // No opening turn went out — the backend still holds the old conversation.
+    expect(scripted.sent).toEqual([]);
+    // And the UI is usable again rather than stuck behind a spinner.
+    expect(result.current.isResetting).toBe(false);
+    expect(result.current.isConnecting).toBe(false);
+    expect((errors[0] as Error).message).toBe('teardown failed');
+  });
+
+  it('R7: the exposed deleteChannel deletes only — no opening turn, conversation untouched', async () => {
+    const scripted = deleteAwareClient({ metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] } });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => {
+      scripted.replayMessage('先前的對話');
+      scripted.finishReplay();
+    });
+    await waitFor(() => expect(result.current.conversation?.messages?.size).toBe(1));
+
+    const conversationBefore = result.current.conversation;
+
+    await act(async () => {
+      await result.current.deleteChannel?.();
+    });
+
+    expect(scripted.deleted).toEqual(['ch']);
+    expect(scripted.sent).toEqual([]);
+    expect(result.current.conversation).toBe(conversationBefore);
+    expect(result.current.channel).not.toBeNull();
+  });
+
+  it('R2: two resets in the same tick issue one delete, not two', async () => {
+    // The header button guards on `isResetting`, which is React state: both clicks read the old `false`.
+    // Before the two-step split that just meant two welcome runs; now the loser's DELETE would land after
+    // the winner opened the new conversation and take it with it.
+    const scripted = deleteAwareClient({ metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] } });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.sent).toHaveLength(1));
+    });
+
+    expect(scripted.deleted).toEqual(['ch']);
+
+    act(() => scripted.finishRun());
+  });
+
+  it('R2: a throwing onBeforeSendMessage does not strand the re-entrancy guard', async () => {
+    // The guard is a ref, so nothing resets it on a re-render: a throw before the try would leave reset
+    // permanently dead for this component, and silently — the second click simply does nothing.
+    const scripted = deleteAwareClient({ metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] } });
+    let explode = true;
+    const { result } = renderHook(() =>
+      useChannel({
+        client: scripted.client,
+        customChannelId: 'ch',
+        onBeforeSendMessage: () => {
+          if (explode) throw new Error('consumer callback blew up');
+
+          return { text: '' };
+        },
+      }),
+    );
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await Promise.resolve();
+    });
+    expect(scripted.deleted).toEqual([]);
+
+    // The callback recovers; the next reset must still work.
+    explode = false;
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
+    });
+
+    act(() => scripted.finishRun());
+  });
+
+  it('R4: a throwing payload function after a successful delete does not leave a dead channel in state', async () => {
+    // Core adopts the channel before it resolves the payload, so a throwing `payload` function fails
+    // *after* the delete has already destroyed the server-side conversation. The channel core closes on
+    // the way out must not stay in state — a truthy-but-dead channel makes every later send a no-op.
+    const errors: unknown[] = [];
+    const scripted = deleteAwareClient({ metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] } });
+    const { result } = renderHook(() =>
+      useChannel({ client: scripted.client, customChannelId: 'ch', onSseError: e => errors.push(e) }),
+    );
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.({
+        text: '',
+        payload: () => {
+          throw new Error('payload builder blew up');
+        },
+      });
+      await waitFor(() => expect(errors).toHaveLength(1));
+    });
+
+    expect(scripted.deleted).toEqual(['ch']);
+    // No opening turn went out, and the dead channel did not stay in state: dropping it is what lets
+    // the mount gate re-fire and rebuild one, which is the observable difference. Left in place, the
+    // gate's `if (channel) return` would hold forever and every later send would be a silent no-op.
+    expect(scripted.sent).toEqual([]);
+    await waitFor(() => expect(scripted.metadataCalls.length).toBeGreaterThan(1));
+    expect(result.current.isResetting).toBe(false);
+  });
+
+  it('R4: closing the channel mid-delete is not undone when the delete lands', async () => {
+    // The delete can take a minute. A `closeChannel()` inside that window must win: adopting the result
+    // afterwards would revive a channel the consumer explicitly closed, and start an opening run.
+    let releaseDelete: (() => void) | undefined;
+    const scripted = deleteAwareClient({
+      metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] },
+      onDelete: () => new Promise<void>(resolve => (releaseDelete = resolve)),
+    });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
+    });
+
+    act(() => result.current.closeChannel?.());
+    expect(result.current.isOpen).toBe(false);
+
+    await act(async () => {
+      releaseDelete?.();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.channel).toBeNull();
+    expect(result.current.isOpen).toBe(false);
+  });
+
+  it('R2: a throwing onSseError does not strand the guard either', async () => {
+    // Core notifies the SSE error handler *before* it settles the run's promise, so a consumer callback
+    // that throws would leave `await start(...)` pending forever — and the ref with it.
+    const scripted = deleteAwareClient({ metadata: null });
+    let explode = true;
+    const { result } = renderHook(() =>
+      useChannel({
+        client: scripted.client,
+        customChannelId: 'ch',
+        onSseError: () => {
+          if (explode) throw new Error('consumer error handler blew up');
+        },
+      }),
+    );
+
+    await waitFor(() => expect(scripted.sent).toHaveLength(1));
+    act(() => scripted.failRun(new Error('socket died')));
+    await waitFor(() => expect(result.current.channel).toBeNull());
+
+    explode = false;
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.deleted).toEqual(['ch']));
+    });
+  });
+
+  it('R7: a failed delete surfaces to the caller of the exposed deleteChannel', async () => {
+    const scripted = deleteAwareClient({
+      metadata: { title: 'x', runState: 'IDLE', launchedSandboxes: [] },
+      onDelete: async () => {
+        throw new Error('teardown failed');
+      },
+    });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await expect(result.current.deleteChannel?.()).rejects.toThrow('teardown failed');
   });
 });

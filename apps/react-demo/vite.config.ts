@@ -44,6 +44,19 @@ function asgardSseMockPlugin(): Plugin {
         }
       });
 
+      // F-032 — `DELETE /channel`. Registered AFTER the metadata middleware above so `/channel/metadata`
+      // still reaches that one: connect runs middlewares in registration order and `/channel` would
+      // otherwise swallow it.
+      server.middlewares.use('/mock-asgard/channel', async (req, res, next) => {
+        try {
+          const { handleMockChannelDelete } = await import('./src/mock-server/sse-mock');
+
+          await handleMockChannelDelete(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
+
       // Blob upload (`POST /blob`) — what `client.uploadFile()` calls when the composer has a pending
       // attachment. Mounted so the live send path completes without a real backend.
       server.middlewares.use('/mock-asgard/blob', async (req, res, next) => {

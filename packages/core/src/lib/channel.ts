@@ -243,7 +243,15 @@ export default class Channel {
     return channel;
   }
 
-  public static async reset(
+  /**
+   * Open a channel with a fresh conversation (F-032): create it and dispatch a single `action=NONE`
+   * opening turn, which the backend answers with the welcome run. Used for the mount-time opening of a
+   * channel that does not exist yet (UC-025) — nothing is deleted, because there is nothing there.
+   *
+   * The run's kind stays `'reset'`: an opening turn is not a turn the user dispatched, so
+   * stop-generation must not fire on it (F-023 AC8).
+   */
+  public static async open(
     config: ChannelConfig,
     payload?: Pick<FetchSsePayload, 'text' | 'payload'>,
     options?: FetchSseOptions,
@@ -254,13 +262,12 @@ export default class Channel {
     try {
       channel.subscribe();
 
-      // Expose the channel before the RESET_CHANNEL run finishes. The backend
-      // can emit a tool_call.consent *during* this run (before run.done), so a
-      // reply submitted while the modal is up must reach a non-null channel —
-      // otherwise the consent answer is silently dropped.
+      // Expose the channel before the opening run finishes. The backend can emit a tool_call.consent
+      // *during* this run (before run.done), so a reply submitted while the modal is up must reach a
+      // non-null channel — otherwise the consent answer is silently dropped.
       onChannelCreated?.(channel);
 
-      await channel.resetChannel(payload, options);
+      await channel.openChannel(payload, options);
 
       return channel;
     } catch (error) {
@@ -271,10 +278,50 @@ export default class Channel {
   }
 
   /**
+   * Clear an **existing** conversation and start over on the same id (F-032) — what the header's reset
+   * button does. Two steps, in this order and never bundled:
+   *
+   * 1. `client.deleteChannel()` — the backend releases the run, transcript, blobs, consent allow-list,
+   *    Sandbox and Channel Home, and answers only once that teardown is done.
+   * 2. {@link Channel.open} — a plain `action=NONE` opening turn on the now-empty id.
+   *
+   * This replaces the single `RESET_CHANNEL` turn, which bundled both into one request and therefore
+   * could never carry attachments: blobs belong to the channel that was live when they were uploaded, so
+   * the delete stripped them and the `blobIds` resolved to nothing without an error. A host that needs
+   * "clear, then send with attachments" sequences it itself: `deleteChannel` → upload → `sendMessage`.
+   *
+   * **Nothing local changes until the delete succeeds** — no channel is constructed, so no state
+   * observer fires. A failed delete therefore leaves the caller's current channel and conversation
+   * exactly as they were, which is the point: the screen must never be cleared while the server still
+   * holds the old conversation.
+   */
+  public static async reset(
+    config: ChannelConfig,
+    payload?: Pick<FetchSsePayload, 'text' | 'payload'>,
+    options?: FetchSseOptions,
+    onChannelCreated?: (channel: Channel) => void,
+  ): Promise<Channel> {
+    if (!config.client.deleteChannel) {
+      // A hand-rolled IAsgardServiceClient that predates F-032. Refuse loudly rather than skipping the
+      // delete (the screen would clear while the backend keeps the old conversation) or falling back to
+      // the retired RESET_CHANNEL turn. `AsgardServiceClient` always has the method, so only a custom
+      // client can land here.
+      throw new Error(
+        'This client cannot reset a channel: IAsgardServiceClient.deleteChannel is not implemented. ' +
+          'Implement it (DELETE {base}/channel?custom_channel_id=…) or use AsgardServiceClient.',
+      );
+    }
+
+    await config.client.deleteChannel(config.customChannelId);
+
+    return Channel.open(config, payload, options, onChannelCreated);
+  }
+
+  /**
    * Join an **existing** channel without resetting it (F-015). Seeds the title from `config.channelTitle`
    * (the `GET /channel/metadata` value) at construction, then replays the server transcript via GET
-   * `rejoinSse` and holds `isConnecting` until the run reaches a terminal. Never sends `RESET_CHANNEL`,
-   * so the channel's history / session / title are preserved — this is the fix for the mount-time
+   * `rejoinSse` and holds `isConnecting` until the run reaches a terminal. Never deletes and never
+   * opens, so the channel's history / session / title are preserved — this is the fix for the mount-time
    * "join an existing channel and wipe its history" data-loss bug.
    */
   public static async restore(
@@ -545,11 +592,16 @@ export default class Channel {
     });
   }
 
-  private resetChannel(payload?: Pick<FetchSsePayload, 'text' | 'payload'>, options?: FetchSseOptions): Promise<void> {
+  /**
+   * The opening turn (F-032): a plain `action=NONE` with the caller's text / payload (empty text when
+   * they gave none). On a channel that does not exist the backend creates it and runs the welcome; on
+   * one just emptied by `deleteChannel` it starts the new conversation.
+   */
+  private openChannel(payload?: Pick<FetchSsePayload, 'text' | 'payload'>, options?: FetchSseOptions): Promise<void> {
     return this.fetchSse(
       'reset',
       {
-        action: FetchSseAction.RESET_CHANNEL,
+        action: FetchSseAction.NONE,
         customChannelId: this.customChannelId,
         customMessageId: this.customMessageId,
         text: payload?.text || '',
@@ -727,7 +779,7 @@ export default class Channel {
    * `force-stoppable`, and calling again with `{ force: true }` tells the backend to give up on the run
    * rather than let it wind down (AC7).
    *
-   * No-ops (resolving) when nothing is running, when the run is not the user's own — a `RESET_CHANNEL`
+   * No-ops (resolving) when nothing is running, when the run is not the user's own — an opening
    * welcome, a transcript replay or an invisible nudge must never be stopped (AC8) — or when a stop is
    * already pending and this is not a force.
    *

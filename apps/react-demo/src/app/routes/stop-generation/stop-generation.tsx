@@ -86,11 +86,11 @@ const SCENARIOS: Scenario[] = [
     customChannelId: 'stop-generation-welcome-demo',
     placeholder: '開場串流中 —— 注意右下角沒有停止鈕…',
     steps: [
-      '本情境 autoResetChannel 維持預設 true → mount 就送 RESET_CHANNEL 開場',
+      '本情境 autoResetChannel 維持預設 true → mount 就以 action=NONE 開場',
       '開場回覆串流期間，右下角「只有停用的送出鈕，沒有停止鈕」',
       '開場結束後送自己的訊息 → 這時才會出現停止鈕',
     ],
-    note: 'AC8。isConnecting 一詞四義（使用者 run／RESET_CHANNEL 歡迎訊息／transcript 重播／隱形 nudge），只有第一種可停。core 用 RunStatus.kind 區分，對歡迎訊息呼叫停止是 no-op、也不會發出任何 suspend 請求。',
+    note: 'AC8。isConnecting 一詞四義（使用者 run／開場歡迎訊息／transcript 重播／隱形 nudge），只有第一種可停。core 用 RunStatus.kind 區分，對歡迎訊息呼叫停止是 no-op、也不會發出任何 suspend 請求。',
   },
 ];
 

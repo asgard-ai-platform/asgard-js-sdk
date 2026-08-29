@@ -41,7 +41,8 @@ export interface LaunchedSandbox {
  * against a welcome message, a transcript replay, or an invisible nudge.
  *
  * - `user` — a turn the user dispatched (`sendMessage`, or a `tool_call.consent` reply continuing it).
- * - `reset` — the `RESET_CHANNEL` opening / welcome run.
+ * - `reset` — the opening / welcome run (`Channel.open`, and the one `Channel.reset` dispatches after
+ *   its delete). Not a turn the user asked for, so it is never stoppable.
  * - `restore` — a GET rejoin that is tailing a run still `RUNNING` on the server (F-014 / F-015).
  * - `replay` — a GET rejoin of a channel whose run has already finished: history is being loaded, but
  *   nothing is being generated, so no run-in-progress indicator belongs on screen (UC-046).

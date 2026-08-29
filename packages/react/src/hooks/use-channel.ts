@@ -85,6 +85,21 @@ export interface UseChannelReturn {
       Partial<Pick<FetchSsePayload, 'payload'>> & { filePreviewUrls?: string[]; documentNames?: string[] },
   ) => Promise<void>;
   resetChannel?: (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => void;
+  /**
+   * End the conversation on the backend and release everything the channel holds (F-032) — the run,
+   * transcript, uploaded blobs, tool-call allow-list, Sandbox and Channel Home. Deletes **only**: no
+   * opening turn is sent and the local conversation is left as it is, so the host controls what the
+   * screen does next.
+   *
+   * This is what makes "clear the conversation, then send with an attachment" possible at all:
+   * `deleteChannel()` → upload → `sendMessage({ blobIds })`. Doing it in one request cannot work,
+   * because blobs belong to the channel that was live when they were uploaded.
+   *
+   * Resolves once the backend confirms the teardown (up to about a minute when a Sandbox has to
+   * terminate); rejects if it fails, in which case the old conversation is still there. To clear and
+   * show a fresh welcome in one call, use `resetChannel`.
+   */
+  deleteChannel?: () => Promise<void>;
   closeChannel?: () => void;
   /**
    * User-initiated stop-generation (F-023). Asks the backend to suspend the background run and keeps
@@ -162,6 +177,17 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   // via `initChannel` or `restoreChannel` never left the Launch HUD's `idle` state. A single factory
   // makes that class of bug structurally impossible: there is only one place a `ChannelStates` field can
   // be wired up, and every path uses it.
+  // One opening flow at a time — see the guard in `startChannel`.
+  const openingRef = useRef(false);
+  // Bumped whenever an in-flight opening flow must be considered superseded: an explicit
+  // `closeChannel()`, or unmount. The delete can take up to a minute, and anything that resolves after
+  // one of those must not be adopted — see `isSuperseded` in `startChannel`.
+  const generationRef = useRef(0);
+  // The live prop, so a flow that started under one channel id can tell that the consumer has since
+  // pointed the component at another one.
+  const customChannelIdRef = useRef(customChannelId);
+  customChannelIdRef.current = customChannelId;
+
   const makeStatesObserver = useCallback(
     () =>
       (states: ChannelStates): void => {
@@ -175,71 +201,174 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     [],
   );
 
-  const resetChannel = useCallback(
-    async (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>) => {
+  /**
+   * The opening flow shared by the mount-time open and the header's reset (F-032). `'open'` dispatches
+   * the `action=NONE` opening turn straight away — the channel does not exist yet, so there is nothing
+   * to delete. `'reset'` deletes first and only opens once the backend confirms the teardown.
+   *
+   * The local conversation is deliberately **not** swapped up front: `Channel.reset` builds nothing
+   * until the delete resolves, so a failed delete leaves the current channel and conversation exactly
+   * as they were. The new (empty) conversation reaches state through the states observer, which fires
+   * as soon as the new channel subscribes.
+   */
+  const startChannel = useCallback(
+    async (
+      mode: 'open' | 'reset',
+      payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>,
+    ): Promise<void> => {
       if (isPreviewMode || !client) return;
 
-      const conversation = new Conversation({
-        messages: new Map(initMessages?.map(message => [message.messageId, message])),
-      });
+      // Re-entrancy has to be refused on a ref, not on `isResetting`. The header button already checks
+      // that flag, but it is React state: two clicks landing in the same tick both read the old `false`
+      // and both get through. That used to mean two harmless welcome runs; now the second reset's
+      // DELETE can land *after* the first one has opened the new conversation and silently destroy it.
+      if (openingRef.current) return;
 
-      setIsResetting(true);
-      setIsConnecting(true);
-      setConversation(conversation);
+      openingRef.current = true;
 
-      const resolvedPayload = onBeforeSendMessage
-        ? onBeforeSendMessage({ text: payload?.text ?? '', payload: payload?.payload })
-        : payload;
+      // Set by the SSE error handler below so the catch can tell the two failure kinds apart without
+      // re-reporting the same error twice.
+      let openingRunFailed = false;
+      // The channel this flow adopted, if it got that far. A failed DELETE never builds one, so this is
+      // what distinguishes "nothing happened, leave the caller's channel alone" from "we created a
+      // channel and then failed", which must not leave a closed instance sitting in state.
+      let adopted: Channel | null = null;
 
-      const channel = await Channel.reset(
-        {
-          client,
-          customChannelId,
-          customMessageId,
-          conversation,
-          channelTitle: channelTitleSeed,
-          statesObserver: makeStatesObserver(),
-        },
-        resolvedPayload,
-        {
-          onSseCompleted() {
-            setIsResetting(false);
+      // The awaited work can outlive the reason for doing it: the DELETE alone can take a minute, and in
+      // that window the consumer may close the channel, unmount, or point the component at a different
+      // `customChannelId`. Adopting the result afterwards would revive a closed channel, or worse, leave
+      // the context advertising one id while sends go to another.
+      const startedAt = generationRef.current;
+      const startedFor = customChannelId;
+      const isSuperseded = (): boolean =>
+        generationRef.current !== startedAt || customChannelIdRef.current !== startedFor;
+
+      // A consumer callback that throws must never wedge the SDK. Core notifies through these *before*
+      // it settles the run's promise, so a throw here would leave `await start(...)` pending forever —
+      // and with it `openingRef`, which is only released in `finally`.
+      const notify = (fn: (() => void) | undefined): void => {
+        if (!fn) return;
+
+        try {
+          fn();
+        } catch {
+          // Swallowed on purpose: it is the consumer's own error on their own callback, and there is no
+          // channel of ours it belongs on. Re-raising it here would break the run it was reporting.
+        }
+      };
+
+      // Everything after the ref is set lives in the try, `finally` included: `onBeforeSendMessage` is
+      // consumer code and may throw, and a throw between here and the try would strand the ref at
+      // `true` — leaving reset permanently dead for this component, silently.
+      try {
+        const conversation = new Conversation({
+          messages: new Map(initMessages?.map(message => [message.messageId, message])),
+        });
+
+        setIsResetting(true);
+        setIsConnecting(true);
+
+        const resolvedPayload = onBeforeSendMessage
+          ? onBeforeSendMessage({ text: payload?.text ?? '', payload: payload?.payload })
+          : payload;
+
+        const start = mode === 'reset' ? Channel.reset : Channel.open;
+
+        const channel = await start(
+          {
+            client,
+            customChannelId,
+            customMessageId,
+            conversation,
+            channelTitle: channelTitleSeed,
+            statesObserver: makeStatesObserver(),
           },
-          onSseError(error) {
-            setIsResetting(false);
-            // The channel was adopted early (see onChannelCreated below). Reset
-            // failed and Channel.reset will close it, so drop it from state —
-            // otherwise later sends no-op against a dead channel and the
-            // `!channel && isOpen` reset-retry effect can never re-fire.
-            setChannel(null);
-            // Handle authentication and bot provider errors
-            if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
-              onAuthError?.(
-                error as {
-                  isAuthError: boolean;
-                  isBotProviderError: boolean;
-                  errorDetail?: unknown;
-                },
+          resolvedPayload,
+          {
+            onSseCompleted() {
+              setIsResetting(false);
+            },
+            onSseError(error) {
+              openingRunFailed = true;
+              setIsResetting(false);
+              // The channel was adopted early (see onChannelCreated below). The opening run failed and
+              // `Channel.open` will close it, so drop it from state — otherwise later sends no-op
+              // against a dead channel and the `!channel && isOpen` retry effect can never re-fire.
+              setChannel(null);
+              // Handle authentication and bot provider errors
+              if (error && typeof error === 'object' && ('isAuthError' in error || 'isBotProviderError' in error)) {
+                notify(() =>
+                  onAuthError?.(
+                    error as {
+                      isAuthError: boolean;
+                      isBotProviderError: boolean;
+                      errorDetail?: unknown;
+                    },
+                  ),
+                );
+              }
+
+              notify(() => onSseError?.(error));
+            },
+            delayTime,
+            onSseMessage(response: SseResponse<EventType>) {
+              notify(() =>
+                onSseMessage?.(response, {
+                  conversation,
+                }),
               );
+            },
+          },
+          // Adopt the channel as soon as it exists — before the opening run completes — so a
+          // tool_call.consent emitted during it can be replied to (otherwise `channel` is still null
+          // and the reply is dropped).
+          created => {
+            adopted = created;
+
+            if (isSuperseded()) {
+              created.close();
+
+              return;
             }
 
-            onSseError?.(error);
+            setChannel(created);
           },
-          delayTime,
-          onSseMessage(response: SseResponse<EventType>) {
-            onSseMessage?.(response, {
-              conversation,
-            });
-          },
-        },
-        // Adopt the channel as soon as it exists — before the RESET_CHANNEL run
-        // completes — so a tool_call.consent emitted during reset can be replied
-        // to (otherwise `channel` is still null and the reply is dropped).
-        setChannel,
-      );
+        );
 
-      setIsOpen(true);
-      setChannel(channel);
+        if (isSuperseded()) {
+          // Closed, or aimed at another channel, while we were waiting. Nothing may be published; the
+          // instance we just built is ours to dispose of, or it leaks its subscription and its run.
+          channel.close();
+
+          return;
+        }
+
+        setIsOpen(true);
+        setChannel(channel);
+      } catch (error) {
+        // Two failures land here. An opening-run error has already been handled by `onSseError` above
+        // (state reset, channel dropped) and is only rethrown by core; re-reporting it would double-fire
+        // the consumer's callback. A failed DELETE never reached the SSE layer at all, so this is its
+        // only report — and the guarantee to keep is that the existing channel and conversation are
+        // still on screen, untouched (core builds nothing until the delete resolves).
+        setIsResetting(false);
+        setIsConnecting(false);
+
+        // A channel was built and then something failed (a throwing `payload` function, for instance,
+        // which core resolves after adopting the channel). `Channel.open` has already closed it, so it
+        // must not stay in state: a truthy-but-dead channel makes every later send a silent no-op and
+        // stops the retry effect from ever re-firing. A failed DELETE never gets here — nothing was
+        // adopted, and the caller's existing channel is left exactly as it was.
+        if (adopted && !openingRunFailed) {
+          setChannel(null);
+        }
+
+        if (!openingRunFailed) {
+          notify(() => onSseError?.(error));
+        }
+      } finally {
+        openingRef.current = false;
+      }
     },
     [
       isPreviewMode,
@@ -255,6 +384,21 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       onBeforeSendMessage,
       makeStatesObserver,
     ],
+  );
+
+  const resetChannel = useCallback(
+    (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>): void => {
+      void startChannel('reset', payload);
+    },
+    [startChannel],
+  );
+
+  /** Mount-time opening of a channel that does not exist yet (F-015 R3 / UC-025) — no delete (F-032). */
+  const openChannel = useCallback(
+    (payload?: Pick<FetchSsePayload, 'text'> & Partial<Pick<FetchSsePayload, 'payload'>>): void => {
+      void startChannel('open', payload);
+    },
+    [startChannel],
   );
 
   const initChannel = useCallback(() => {
@@ -280,7 +424,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   }, [isPreviewMode, client, customChannelId, customMessageId, initMessages, channelTitleSeed, makeStatesObserver]);
 
   // F-015 — join an existing channel: replay the server transcript (F-014) and seed the title from
-  // metadata (F-016) without ever sending RESET_CHANNEL. `titleSeed` comes from `GET /channel/metadata`.
+  // metadata (F-016) without deleting or opening anything. `titleSeed` comes from `GET /channel/metadata`.
   // The live restore path uses the server transcript as the single source of truth, so it does NOT seed
   // from `initMessages` (which stays preview/offline-only — see the preview branch above).
   const restoreChannel = useCallback(
@@ -363,6 +507,9 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   );
 
   const closeChannel = useCallback(() => {
+    // Supersede any opening flow still awaiting its DELETE, so it disposes of what it builds instead of
+    // publishing it and undoing this close a minute from now.
+    generationRef.current += 1;
     setChannel((prevChannel: Channel | null) => {
       prevChannel?.close();
 
@@ -375,6 +522,23 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     setConversation(null);
     setSandboxPhase('idle');
   }, []);
+
+  /**
+   * Delete the channel and nothing else (F-032) — no opening turn, no change to the local conversation.
+   * The host owns what happens next, which is the whole point: "clear the conversation and start over
+   * *with* an attachment" is impossible in one request (the delete strips the blobs the message would
+   * reference), so a host that needs it sequences the three steps itself —
+   * `deleteChannel()` → `client.uploadFile()` → `sendMessage({ blobIds })`.
+   *
+   * Rejects if the delete fails, and does not touch local state either way: the caller decides whether
+   * the on-screen transcript should follow. For the "clear it and show a fresh welcome" case use
+   * `resetChannel` instead, which does both.
+   */
+  const deleteChannel = useCallback(async (): Promise<void> => {
+    if (isPreviewMode || !client) return;
+
+    await client.deleteChannel(customChannelId);
+  }, [isPreviewMode, client, customChannelId]);
 
   const sendMessage = useCallback(
     async (
@@ -475,7 +639,9 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     if (channel || !isOpen) return;
 
     // A client without the metadata gate (a custom IAsgardServiceClient) keeps the pre-F-015 behavior:
-    // branch on autoResetChannel with no existence check.
+    // branch on autoResetChannel with no existence check. Its contract is "mount always resets", and a
+    // reset now means delete-then-open (F-032) — unlike the 404 branch below, this one cannot know the
+    // channel is absent, so it must not skip the delete.
     if (!client.channelMetadata) {
       if (autoResetChannel !== false) {
         resetChannel(resetPayload);
@@ -508,11 +674,12 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       if (cancelled) return;
 
       if (metadata) {
-        // R2 — channel exists: always restore, seed the title + live sandboxes from metadata, never RESET_CHANNEL.
+        // R2 — channel exists: always restore, seed the title + live sandboxes from metadata, never re-open.
         restoreChannel(metadata.title, metadata.launchedSandboxes, metadata.runState);
       } else if (autoResetChannel !== false) {
-        // R3 — not exists + auto-reset (default): open via RESET_CHANNEL.
-        resetChannel(resetPayload);
+        // R3 — not exists + auto-reset (default): open with `action=NONE`. No delete (F-032): there is
+        // no channel to tear down, and on an absent one a reset was only ever an expensive `NONE`.
+        openChannel(resetPayload);
       } else {
         // R4 — not exists + no auto-reset: stay empty; the first user send starts it with action=NONE.
         initChannel();
@@ -531,6 +698,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     autoResetChannel,
     restoreChannel,
     resetChannel,
+    openChannel,
     initChannel,
     resetPayload,
     onSseError,
@@ -556,6 +724,10 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
   channelRef.current = channel;
   useEffect(() => {
     return (): void => {
+      // Same reason as `closeChannel`: this closes the channel that exists at unmount, and an opening
+      // flow still waiting on its DELETE would otherwise build one after it and leak the subscription
+      // and its run.
+      generationRef.current += 1;
       channelRef.current?.close();
     };
   }, []);
@@ -588,6 +760,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             runStatus,
             sendMessage,
             resetChannel,
+            deleteChannel,
             closeChannel,
             stopGeneration,
             replyToolCallConsents,
@@ -609,6 +782,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       runStatus,
       sendMessage,
       resetChannel,
+      deleteChannel,
       closeChannel,
       stopGeneration,
       replyToolCallConsents,

@@ -31,6 +31,21 @@ export interface IAsgardServiceClient {
    * Optional for backward compatibility — a client without it falls back to the legacy local abort.
    */
   suspendChannel?(customChannelId: string, options?: StopGenerationOptions & { requestId?: string }): Promise<void>;
+  /**
+   * End the conversation and release everything the channel holds (F-032) via
+   * `DELETE {base}/channel?custom_channel_id=…`: the in-flight run, the transcript, uploaded blobs, the
+   * tool-call allow-list, the Sandbox and the Channel Home. Resolving means the teardown is **done**,
+   * not scheduled, so the same `customChannelId` is free to start over; deleting a channel that does not
+   * exist is a success, not an error.
+   *
+   * May take up to about a minute when a live Sandbox has to terminate first — the wait is deliberate,
+   * so the next turn does not race a dying pod. Callers must not impose a shorter timeout.
+   *
+   * Optional for backward compatibility — a hand-rolled client without it cannot be reset
+   * ({@link Channel.reset} rejects rather than clearing the screen while the server keeps the old
+   * conversation).
+   */
+  deleteChannel?(customChannelId: string): Promise<void>;
   uploadFile?(file: File, customChannelId: string): Promise<BlobUploadResponse>;
   downloadChannelHomeFile?(relativePath: string, customChannelId: string): Promise<ChannelHomeDownloadResult>;
 }

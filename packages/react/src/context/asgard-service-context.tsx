@@ -83,6 +83,14 @@ export interface AsgardServiceContextValue {
   messageBoxBottomRef: RefObject<HTMLDivElement | null>;
   sendMessage?: UseChannelReturn['sendMessage'];
   resetChannel?: UseChannelReturn['resetChannel'];
+  /**
+   * End the conversation on the backend and release everything the channel holds (F-032). Deletes only
+   * — no opening turn, and the on-screen conversation is left as it is, so the host decides what
+   * happens next. Sequence it as `deleteChannel()` → upload → `sendMessage({ blobIds })` when the fresh
+   * conversation has to start with an attachment; use {@link resetChannel} to clear and re-open in one
+   * call.
+   */
+  deleteChannel?: UseChannelReturn['deleteChannel'];
   closeChannel?: UseChannelReturn['closeChannel'];
   /**
    * User-initiated stop-generation (F-023): asks the backend to suspend the background run, then waits
@@ -319,6 +327,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     runStatus,
     sendMessage,
     resetChannel,
+    deleteChannel,
     closeChannel,
     stopGeneration,
     replyToolCallConsents,
@@ -439,6 +448,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       canForceStop,
       sendMessage: wrappedSendMessage,
       resetChannel,
+      deleteChannel,
       closeChannel,
       stopGeneration,
       replyToolCallConsents: wrappedReplyToolCallConsents,
@@ -481,6 +491,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       canForceStop,
       wrappedSendMessage,
       resetChannel,
+      deleteChannel,
       closeChannel,
       stopGeneration,
       wrappedReplyToolCallConsents,

@@ -278,6 +278,47 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
   }
 
+  private deriveChannelEndpoint(): string | null {
+    const baseEndpoint = this.getBaseEndpoint();
+
+    return baseEndpoint ? `${baseEndpoint}/channel` : null;
+  }
+
+  /**
+   * End the conversation and release the whole channel (F-032):
+   * `DELETE {base}/channel?custom_channel_id=…`. The backend tears down the in-flight run, the
+   * transcript, uploaded blobs, the tool-call allow-list, the Sandbox and the Channel Home, and only
+   * then answers — so once this resolves the same `customChannelId` is genuinely a blank slate
+   * (`GET /channel/metadata` goes back to `404`).
+   *
+   * Success is **any 2xx**: the endpoint answers `204 No Content`, and does so for a channel that never
+   * existed too (deleting nothing is not a failure). Unlike {@link suspendChannel} there is no `404`
+   * special case, because the backend never answers one here. Everything else throws {@link HttpError},
+   * and a throw must never be read as "deleted" — a `500` means the teardown failed and the old
+   * conversation is still there.
+   *
+   * **No timeout is imposed.** A channel with a live Sandbox blocks until the pod is really gone (up to
+   * about a minute), on purpose: the next turn must not race a dying pod.
+   */
+  async deleteChannel(customChannelId: string): Promise<void> {
+    const endpoint = this.deriveChannelEndpoint();
+
+    if (!endpoint) {
+      throw new Error('Unable to derive channel endpoint. Please provide botProviderEndpoint in config.');
+    }
+
+    const url = new URL(endpoint);
+    url.searchParams.set('custom_channel_id', customChannelId);
+
+    const response = await fetch(url.toString(), { method: 'DELETE', headers: this.apiHeaders() });
+
+    if (response.ok) {
+      return;
+    }
+
+    throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
+  }
+
   private runSse(observable: Observable<SseResponse<EventType>>, options?: FetchSseOptions): Subscription {
     return observable
       .pipe(

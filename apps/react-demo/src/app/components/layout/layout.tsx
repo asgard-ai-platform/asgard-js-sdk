@@ -65,6 +65,7 @@ const navItems = [
   { to: '/question-template', label: 'Question Card (F-029)' },
   { to: '/attachment-rejoin', label: 'Replayed attachments (#448)' },
   { to: '/canvas-card', label: 'Canvas Card (F-030)' },
+  { to: '/delete-channel', label: 'Delete Channel (F-032)' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {
