@@ -274,3 +274,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-072` | Review: close the three reset follow-ups                 | —        | done   | [REVIEW-072-reset-follow-ups.md](./REVIEW-072-reset-follow-ups.md)                                       |
 | `BUILD-073`  | Report consent reply failures through onSseError         | High     | done   | [BUILD-073-consent-reply-error-reporting.md](./BUILD-073-consent-reply-error-reporting.md)               |
 | `REVIEW-073` | Review: report consent reply failures through onSseError | —        | done   | [REVIEW-073-consent-reply-error-reporting.md](./REVIEW-073-consent-reply-error-reporting.md)             |
+| `BUILD-074`  | Close the remaining SSE error-guard gaps                 | High     | done   | [BUILD-074-sse-error-guard-gaps.md](./BUILD-074-sse-error-guard-gaps.md)                                 |
+| `REVIEW-074` | Review: close the remaining SSE error-guard gaps         | —        | done   | [REVIEW-074-sse-error-guard-gaps.md](./REVIEW-074-sse-error-guard-gaps.md)                               |
