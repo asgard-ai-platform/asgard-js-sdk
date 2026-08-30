@@ -113,15 +113,21 @@ Files:
 
 ## Out of scope (found here, not fixed here)
 
+**All three are tracked in #459.**
+
 - **`nudge` has the same missing handler.** `use-channel.ts` passes it only `onSseMessage`. A nudge is
   invisible by design, so a failed one is silent by design too — but the consumer still cannot know.
 - **`onAuthError` never fires from the first-party client.** Nothing in `@asgard-js/core` constructs
   `{ isAuthError, isBotProviderError }`; a live 403 arrives as a plain `HTTP 403: Forbidden` and only
   `onSseError` sees it (confirmed in the browser). The predicate is dead against `AsgardServiceClient`
   on all four paths, and has been since before this task. R2 pins the consistency, not a live route.
-- **`sendMessage` reports without the throw-guard.** Same "core notifies before it settles" exposure as
-  R5; its caller is the composer rather than the gate, so the consequence is different, and changing it
-  would be an unrequested behavior change on the busiest path in the SDK.
+- **`restoreChannel` and `sendMessage` report without the throw-guard.** Same "core notifies before it
+  settles" exposure as R5. **Corrected while filing #459:** this entry first named `sendMessage` alone,
+  but `restoreChannel` (`use-channel.ts:472-482`) hands the consumer callbacks over bare as well — only
+  `startChannel` and the consent path go through `notify`. The two differ in consequence: `sendMessage`'s
+  caller is the built-in composer, which calls it fire-and-forget, so a throwing callback surfaces as an
+  unhandled rejection rather than a wedge; `restoreChannel`'s outer `catch {}` happens to swallow it.
+  Neither was fixed here — on the busiest path in the SDK that would be an unrequested behavior change.
 
 ---
 
@@ -134,3 +140,6 @@ in-progress`). Written after implementation began — the investigation that ans
   the five pieces reverted individually to confirm which cases it holds up. R7 walked in the browser
   against the dev consent bot with the reply refused at the network layer, before and after.
 - 2026-08-30: §1 + §3 reviewed via REVIEW-073 — 0 blockers, 3 Minor findings (Status: `in-progress → done`).
+- 2026-08-30: the three "Out of scope" items filed as #459. Re-reading the source to write that issue
+  corrected the third one: `restoreChannel` lacks the throw-guard too, not `sendMessage` alone. No
+  source change — the correction is to this record.

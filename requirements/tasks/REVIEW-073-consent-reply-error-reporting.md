@@ -130,13 +130,14 @@ None.
    `{ isAuthError, isBotProviderError }`; the live 403 arrived as a plain `HTTP 403: Forbidden` and only
    `onSseError` saw it. The predicate has been inert on all four paths since before this task — R2 pins
    that the consent path now applies the same rule as the others, not that a 403 reaches `onAuthError`.
-   Worth a separate ticket to decide whether `onAuthError` should be populated or deprecated.
+   Worth a separate ticket to decide whether `onAuthError` should be populated or deprecated. Filed as
+   #459 §2 — that ticket asks for the decision, not for an implementation.
 2. **`AuthShapedError` is a local alias for a shape written inline in three more places**
    (`use-channel.ts:56`, `asgard-service-context.tsx:210`, `chatbot.tsx:125`). Centralizing it per §3.2
    means promoting it into `@asgard-js/core`'s public types, which changes the emitted `.d.ts` for a
    public prop — out of proportion to this task. Left as is deliberately.
 3. **`nudge` still has no `onSseError`.** Recorded under BUILD-073 "Out of scope"; the same one-line
-   omission on an invisible path.
+   omission on an invisible path. Filed as #459 §1.
 
 ---
 
@@ -150,3 +151,7 @@ None.
 - 2026-08-30: §3 functional — R1–R7 all Pass; each of the five pieces reverted once to confirm the
   cases it covers, and all six unit cases confirmed red on `main`. Three Minor findings, none blocking
   (Status: `in-progress → done`).
+- 2026-08-30: Minor 1 and 3 filed as #459, together with BUILD-073's third "Out of scope" item. Writing
+  that issue turned up a miss this review shares: the throw-guard gap covers `restoreChannel` as well as
+  `sendMessage`, and neither §1 nor §3 caught it. Minor 2 (`AuthShapedError` centralization) stays out —
+  it is a deliberate scope call, not a defect.
