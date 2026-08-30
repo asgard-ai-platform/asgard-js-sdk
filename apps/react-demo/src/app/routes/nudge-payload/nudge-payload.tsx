@@ -35,10 +35,16 @@ interface CallLog {
   outgoing: Record<string, unknown> | undefined;
 }
 
+interface ErrorLog {
+  id: number;
+  text: string;
+}
+
 export function NudgePayload(): ReactNode {
   const chatbotRef = useRef<ChatbotRef>(null);
   const logId = useRef(0);
   const [logs, setLogs] = useState<CallLog[]>([]);
+  const [errors, setErrors] = useState<ErrorLog[]>([]);
 
   const handleBeforeSendMessage = useCallback((params: SendMessageParams): SendMessageParams => {
     const caller = typeof params.payload === 'function' ? params.payload() : params.payload ?? {};
@@ -69,6 +75,32 @@ export function NudgePayload(): ReactNode {
   }, []);
 
   const clearLogs = useCallback((): void => setLogs([]), []);
+  const clearErrors = useCallback((): void => setErrors([]), []);
+
+  // asgard-js-sdk#459 §1 — a nudge is invisible on screen by design, so before the fix a failed one was
+  // invisible everywhere: `use-channel` never gave core an `onSseError` to call. Logging it here is what
+  // makes the fix visible; the dev backend already refuses this turn (see `nudge` above), so pressing the
+  // button is enough to exercise it.
+  const pushError = useCallback((text: string): void => {
+    logId.current += 1;
+    const id = logId.current;
+
+    setErrors(prev => [{ id, text }, ...prev].slice(0, 8));
+  }, []);
+
+  const handleSseError = useCallback(
+    (error: unknown): void => {
+      pushError(`onSseError · ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+    },
+    [pushError],
+  );
+
+  const handleAuthError = useCallback(
+    (error: { isAuthError: boolean; isBotProviderError: boolean }): void => {
+      pushError(`onAuthError · isAuthError=${error.isAuthError} isBotProviderError=${error.isBotProviderError}`);
+    },
+    [pushError],
+  );
 
   return (
     <DemoWrapper
@@ -122,6 +154,30 @@ export function NudgePayload(): ReactNode {
             </div>
           )}
         </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>onSseError / onAuthError 紀錄（#459 §1）</div>
+            {errors.length > 0 && (
+              <button className={styles.button} onClick={clearErrors}>
+                Clear
+              </button>
+            )}
+          </div>
+          {errors.length === 0 ? (
+            <p className={styles.hint}>
+              還沒有錯誤。一個被拒絕的 nudge 會顯示在這裡（後端拒絕，或在 Network 層把 NUDGE 那發擋成 4xx）。
+            </p>
+          ) : (
+            <div className={styles.logs}>
+              {errors.map(entry => (
+                <div key={entry.id} className={styles.log}>
+                  <div className={styles.logLabel}>{entry.text}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className={styles.chatbotContainer}>
@@ -131,6 +187,8 @@ export function NudgePayload(): ReactNode {
           config={{ botProviderEndpoint: import.meta.env.VITE_SIMPLE_BOT_PROVIDER_ENDPOINT }}
           customChannelId="nudge-payload-demo"
           onBeforeSendMessage={handleBeforeSendMessage}
+          onSseError={handleSseError}
+          onAuthError={handleAuthError}
         />
       </div>
     </DemoWrapper>
