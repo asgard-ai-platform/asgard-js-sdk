@@ -476,9 +476,12 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
 
               const authError = asAuthShapedError(error);
 
-              if (authError) onAuthError?.(authError);
+              // `notify` because core reports through here before it settles the run — see the comment
+              // on `notify`. #459 §3: a throw here skips `settleRun()`, so `isConnecting` stays latched
+              // and the restore promise never settles, taking `Channel.restore`'s own cleanup with it.
+              if (authError) notify(() => onAuthError?.(authError));
 
-              onSseError?.(error);
+              notify(() => onSseError?.(error));
             },
             delayTime,
             onSseMessage(response: SseResponse<EventType>) {
@@ -508,6 +511,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       onSseMessage,
       onAuthError,
       onSseError,
+      notify,
       makeStatesObserver,
     ],
   );
@@ -575,17 +579,29 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
               conversation,
             });
           },
+          // `notify` for the same reason as the consent path (#459 §3) — and here the entrance is the
+          // one the built-in composer uses for every message.
           onSseError(error) {
             const authError = asAuthShapedError(error);
 
-            if (authError) onAuthError?.(authError);
+            if (authError) notify(() => onAuthError?.(authError));
 
-            onSseError?.(error);
+            notify(() => onSseError?.(error));
           },
         },
       );
     },
-    [channel, delayTime, customMessageId, onSseMessage, onAuthError, onSseError, conversation, refuseWhileResetting],
+    [
+      channel,
+      delayTime,
+      customMessageId,
+      onSseMessage,
+      onAuthError,
+      onSseError,
+      conversation,
+      notify,
+      refuseWhileResetting,
+    ],
   );
 
   const clearPromptSuggestion = useCallback((): void => {
@@ -649,11 +665,21 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           onSseMessage(response: SseResponse<EventType>) {
             onSseMessage?.(response, { conversation });
           },
+          // #459 §1 — a nudge leaves nothing on screen, failed or not, and that part is the design. What
+          // was missing is any way for the consumer to learn it failed: this handlers object held only
+          // `onSseMessage`, so core's `options?.onSseError?.(err)` was a call on a missing key.
+          onSseError(error) {
+            const authError = asAuthShapedError(error);
+
+            if (authError) notify(() => onAuthError?.(authError));
+
+            notify(() => onSseError?.(error));
+          },
         },
         payload,
       );
     },
-    [channel, delayTime, onSseMessage, conversation],
+    [channel, delayTime, onSseMessage, onAuthError, onSseError, conversation, notify],
   );
 
   // F-015 — metadata-gated join-init. On mount, gate on `GET /channel/metadata` instead of unconditionally
