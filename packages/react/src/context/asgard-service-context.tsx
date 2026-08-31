@@ -391,10 +391,11 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
   // Differences from `wrappedSendMessage`:
   //   - No `onMessageSent` fire: consent reply isn't a user message, so the
   //     sent-message lifecycle hook should not fire here.
-  //   - No try/catch swallow: the inner `replyToolCallConsents` does not yet
-  //     propagate `onSseError`/`onAuthError` (pre-existing gap), so the
-  //     promise rejection is the only error signal callers get — swallowing
-  //     it would drop errors entirely.
+  //   - No try/catch swallow: a consent reply reports through `onSseError` /
+  //     `onAuthError` like every other entrance since #331, but the rejection
+  //     is still the signal a programmatic caller awaits on — swallowing it
+  //     here would make a refused reply look like it went through. The
+  //     built-in gate catches it; a host driving this directly must too.
   const wrappedReplyToolCallConsents: UseChannelReturn['replyToolCallConsents'] = useMemo(() => {
     if (!replyToolCallConsents) return undefined;
 
