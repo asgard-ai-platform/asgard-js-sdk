@@ -149,6 +149,24 @@ function seedExpansion(
 }
 
 /**
+ * Whether `path` is a directory this tree has actually seen — the root, or an entry its parent's loaded
+ * listing reports as one.
+ *
+ * The gate on every `list` request that is not the user opening a node by hand. `expanded` holds paths a
+ * *host* wrote (`autoExpandPaths`), and nothing has said those are directories, or that they exist at
+ * all: a from-git SkillSet's contents move under the consumer, so a search path whose folder was deleted
+ * upstream is ordinary rather than exotic. Listing one answers 400 or 404, and that reaches the host as
+ * an `onError` it can do nothing with, about a row it cannot even see.
+ */
+function isKnownDir(listings: Readonly<Record<string, DirListing>>, root: string, path: string): boolean {
+  if (path === root) return true;
+
+  const parent = listings[parentDir(path)];
+
+  return parent?.status === 'loaded' && parent.entries.some(entry => entry.path === path && entry.isDir);
+}
+
+/**
  * The SourceSet explorer's whole state machine: which directories are listed, what is expanded and
  * selected, the clipboard, and every mutation.
  *
@@ -187,13 +205,28 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
   // collapsing and re-expanding a large directory otherwise settles on whichever walk finished last.
   const seq = useRef<Record<string, number>>({});
 
-  const report = useCallback(
-    (e: unknown, contextKey?: string): void => {
-      setError(volumeErrorMessage(e, locale, contextKey ? t(locale, contextKey) : undefined));
-      onError?.(e);
-    },
-    [locale, onError],
-  );
+  // `locale` and `onError` are read through refs rather than closed over, so that neither takes part in
+  // any dependency array below (BUILD-075 R5).
+  //
+  // What that protects: `listDir` is a dependency of the effect that resets the whole tree, so anything
+  // `listDir` depends on becomes a reason to wipe `listings`, drop the selection and re-seed the
+  // expansion. `onError` is the dangerous one — `onError={e => toast(e)}` is how everyone writes it, and
+  // a fresh arrow every host render meant the tree collapsed and refetched on every host render. R5's
+  // promise that a seed is read once was false for the same reason: changing `locale` alone re-ran the
+  // reset and sprang the tree back open under whoever was using it.
+  //
+  // Reading them late is also the more correct reading: an error message should be phrased in the locale
+  // that is current when it is shown, not the one that was current when the request went out.
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
+  const report = useCallback((e: unknown, contextKey?: string): void => {
+    const current = localeRef.current;
+    setError(volumeErrorMessage(e, current, contextKey ? t(current, contextKey) : undefined));
+    onErrorRef.current?.(e);
+  }, []);
 
   const listDir = useCallback(
     async (path: string): Promise<void> => {
@@ -227,14 +260,19 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
             entries: [],
             total: 0,
             complete: false,
-            error: volumeErrorMessage(e, locale),
+            error: volumeErrorMessage(e, localeRef.current),
           },
         }));
-        onError?.(e);
+        onErrorRef.current?.(e);
       }
     },
-    [client, maxEntries, locale, onError],
+    // Deliberately only what changes what a listing *is*. `locale` and `onError` are read through refs
+    // above — see there for why they must not appear here.
+    [client, maxEntries],
   );
+
+  /** Whether `initialPath` has been selected yet; re-armed by the reset effect when the path changes. */
+  const revealed = useRef(false);
 
   // `autoExpandPaths` is read through a ref so it can seed this effect without being a dependency of it
   // (BUILD-075 R5). As a dependency it would be tracked state rather than a seed: the host recomputes
@@ -251,6 +289,9 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     setClipboard(null);
     setError(null);
     seq.current = {};
+    // Re-arm the reveal below. Without this a *changed* `initialPath` clears the selection and never
+    // replaces it, which R6 turned from invisible into a host watching its selection evaporate.
+    revealed.current = false;
 
     const reveal = initialPath && isWithin(rootPath, initialPath) ? initialPath : null;
     const dirs = reveal ? [rootPath, ...ancestorDirs(rootPath, reveal)] : [rootPath];
@@ -273,10 +314,7 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     for (const path of expanded) {
       if (path === rootPath || listings[path]) continue;
 
-      const parent = listings[parentDir(path)];
-      if (parent?.status !== 'loaded') continue;
-
-      if (parent.entries.some(entry => entry.path === path && entry.isDir)) void listDir(path);
+      if (isKnownDir(listings, rootPath, path)) void listDir(path);
     }
   }, [expanded, listings, rootPath, listDir]);
 
@@ -298,7 +336,6 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
 
   // Select `initialPath` once its parent listing lands, so the selection carries the real entry (with
   // `isDir`) rather than one synthesized from the path.
-  const revealed = useRef(false);
   useEffect(() => {
     if (revealed.current || !initialPath || !isWithin(rootPath, initialPath)) return;
 
@@ -395,11 +432,15 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
 
   const closeFile = useCallback((): void => setOpenFile(null), []);
 
+  // Re-lists what is on screen — but only what this tree has confirmed is a directory. Without the
+  // filter, one click here defeats the cascade's guard entirely: a seeded path that never resolved (a
+  // file, or a folder deleted upstream) sits in `expanded` forever and gets a doomed `list` on every
+  // refresh, permanently poisoning the button for that mount.
   const refresh = useCallback((): void => {
     setError(null);
     setRefreshToken(n => n + 1);
-    [...expanded].forEach(dir => void listDir(dir));
-  }, [expanded, listDir]);
+    [...expanded].filter(dir => isKnownDir(listings, rootPath, dir)).forEach(dir => void listDir(dir));
+  }, [expanded, listings, rootPath, listDir]);
 
   const newFile = useCallback(async (): Promise<void> => {
     const name = await requestInput({ title: t(locale, 'sourceSetExplorer.newFilePrompt') });

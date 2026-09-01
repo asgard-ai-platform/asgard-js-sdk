@@ -44,7 +44,7 @@ import {
   UploadIcon,
   XIcon,
 } from './icons';
-import { pathChain } from './paths';
+import { normalizeRefPath, pathChain } from './paths';
 import { useSourceSetExplorer } from './use-source-set-explorer';
 import styles from './source-set-explorer.module.scss';
 
@@ -76,14 +76,15 @@ export interface SourceSetFileExplorerProps {
   apiKey?: string;
   /** Merged into every request, e.g. `{ Authorization: 'Bearer …' }`. */
   customHeaders?: Record<string, string>;
-  /** Lock the tree to a subtree of the volume. Defaults to the volume root. */
+  /** Lock the tree to a subtree of the volume. Defaults to the volume root. A trailing slash is optional. */
   rootPath?: string;
-  /** Expand to, and select, this path on mount. */
+  /** Expand to, and select, this path on mount. A trailing slash is optional. */
   initialPath?: string;
   /**
    * Paths to open on mount, each together with the chain leading to it **and its own level** — unlike
    * {@link SourceSetFileExplorerProps.initialPath}, which reveals a file and so stops at its parent.
-   * A trailing slash is optional. Paths outside `rootPath` open nothing.
+   * A trailing slash is optional. Paths outside `rootPath` open nothing, and so does a path equal to
+   * `rootPath`: the root is the tree's frame rather than a row in it, so there is nothing to open.
    *
    * Read once, as a seed. Changing it later leaves the tree exactly as the user has arranged it: a host
    * that recomputes this array as its own state changes would otherwise re-open the tree underneath
@@ -100,6 +101,10 @@ export interface SourceSetFileExplorerProps {
    *
    * Trailing slashes are optional here too. Unlike {@link SourceSetFileExplorerProps.entryBadge} this
    * colours the name itself, which no host-rendered node can do.
+   *
+   * A path equal to `rootPath` marks nothing, for the same reason it opens nothing: the root has no row
+   * of its own to paint. A host whose marked folder *is* the subtree root should mount one level up so
+   * that folder is a row — otherwise its panel lists a path the tree never acknowledges.
    */
   highlightPaths?: readonly string[];
   /** Hide every mutating action, including the file view's edit entry point. */
@@ -204,8 +209,8 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     sourceSetEndpoint,
     apiKey,
     customHeaders,
-    rootPath = '',
-    initialPath,
+    rootPath: rawRootPath = '',
+    initialPath: rawInitialPath,
     autoExpandPaths,
     highlightPaths,
     readOnly = false,
@@ -218,6 +223,19 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     entryBadge,
     onError,
   } = props;
+
+  /**
+   * Every path prop absorbs the trailing slash, not just the two new ones.
+   *
+   * A host holds one `destination_path` string and feeds it to both `rootPath` and the path arrays, and
+   * that string comes from a backend that writes directories with a trailing slash. Before this,
+   * `rootPath="repo/"` reached the client and threw `path must not end with a slash` — naming the volume
+   * path rather than the prop, leaving an empty tree, and silently discarding `autoExpandPaths` too
+   * (`isWithin("repo/", "repo/skills")` tests `startsWith("repo//")`). Tolerating it on the new props
+   * while the old ones threw would be a worse trap than tolerating it nowhere.
+   */
+  const rootPath = normalizeRefPath(rawRootPath);
+  const initialPath = rawInitialPath === undefined ? undefined : normalizeRefPath(rawInitialPath);
 
   // `customHeaders` is almost always an object literal at the call site, so identity alone would rebuild
   // the client — and the whole tree with it — on every host render.

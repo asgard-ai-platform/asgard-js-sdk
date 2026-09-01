@@ -813,6 +813,11 @@ describe('BUILD-075 — search-path affordances', () => {
     expect(block('labelHighlight')).toContain('font-weight: 600');
     expect(block('labelHighlightAncestor')).toContain('--asg-color-primary');
     expect(block('labelHighlightAncestor')).toContain('--asg-color-text-secondary');
+    // The mix space and ratio are the reference implementation's, not a preference: chat-kit paints
+    // `.is-search-path-parent` as `color-mix(in oklab, var(--primary) 62%, var(--text-secondary))`, and
+    // `in srgb` at the same ratio drifts 27/255 of red away from it under the consumer's own palette.
+    // Pinned here so a later tidy-up toward this file's other `in srgb` mixes has to be deliberate.
+    expect(block('labelHighlightAncestor')).toMatch(/color-mix\(in oklab,.*62%/);
     // Only design-system tokens (F-025 R16): every colour here is a var() with a fallback, none is bare.
     expect(block('labelHighlight')).not.toMatch(/color:\s*#/);
     expect(block('labelHighlightAncestor')).not.toMatch(/color:\s*#/);
@@ -963,6 +968,106 @@ describe('BUILD-075 — search-path affordances', () => {
     expect(screen.getAllByRole('treeitem').every(row => !row.children[2].className.includes('labelHighlight'))).toBe(
       true,
     );
+  });
+
+  it('never lists a seeded path from Refresh either, not just at mount (R4)', async () => {
+    const probe = installVolume(DEEP);
+    const onError = vi.fn();
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['git/README.md', 'git/ghost/']}
+        onError={onError}
+      />,
+    );
+
+    await screen.findByText('README.md');
+    // The cascade held at mount; the question is whether one toolbar click walks around it. A seeded
+    // path that never resolved stays in `expanded` forever, so an unguarded Refresh would fire the same
+    // doomed request on every click for the life of the mount.
+    fireEvent.click(requireToolButton('sourceSetExplorer.refresh'));
+
+    await waitFor(() => expect(probe.listedPaths().filter(path => path === 'git').length).toBe(2));
+    expect(probe.listedPaths()).not.toContain('git/README.md');
+    expect(probe.listedPaths()).not.toContain('git/ghost');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('re-reads the seed only when the volume changes, not when locale does (R5)', async () => {
+    installVolume(DEEP);
+    const seen: (FsEntry | null)[] = [];
+    const onSelectEntry = (entry: FsEntry | null): void => void seen.push(entry);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k', autoExpandPaths: ['git/skills'], onSelectEntry };
+    const { rerender } = render(<SourceSetFileExplorer {...props} locale="en-US" />);
+
+    await screen.findByText('pdf');
+    fireEvent.click(screen.getByText('skills'));
+    await waitFor(() => expect(screen.queryByText('pdf')).toBeNull());
+
+    rerender(<SourceSetFileExplorer {...props} locale="zh-TW" />);
+
+    // `locale` reaches the error formatter, which the listing loader closes over — so before this was
+    // pinned, switching language re-ran the whole reset: tree re-seeded, selection dropped, listings
+    // refetched. R5 promises the seed is read once, and "once" has to survive every prop but the volume.
+    await screen.findByLabelText(t('zh-TW', 'sourceSetExplorer.refresh'));
+    expect(screen.queryByText('pdf')).toBeNull();
+    expect(seen.map(entry => entry?.path ?? null)).toEqual(['git/skills']);
+  });
+
+  it('survives a host that passes a fresh onError on every render (R5)', async () => {
+    const probe = installVolume(DEEP);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k' };
+    const { rerender } = render(<SourceSetFileExplorer {...props} onError={() => undefined} />);
+
+    fireEvent.click(await screen.findByText('git'));
+    await screen.findByText('skills');
+    const settled = probe.listedPaths();
+
+    // `onError={e => toast(e)}` is how everyone writes it, and it is a new function every host render.
+    rerender(<SourceSetFileExplorer {...props} onError={() => undefined} />);
+
+    await waitFor(() => expect(screen.queryByText('skills')).not.toBeNull());
+    expect(probe.listedPaths()).toEqual(settled);
+  });
+
+  it('re-selects when initialPath changes rather than leaving the host holding null (R6)', async () => {
+    installVolume(DEEP);
+    const seen: (FsEntry | null)[] = [];
+    const onSelectEntry = (entry: FsEntry | null): void => void seen.push(entry);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k', onSelectEntry };
+    const { rerender } = render(<SourceSetFileExplorer {...props} initialPath="git/README.md" />);
+
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    rerender(<SourceSetFileExplorer {...props} initialPath="git/skills" />);
+
+    // The reveal used to arm exactly once per mount, so a changed path cleared the selection and never
+    // replaced it — invisible until `onSelectEntry` gave a host something to hold.
+    await waitFor(() => expect(seen.at(-1)?.path).toBe('git/skills'));
+    expect(seen.map(entry => entry?.path ?? null)).not.toContain(null);
+  });
+
+  it('absorbs the trailing slash on rootPath too, not only on the two new props (R3)', async () => {
+    const probe = installVolume(DEEP);
+    const onError = vi.fn();
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        rootPath="git/"
+        autoExpandPaths={['git/skills/']}
+        highlightPaths={['git/skills/']}
+        onError={onError}
+      />,
+    );
+
+    // A host holds one `destination_path` and feeds it to every path prop; the backend writes that field
+    // with a trailing slash. Tolerating it on the new props while `rootPath` threw was the worse trap.
+    expect(await screen.findByText('pdf')).toBeTruthy();
+    expect(onError).not.toHaveBeenCalled();
+    expect(probe.listedPaths()).toEqual(['git', 'git/skills']);
+    expect(nameOf('skills').className).toContain('labelHighlight');
   });
 
   it('adds nothing at all when none of the four props is supplied (R7)', async () => {
