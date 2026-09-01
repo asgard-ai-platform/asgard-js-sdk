@@ -5,7 +5,7 @@
 - Task ID: `REVIEW-075`
 - Status: `done`
 - BUILD Task: `BUILD-075`
-- Reviewed commit: `0fc95574ff36a6c0a1daf78ab3311408e0244677`
+- Reviewed commit: `d6d3299f` (second round; first round was `0fc95574`)
 - Reviewed branch: `feat/95-explorer-search-path-affordances`
 
 ---
@@ -150,6 +150,29 @@ None.
 
 ### Important (should fix in this cycle)
 
+0. **[第二輪] 六項缺陷，四項修掉、一項改文件、一項開票。** 第一輪 §1/§3 是在**只讀過 TASK-005 spec** 的基礎上做的；
+   之後補讀了 issue 留言、下游後端契約（[asgard-odin-pm#540](https://github.com/asgard-ai-platform/asgard-odin-pm/pull/540)）、
+   `UC-044`、需求方決議，並且**把設計原型跑起來**（[asgard-odin-pm-design#39](https://github.com/asgard-ai-platform/asgard-odin-pm-design/pull/39)），
+   對照之下抓到下列各項。全部先用臨時 probe spec 獨立重現、修完再重現一次確認，然後轉成常駐回歸測試。
+
+   | #   | 缺陷                                                                                                                                                   | 實測（修前 → 修後）                                                                                              | 處置                                                                                                                              |
+   | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+   | 1   | `refresh()` 對 `expanded` 裡**未確認是目錄**的種子路徑發 `list`，繞過 cascade 的守衛；那些路徑永遠留在集合裡，等於該 mount 的重新整理被永久毒化        | `[…, "git/README.md", "git/ghost"]` → `["", "git", "", "git"]`                                                   | 抽出 `isKnownDir()` 由 cascade 與 `refresh` 共用                                                                                  |
+   | 2   | **R5 為假**：重置 effect 依賴 `listDir`，而 `listDir` 閉包 `locale`/`onError` ⇒ 只改 `locale` 就重新套用種子、把收合的樹彈回去，並多送一次 `null` 選取 | 樹彈回展開 + `["git/skills", null]` → 維持收合 + `["git/skills"]`                                                | `localeRef` / `onErrorRef`，`listDir` 只依賴 `[client, maxEntries]`                                                               |
+   | 2b  | 同一根因的**既有 bug**：`onError={e => toast(e)}` 使宿主每次 re-render 清空 `listings`、關開啟的檔案、丟剪貼簿與選取、重抓整棵樹                       | `skills` 消失 + 額外 `list` → 零額外請求、`skills` 留著                                                          | 同上                                                                                                                              |
+   | 4   | `rootPath` / `initialPath` **不**吸收尾斜線，而新 prop 吸收 ⇒ 宿主拿同一個 `destination_path` 餵三個 prop 時硬失敗，且錯誤訊息不指向 prop              | 爆錯、樹全空、零高亮 → 正常列出、零錯誤、正確高亮                                                                | 兩者都過 `normalizeRefPath`                                                                                                       |
+   | 5   | **既有 bug**：`revealed` ref 從不重設 ⇒ 改 `initialPath` 清掉選取後永不重選                                                                            | `["git/README.md", null]` → `["git/README.md", "git/skills"]`（連中間的 `null` 都沒有，React 批次在同一 commit） | 重置 effect 內 `revealed.current = false`                                                                                         |
+   | 3   | path 等於 `rootPath` 時不亮也不展開（root 無列可畫）—— 正好是 Skillset 的預設狀態                                                                      | 行為不變                                                                                                         | 三個路徑 prop 的 doc 寫明，並指出宿主該往上掛一層                                                                                 |
+   | 6   | 跳色只有顏色通道，祖先層連字重都沒有（WCAG 1.4.1）；不支援 `color-mix()` 時整條退化且無 fallback                                                       | 行為不變                                                                                                         | 參考實作與 Odin 原型皆如此，不單方面偏離 → 開 [asgard-js-sdk#462](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/462) |
+
+   另有一項**與設計原型的偏差**（不是缺陷，是我選錯）：祖先色原型寫 `color-mix(in oklab, primary 62%, text-secondary)`，
+   我第一版寫 `in srgb 60%`，且在驗收文件裡把它記成「規格沒給數字，比例是我挑的」—— 那句話不成立，數字就在我讀過的
+   那個檔案裡。已改成與原型一致，並把 mix space 與比例釘進 stylesheet 測試。
+
+   §1 與 §3 在修完後重跑：`lint:packages` 0 errors、`nx lint react-demo` 0 errors、`format:check` 乾淨、
+   `typecheck` 三專案綠、`test:packages` 712 通過（275 core + 437 react，新增 5 個回歸案例）、build 乾淨。
+   R1–R8 逐條仍 Pass。
+
 1. **[test coverage] Three boundaries of the new props were correct but unpinned.** §3 Step 3 probed
    them by hand and all three behaved correctly, but nothing in the suite would have caught a
    regression: a path outside `rootPath` (which must open nothing and must not breach F-025 R11's "never
@@ -173,3 +196,6 @@ None.
 - 2026-09-01: §3 functional validation — R1–R8 all Pass across Vitest and a two-width demo walk. One
   Important finding (unpinned boundaries) routed back to BUILD-075 and fixed in `0fc95574`; §1 and §3
   re-run green afterwards. 0 BLOCKERs (Status: `in-progress → done`).
+- 2026-09-01: 第二輪 —— 補讀 issue 留言、下游後端契約、`UC-044`、需求方決議，並把設計原型跑起來對照。六項缺陷：
+  四項修掉（commit `d6d3299f`）、一項改 prop doc、一項開 [#462](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/462)；
+  另修掉一項與設計原型的顏色偏差。§1 / §3 重跑全綠，0 BLOCKERs（Status 維持 `done`）。

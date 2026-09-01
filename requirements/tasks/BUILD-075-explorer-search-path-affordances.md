@@ -117,7 +117,42 @@ Files:
 | `apps/react-demo/src/app/routes/source-set-explorer/source-set-explorer.module.scss` | The panel's own styling — host-side, the SDK contributes nothing to that box (T8)        |
 | `apps/react-demo/src/app/routes/source-set-explorer/volume-mock.ts`                  | A `skills/` tree, so the mock has an ancestor to paint a step weaker at all (T8)         |
 
+Added after the downstream contract and the design prototype were read (see `## Decisions`):
+
+| File (package)                                                                      | Change                                                                                                                               |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/react/src/components/source-set-explorer/use-source-set-explorer.ts`      | `localeRef` / `onErrorRef` out of `listDir`'s deps; `isKnownDir()` shared by the cascade and `refresh`; the reset re-arms `revealed` |
+| `packages/react/src/components/source-set-explorer/source-set-file-explorer.tsx`    | `rootPath` / `initialPath` normalized through `normalizeRefPath`; prop docs on the root-equals-path no-op                            |
+| `packages/react/src/components/source-set-explorer/source-set-explorer.module.scss` | Ancestor mix changed to `in oklab` at 62%, matching the reference implementation exactly                                             |
+| `packages/react/src/components/source-set-explorer/source-set-explorer.spec.tsx`    | 5 regression cases + the mix space and ratio pinned in the stylesheet assertion                                                      |
+
 `packages/core/` and `packages/react/src/components/file-explorer/` are untouched (T7).
+
+---
+
+## Decisions
+
+- **祖先色用 `in oklab` 62%，不是 `in srgb` 60%。** 這是照參考實作走：chat-kit 的
+  `.ssfe-row-name.is-search-path-parent` 寫的就是 `color-mix(in oklab, var(--primary) 62%, var(--text-secondary))`。
+  第一版我選了 srgb 60%，理由是這份 stylesheet 其他 `color-mix` 都用 srgb ——**那個理由不成立**：檔案裡其他
+  mix 都是「顏色混透明」，沒有一條在混兩個顏色，所以沒有一致性可維護；而 srgb 在同比例下會偏向 accent 自己的
+  色相，用 Odin 的翠綠實測差 27/255 的紅（`rgb(93,169,134)` vs `rgb(66,167,133)`），並排看得出來。mix space
+  與比例已釘進 stylesheet 測試。
+- **`rootPath` / `initialPath` 也吸收尾斜線。** 消費端手上只有一個 `destination_path` 字串（後端存成 `repo/`），
+  會同時餵給 `rootPath` 與兩個路徑陣列。原本只有新 prop 容忍尾斜線，`rootPath="repo/"` 則從 core client 拋
+  `path must not end with a slash` —— 錯誤訊息指的是 volume path 而不是哪個 prop，樹全空，`autoExpandPaths`
+  還被靜默丟棄（`isWithin("repo/", "repo/skills")` 比的是 `startsWith("repo//")`）。既然這張票就是在教消費端
+  「尾斜線沒關係」，只做一半是更糟的陷阱。
+- **path 等於 `rootPath` 時不亮也不展開，這是刻意的並寫進 prop doc。** root 是樹的框、不是一列，沒有可上色的
+  節點。這正是 Skillset 的預設狀態（空 search paths → 後端存 `[destination_path]`），所以三個路徑 prop 的
+  doc 都寫明，並指出宿主該往上掛一層。Odin 的原型本來就掛在 volume root，不會踩到。
+- **跳色只有視覺通道，不在這張票補無障礙標記。** 參考實作與 Odin 原型都是純視覺，單方面加 `aria-*` 會偏離原型。
+  開成 [asgard-js-sdk#462](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/462) 獨立追蹤。
+- **順帶修掉兩個既有 bug，因為 R5 / R6 讓它們從隱形變成會被看見。** 重置整棵樹的 effect 依賴 `listDir`，而
+  `listDir` 閉包了 `locale` 與 `onError` ⇒ 宿主寫 `onError={e => toast(e)}`（每次 render 都是新 arrow）就會
+  在每次 render 清空 `listings`、關掉開啟的檔案、丟掉剪貼簿與選取、重抓整棵樹；而 `revealed` 這個 `useRef`
+  從來不重設 ⇒ 改 `initialPath` 只會清掉選取、永遠不再選回來。兩者都早於本 task，但 R5 明說「種子只讀一次」、
+  R6 讓宿主真的握著那個選取，所以在本 cycle 內修掉而非留成 follow-up。
 
 ---
 
@@ -139,3 +174,11 @@ Files:
   to Download + Refresh while both host items stayed and `Add skills/ to search paths` ran (R1);
   removing `skills/` again returned `skills` to the ancestor shade with `csv` / `pdf` still targets, and
   with the props unset every name span carried exactly the one pre-existing `.label` class (R7).
+- 2026-09-01: 讀進下游契約與設計原型後的第二輪（Status 維持 `done`）。來源：[asgard-sdk-pm#95 的留言](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/95#issuecomment-5487788243)、
+  [asgard-odin-pm#540](https://github.com/asgard-ai-platform/asgard-odin-pm/pull/540)（TASK-028 後端契約，已 merged）、
+  `UC-044`、決議 `2026-09-01-skillset-search-paths-from-file-tree`、以及**跑起來的**設計原型
+  [asgard-odin-pm-design#39](https://github.com/asgard-ai-platform/asgard-odin-pm-design/pull/39)。逐條核對 UC-044
+  依賴 SDK 的七條 AC，七條皆可滿足；後端契約（volume-relative、帶尾斜線、前綴非固定 `git/`）與本實作假設一致。
+  抓到並修掉的偏差與缺陷見 `## Decisions`；新增 5 個回歸測試。閘門重跑全綠 —— `lint:packages` 0 errors、
+  `nx lint react-demo` 0 errors、`format:check` 乾淨、`typecheck` 三專案綠、`test:packages` 712 通過
+  （275 core + 437 react），`build:core` / `build:react` 乾淨。
