@@ -5,7 +5,7 @@
 - Task ID: `REVIEW-076`
 - Status: `done`
 - BUILD Task: `BUILD-076`
-- Reviewed commit: `<filled on commit>`
+- Reviewed commit: `35dac5f4`
 - Reviewed branch: `fix/462-highlight-accessible-name`
 
 ---
