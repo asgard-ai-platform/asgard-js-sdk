@@ -44,6 +44,7 @@ import {
   UploadIcon,
   XIcon,
 } from './icons';
+import { pathChain } from './paths';
 import { useSourceSetExplorer } from './use-source-set-explorer';
 import styles from './source-set-explorer.module.scss';
 
@@ -79,6 +80,28 @@ export interface SourceSetFileExplorerProps {
   rootPath?: string;
   /** Expand to, and select, this path on mount. */
   initialPath?: string;
+  /**
+   * Paths to open on mount, each together with the chain leading to it **and its own level** — unlike
+   * {@link SourceSetFileExplorerProps.initialPath}, which reveals a file and so stops at its parent.
+   * A trailing slash is optional. Paths outside `rootPath` open nothing.
+   *
+   * Read once, as a seed. Changing it later leaves the tree exactly as the user has arranged it: a host
+   * that recomputes this array as its own state changes would otherwise re-open the tree underneath
+   * someone who is still working in it.
+   */
+  autoExpandPaths?: readonly string[];
+  /**
+   * Paths to mark as the point of interest — what a Search Paths panel beside the tree is pointing at.
+   *
+   * Two strengths, and the difference carries meaning: the path itself is painted in the accent colour
+   * and bold, while each directory on the way to it is a step weaker. Both have to be visible, because
+   * the question being answered is "which folders are actually used, and where are they?" — but painting
+   * them alike would say every level on the way is one of them.
+   *
+   * Trailing slashes are optional here too. Unlike {@link SourceSetFileExplorerProps.entryBadge} this
+   * colours the name itself, which no host-rendered node can do.
+   */
+  highlightPaths?: readonly string[];
   /** Hide every mutating action, including the file view's edit entry point. */
   readOnly?: boolean;
   locale?: Locale;
@@ -99,10 +122,23 @@ export interface SourceSetFileExplorerProps {
    * before `Refresh`. Called with the currently selected entry, or `null` when nothing is selected —
    * the same target every built-in action resolves against.
    *
-   * Not called at all while `readOnly` (F-025 R10): a read-only volume offers no gesture that can never
-   * complete, and that applies to the host's section as much as to the built-in ones.
+   * **`readOnly` does not suppress this section.** R10 drops the actions that change *this volume's
+   * files*, and a host's action usually changes nothing on the volume at all — adding a folder to a
+   * SkillSet's search paths, or attaching a syncer to one, edits the host's own configuration. Those are
+   * not merely legal on a read-only source, they are where they matter most: a from-git SkillSet's files
+   * are read-only precisely because git owns their contents, and which folders count as skills is still
+   * the user's decision. Whether a particular action belongs in read-only mode is the host's call, made
+   * by what it returns — it is the only side that knows whether the action touches the volume.
    */
   extraEntryActions?: (entry: FsEntry | null) => ContextMenuItem[];
+  /**
+   * Told whenever the selection changes, with the entry or `null`. Fires for the component's own
+   * clearings too — a background click, Esc, or the reset a `rootPath` change performs.
+   *
+   * What lets a panel next to the tree act on "the folder you have selected". Without it the context
+   * menu is the only way in, which for a panel that deliberately has no path field is too little.
+   */
+  onSelectEntry?: (entry: FsEntry | null) => void;
   /**
    * Decoration for the right of each entry's name — a badge, a status marker. Return `null` to leave a
    * row as it was.
@@ -170,12 +206,15 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     customHeaders,
     rootPath = '',
     initialPath,
+    autoExpandPaths,
+    highlightPaths,
     readOnly = false,
     locale = 'en-US',
     theme,
     maxEntries,
     uploadConcurrency,
     extraEntryActions,
+    onSelectEntry,
     entryBadge,
     onError,
   } = props;
@@ -198,6 +237,8 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     client,
     rootPath,
     initialPath,
+    autoExpandPaths,
+    onSelectEntry,
     locale,
     maxEntries,
     uploadConcurrency,
@@ -422,6 +463,31 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
 
   const labelOf = useCallback((action: ExplorerAction): string => action.label ?? t(locale, action.labelKey), [locale]);
 
+  /**
+   * `highlightPaths` split into the two strengths the tree paints (R2).
+   *
+   * Keyed on the joined string rather than the array: `highlightPaths={['a']}` at a call site is a fresh
+   * array every render, and depending on its identity would rebuild both sets on every keystroke the
+   * host's own panel handles. `\0` cannot occur in a path, so it can only be the separator.
+   */
+  const highlightKey = (highlightPaths ?? []).join('\0');
+  const highlight = useMemo(() => {
+    const targets = new Set<string>();
+    const ancestors = new Set<string>();
+
+    for (const raw of highlightKey ? highlightKey.split('\0') : []) {
+      const chain = pathChain(raw);
+      if (chain.length === 0) continue;
+
+      targets.add(chain[chain.length - 1]);
+      // A directory can be both — the search paths `git/skills` and `git/skills/pdf` make the first one
+      // a target in its own right. `targets` is consulted first in the tree, so the stronger one wins.
+      for (const dir of chain.slice(0, -1)) ancestors.add(dir);
+    }
+
+    return { targets, ancestors };
+  }, [highlightKey]);
+
   const openMenu = useCallback((event: MouseEvent): void => {
     event.preventDefault();
     const host = event.currentTarget.closest<HTMLElement>(`.${styles.root}`);
@@ -448,7 +514,11 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
 
     // The host's section sits between the mutating pair and `Refresh`, which stays the closer. A host
     // that returns nothing drops out through the same filter every built-in group goes through.
-    const extra = !readOnly && extraEntryActions ? extraEntryActions(selected) : [];
+    //
+    // Asked while `readOnly` too (BUILD-075 R1). What R10 removes is the gestures that would change this
+    // volume's files; the host's own actions mostly change the host's configuration instead, and the
+    // read-only case is the one that needs them — see the prop's doc comment.
+    const extra = extraEntryActions ? extraEntryActions(selected) : [];
 
     // Upload is the one action the toolbar renders as a menu rather than a command, so here it expands
     // into its two rows instead of nesting a second menu inside this one. Same two `uploadEntries` the
@@ -460,7 +530,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
       extra,
       group(['refresh']),
     ].filter(section => section.length > 0);
-  }, [actions, labelOf, readOnly, extraEntryActions, selected, uploadEntries]);
+  }, [actions, labelOf, extraEntryActions, selected, uploadEntries]);
 
   /**
    * This explorer's copy for the shared upload UI, drawn from `sourceSetExplorer.*`.
@@ -663,6 +733,8 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
             onContextMenu={openMenu}
             onClearSelection={clearSelection}
             entryBadge={entryBadge}
+            highlightTargets={highlight.targets}
+            highlightAncestors={highlight.ancestors}
           />
         )}
       </div>

@@ -19,6 +19,17 @@ import styles from './source-set-explorer.module.scss';
  * extra right-click action that pulls from an external source, a folder already pulling shows that item
  * greyed with who owns it, and its row carries a marker. None of that is the SDK's — the route plays the
  * host, which is the whole point of the two props.
+ *
+ * The "search paths" switch plays Odin's Skillset Files tab (BUILD-075): a panel under each tree holds
+ * the folders that count as skills, and the tree is the only way to put one there. Picking is what the
+ * four props are for — `onSelectEntry` feeds the panel's button, `extraEntryActions` gives the same
+ * gesture a right-click home *including while `readOnly`*, `highlightPaths` shows which folders are in
+ * and how to reach them, and `autoExpandPaths` opens to them on arrival. Each mount keeps its own
+ * selection, while the list itself is shared so both trees paint the same thing.
+ *
+ * The list holds paths the way a search path is written — with a trailing slash — and hands them over
+ * unaltered. That is deliberate: it is what proves the component absorbs the difference against
+ * `entry.path`, which has none.
  */
 
 const REAL_ENDPOINT = import.meta.env.VITE_SOURCE_SET_ENDPOINT as string | undefined;
@@ -31,6 +42,23 @@ type DemoLocale = (typeof LOCALES)[number];
 
 /** Stands in for the host's own icon set — the SDK renders whatever node the host hands it. */
 const SYNC_GLYPH = <span aria-hidden>↻</span>;
+const SKILL_GLYPH = <span aria-hidden>◆</span>;
+
+/**
+ * How a search path is written down: a folder, so a trailing slash. Kept as the host writes it rather
+ * than trimmed on the way in — absorbing the difference is the component's job (R3), and doing it here
+ * would hide whether it actually does.
+ */
+const asSearchPath = (path: string): string => `${path}/`;
+
+/**
+ * The two widths, side by side rather than behind a toggle. `id` doubles as the stylesheet key, so the
+ * pair cannot drift into a mount the layout has no column for.
+ */
+const MOUNTS = [
+  { id: 'narrow', title: 'Narrow — 320px aside' },
+  { id: 'wide', title: 'Full-bleed — how Platform and Agent Hub mount it' },
+] as const;
 
 export function SourceSetExplorerRoute(): ReactNode {
   const usingMock = !REAL_ENDPOINT;
@@ -51,33 +79,62 @@ export function SourceSetExplorerRoute(): ReactNode {
   // Which directories a pretend syncer writes into. `notes` starts mounted so the badge and the greyed-out
   // menu item are both on screen without setting anything up first.
   const [pulled, setPulled] = useState<Record<string, string>>({ notes: 'nightly-docs' });
+  const [searchPathsOn, setSearchPathsOn] = useState(true);
+  // Shared by both mounts on purpose: the two trees then paint the same list, which is what makes the
+  // narrow / wide comparison say anything. The selection driving the panel stays per mount.
+  const [searchPaths, setSearchPaths] = useState<string[]>([asSearchPath('skills/pdf')]);
+
+  const addSearchPath = useCallback((path: string): void => {
+    setSearchPaths(current => (current.includes(asSearchPath(path)) ? current : [...current, asSearchPath(path)]));
+  }, []);
+
+  const removeSearchPath = useCallback((path: string): void => {
+    setSearchPaths(current => current.filter(it => it !== path));
+  }, []);
 
   const extraEntryActions = useCallback(
     (entry: FsEntry | null): ContextMenuItem[] => {
       if (!entry?.isDir) return [];
 
-      const owner = pulled[entry.path];
+      const items: ContextMenuItem[] = [];
 
-      return owner
-        ? [
-            {
+      if (hostExtras) {
+        const owner = pulled[entry.path];
+        // Annotated rather than inlined into `push`: the two branches of a ternary lose the contextual
+        // type the array position used to give them, and with it the inferred return type of `onSelect`.
+        const pull: ContextMenuItem = owner
+          ? {
               key: 'pull',
               label: `Pulled by ${owner}`,
               icon: SYNC_GLYPH,
               disabled: true,
               onSelect: (): void => undefined,
-            },
-          ]
-        : [
-            {
+            }
+          : {
               key: 'pull',
               label: 'Pull from external source',
               icon: SYNC_GLYPH,
               onSelect: () => setPulled(current => ({ ...current, [entry.path]: 'nightly-docs' })),
-            },
-          ];
+            };
+
+        items.push(pull);
+      }
+
+      // The action that has to survive `readOnly`: it changes this route's own list, never the volume.
+      if (searchPathsOn) {
+        const already = searchPaths.includes(asSearchPath(entry.path));
+        items.push({
+          key: 'search-path',
+          label: already ? 'Already a search path' : `Add ${asSearchPath(entry.path)} to search paths`,
+          icon: SKILL_GLYPH,
+          disabled: already,
+          onSelect: () => addSearchPath(entry.path),
+        });
+      }
+
+      return items;
     },
-    [pulled],
+    [hostExtras, pulled, searchPathsOn, searchPaths, addSearchPath],
   );
 
   const entryBadge = useCallback(
@@ -136,6 +193,11 @@ export function SourceSetExplorerRoute(): ReactNode {
           </label>
 
           <label className={styles.control}>
+            <input type="checkbox" checked={searchPathsOn} onChange={event => setSearchPathsOn(event.target.checked)} />
+            search paths panel
+          </label>
+
+          <label className={styles.control}>
             <input type="checkbox" checked={slowWrites} onChange={event => setSlowWrites(event.target.checked)} />
             slow writes (700ms)
           </label>
@@ -190,52 +252,155 @@ export function SourceSetExplorerRoute(): ReactNode {
           <p className={styles.hint}>
             Host extension points are on: <code>notes/</code> already carries a marker, and its right-click menu shows{' '}
             <code>Pulled by nightly-docs</code> greyed out. Right-click <code>empty/</code> and pick{' '}
-            <code>Pull from external source</code> to mark that one too. Switch <code>readOnly</code> on and the extra
-            action goes away while the marker stays.
+            <code>Pull from external source</code> to mark that one too. Switch <code>readOnly</code> on and the marker
+            stays.
+          </p>
+        )}
+
+        {searchPathsOn && (
+          <p className={styles.hint}>
+            Search paths are on: both trees open to <code>skills/pdf/</code> on arrival, and three strengths are on
+            screen at once — <code>pdf</code> is a search path, <code>skills</code> only leads to one, and{' '}
+            <code>csv</code> is neither. Add <code>skills/csv/</code> by selecting it and using the panel’s button, or
+            through its right-click menu; then remove one from the panel and watch the colour go while the tree stays
+            exactly where you left it (the prop is a seed, not a leash). Switch <code>readOnly</code> on: every built-in
+            mutating action disappears and <code>Add … to search paths</code> stays — which is the whole point, since a
+            from-git SkillSet is read-only and still needs its folders picked.
           </p>
         )}
 
         {ready ? (
           <div className={styles.mounts}>
-            <section className={styles.narrow}>
-              <h3 className={styles.mountTitle}>Narrow — 320px aside</h3>
-              <div className={styles.mountBody}>
-                <SourceSetFileExplorer
-                  key={`narrow:${rootPath}`}
-                  sourceSetEndpoint={connection.sourceSetEndpoint}
-                  apiKey={connection.apiKey}
-                  customHeaders={connection.customHeaders}
-                  rootPath={rootPath}
-                  readOnly={readOnly}
-                  locale={locale}
-                  extraEntryActions={hostExtras ? extraEntryActions : undefined}
-                  entryBadge={hostExtras ? entryBadge : undefined}
-                />
-              </div>
-            </section>
-
-            <section className={styles.wide}>
-              <h3 className={styles.mountTitle}>Full-bleed — how Platform and Agent Hub mount it</h3>
-              <div className={styles.mountBody}>
-                <SourceSetFileExplorer
-                  key={`wide:${rootPath}`}
-                  sourceSetEndpoint={connection.sourceSetEndpoint}
-                  apiKey={connection.apiKey}
-                  customHeaders={connection.customHeaders}
-                  rootPath={rootPath}
-                  readOnly={readOnly}
-                  locale={locale}
-                  extraEntryActions={hostExtras ? extraEntryActions : undefined}
-                  entryBadge={hostExtras ? entryBadge : undefined}
-                />
-              </div>
-            </section>
+            {MOUNTS.map(mount => (
+              <ExplorerMount
+                key={`${mount.id}:${rootPath}`}
+                className={styles[mount.id]}
+                title={mount.title}
+                connection={connection}
+                rootPath={rootPath}
+                readOnly={readOnly}
+                locale={locale}
+                extraEntryActions={hostExtras || searchPathsOn ? extraEntryActions : undefined}
+                entryBadge={hostExtras ? entryBadge : undefined}
+                searchPaths={searchPathsOn ? searchPaths : undefined}
+                onAddSearchPath={addSearchPath}
+                onRemoveSearchPath={removeSearchPath}
+              />
+            ))}
           </div>
         ) : (
           <p className={styles.hint}>Starting the mock volume…</p>
         )}
       </div>
     </DemoWrapper>
+  );
+}
+
+interface ExplorerMountProps {
+  className: string;
+  title: string;
+  connection: { sourceSetEndpoint: string; apiKey?: string; customHeaders?: Record<string, string> };
+  rootPath: string;
+  readOnly: boolean;
+  locale: DemoLocale;
+  extraEntryActions?: (entry: FsEntry | null) => ContextMenuItem[];
+  entryBadge?: (entry: FsEntry) => ReactNode;
+  /** The shared list, or `undefined` while the switch is off — which is also how the props go unset. */
+  searchPaths?: string[];
+  onAddSearchPath: (path: string) => void;
+  onRemoveSearchPath: (path: string) => void;
+}
+
+/**
+ * One mount, plus the Search Paths panel that stands in for Odin's.
+ *
+ * The selection lives here rather than in the route: two trees on one page have two selections, and a
+ * panel that reports the other mount's would be worse than no panel. `onSelectEntry` is what makes that
+ * possible from outside the component.
+ */
+function ExplorerMount(props: ExplorerMountProps): ReactNode {
+  const {
+    className,
+    title,
+    connection,
+    rootPath,
+    readOnly,
+    locale,
+    extraEntryActions,
+    entryBadge,
+    searchPaths,
+    onAddSearchPath,
+    onRemoveSearchPath,
+  } = props;
+
+  const [selected, setSelected] = useState<FsEntry | null>(null);
+
+  // Read once at mount, on purpose: passing the live list would re-seed the tree on every add, which is
+  // exactly the behaviour `autoExpandPaths` promises not to have. Holding the first value here makes the
+  // demo state that promise rather than merely rely on it.
+  const [autoExpandSeed] = useState(searchPaths);
+
+  const already = selected != null && searchPaths?.includes(asSearchPath(selected.path)) === true;
+  const canAdd = selected?.isDir === true && !already;
+
+  return (
+    <section className={className}>
+      <h3 className={styles.mountTitle}>{title}</h3>
+      <div className={styles.mountBody}>
+        <SourceSetFileExplorer
+          sourceSetEndpoint={connection.sourceSetEndpoint}
+          apiKey={connection.apiKey}
+          customHeaders={connection.customHeaders}
+          rootPath={rootPath}
+          readOnly={readOnly}
+          locale={locale}
+          extraEntryActions={extraEntryActions}
+          entryBadge={entryBadge}
+          highlightPaths={searchPaths}
+          autoExpandPaths={autoExpandSeed}
+          onSelectEntry={setSelected}
+        />
+      </div>
+
+      {searchPaths && (
+        <div className={styles.panel}>
+          <div className={styles.panelTitle}>Search Paths</div>
+
+          {searchPaths.length === 0 ? (
+            <p className={styles.panelEmpty}>Nothing picked — every folder would be scanned.</p>
+          ) : (
+            <ul className={styles.pathList}>
+              {searchPaths.map(path => (
+                <li key={path} className={styles.pathRow}>
+                  <code>{path}</code>
+                  <button
+                    type="button"
+                    className={styles.pathRemove}
+                    aria-label={`Remove ${path}`}
+                    onClick={() => onRemoveSearchPath(path)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button
+            type="button"
+            className={styles.panelAdd}
+            disabled={!canAdd}
+            onClick={() => selected && onAddSearchPath(selected.path)}
+          >
+            {selected?.isDir
+              ? already
+                ? `${asSearchPath(selected.path)} is already in`
+                : `Add ${asSearchPath(selected.path)}`
+              : 'Select a folder in the tree'}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -199,6 +199,23 @@
   white-space: nowrap;
 }
 
+// The host's `highlightPaths`, in the two strengths the prop promises. The colour is the same accent the
+// selection and the focus ring already use (F-025 R16) — nothing new is introduced, and a host that
+// rethemes `--asg-color-primary` gets both levels moved with it.
+//
+// Weight carries the distinction as much as colour does: the marked folder is bold, and mixing the
+// accent back toward the secondary text colour leaves the levels on the way to it legible as a trail
+// without reading as marked themselves. Both survive a monochrome or high-contrast rendering, which a
+// hue difference alone would not.
+.labelHighlight {
+  color: var(--asg-color-primary, #4f46e5);
+  font-weight: 600;
+}
+
+.labelHighlightAncestor {
+  color: color-mix(in srgb, var(--asg-color-primary, #4f46e5) 60%, var(--asg-color-text-secondary, #6b7280));
+}
+
 // The host's badge slot. `margin-left: auto` parks it on the row's trailing edge (as the prototype does)
 // and `flex: none` keeps it whole, so a long name truncates before the marker does. Layout only — colour
 // and size come from whatever the host renders inside.

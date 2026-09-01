@@ -11,7 +11,7 @@ import {
 import { type Locale, t } from '../../i18n';
 import { blobToDataUrl, blobToText, isImageName, saveBlob } from './blob';
 import { isConflict, volumeErrorMessage } from './errors';
-import { baseName, isWithin, joinPath, parentDir, sortEntries, uniqueName } from './paths';
+import { baseName, isWithin, joinPath, normalizeRefPath, parentDir, pathChain, sortEntries, uniqueName } from './paths';
 
 /**
  * One directory's listing. `total` / `complete` come straight from `listAll` (F-026): `complete: false`
@@ -37,6 +37,10 @@ export interface SourceSetExplorerOptions {
   rootPath: string;
   /** Path to reveal and select on first render. */
   initialPath?: string;
+  /** Directories to open on mount, each with its own chain. A seed, not tracked state — see the effect. */
+  autoExpandPaths?: readonly string[];
+  /** Told about every selection change, including the ones the component makes on its own. */
+  onSelectEntry?: (entry: FsEntry | null) => void;
   locale: Locale;
   /** Ceiling for one directory's auto-paging walk. */
   maxEntries?: number;
@@ -116,6 +120,35 @@ function ancestorDirs(root: string, path: string): string[] {
 }
 
 /**
+ * The directories a fresh tree opens with: the root, the chain down to `initialPath`, and every chain
+ * named by `autoExpandPaths` (BUILD-075 R4).
+ *
+ * `ancestorDirs` deliberately stops one short of its argument — `initialPath` is usually a file, and a
+ * file has nothing to open. A search path is the opposite: `git/skills/pdf` is asking to see *inside*
+ * `git/skills/pdf`, so its own level belongs in the set. Each chain is clipped to `root`, which is both
+ * what keeps a path outside the subtree from opening anything and what drops the levels above the root.
+ */
+function seedExpansion(
+  root: string,
+  initialPath: string | undefined,
+  autoExpandPaths?: readonly string[],
+): Set<string> {
+  const reveal = initialPath && isWithin(root, initialPath) ? initialPath : null;
+  const seed = new Set([root, ...(reveal ? ancestorDirs(root, reveal) : [])]);
+
+  for (const raw of autoExpandPaths ?? []) {
+    const path = normalizeRefPath(raw);
+    if (path === '' || !isWithin(root, path)) continue;
+
+    for (const dir of pathChain(path)) {
+      if (isWithin(root, dir)) seed.add(dir);
+    }
+  }
+
+  return seed;
+}
+
+/**
  * The SourceSet explorer's whole state machine: which directories are listed, what is expanded and
  * selected, the clipboard, and every mutation.
  *
@@ -128,6 +161,8 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     client,
     rootPath,
     initialPath,
+    autoExpandPaths,
+    onSelectEntry,
     locale,
     maxEntries,
     uploadConcurrency,
@@ -138,7 +173,9 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
   } = options;
 
   const [listings, setListings] = useState<Record<string, DirListing>>({});
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set([rootPath]));
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() =>
+    seedExpansion(rootPath, initialPath, autoExpandPaths),
+  );
   const [selected, setSelected] = useState<FsEntry | null>(null);
   const [openFile, setOpenFile] = useState<FsEntry | null>(null);
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
@@ -199,6 +236,13 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     [client, maxEntries, locale, onError],
   );
 
+  // `autoExpandPaths` is read through a ref so it can seed this effect without being a dependency of it
+  // (BUILD-075 R5). As a dependency it would be tracked state rather than a seed: the host recomputes
+  // the array whenever its own Search Paths change, and re-running would spring the tree back open over
+  // whatever the user had collapsed — mid-gesture, while they are still choosing the next folder.
+  const autoExpandRef = useRef(autoExpandPaths);
+  autoExpandRef.current = autoExpandPaths;
+
   // First listing, plus revealing `initialPath`. Re-runs when the volume itself changes.
   useEffect(() => {
     setListings({});
@@ -210,9 +254,47 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
 
     const reveal = initialPath && isWithin(rootPath, initialPath) ? initialPath : null;
     const dirs = reveal ? [rootPath, ...ancestorDirs(rootPath, reveal)] : [rootPath];
-    setExpanded(new Set(dirs));
+    setExpanded(seedExpansion(rootPath, initialPath, autoExpandRef.current));
+    // Only the root and `initialPath`'s ancestors are fetched here. A seeded chain is walked one level
+    // at a time by the effect below instead — see there for why it cannot be fetched up front.
     dirs.forEach(dir => void listDir(dir));
   }, [rootPath, initialPath, listDir]);
+
+  // Fetches the seeded chain, one confirmed directory at a time (R4).
+  //
+  // Not part of the eager list above, because a seed is a path a *host* wrote and nothing has said it is
+  // a directory yet: firing `list` at `notes/todo.md` answers 400 and reaches the host as an `onError`
+  // it can do nothing about. Waiting for the parent's listing settles the question — an entry that turns
+  // out to be a file is simply never listed, and never renders a body either way.
+  //
+  // Terminates because every path it acts on gets a listing (`loading` synchronously, then `loaded` or
+  // `error`), and the first guard skips any path that has one.
+  useEffect(() => {
+    for (const path of expanded) {
+      if (path === rootPath || listings[path]) continue;
+
+      const parent = listings[parentDir(path)];
+      if (parent?.status !== 'loaded') continue;
+
+      if (parent.entries.some(entry => entry.path === path && entry.isDir)) void listDir(path);
+    }
+  }, [expanded, listings, rootPath, listDir]);
+
+  // Reports selection changes to the host (R6).
+  //
+  // Watched rather than wired into `select`, because `select` is only one of the ways the selection
+  // moves: revealing `initialPath` sets it, `rename` and `remove` drop it, and changing `rootPath`
+  // clears it. A watcher covers all of them without every call site having to remember, and it reports
+  // changes only — `lastReported` starts at `null` so a mount with nothing selected stays quiet.
+  const onSelectEntryRef = useRef(onSelectEntry);
+  onSelectEntryRef.current = onSelectEntry;
+  const lastReported = useRef<FsEntry | null>(null);
+  useEffect(() => {
+    if (lastReported.current === selected) return;
+
+    lastReported.current = selected;
+    onSelectEntryRef.current?.(selected);
+  }, [selected]);
 
   // Select `initialPath` once its parent listing lands, so the selection carries the real entry (with
   // `isDir`) rather than one synthesized from the path.

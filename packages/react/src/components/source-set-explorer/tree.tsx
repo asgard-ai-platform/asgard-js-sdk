@@ -21,6 +21,10 @@ export interface SourceSetTreeProps {
   onClearSelection: () => void;
   /** Host decoration for the right of a row's name; `null` leaves the row untouched. */
   entryBadge?: (entry: FsEntry) => ReactNode;
+  /** Paths the host marked — painted in the accent colour. Already normalized by the shell. */
+  highlightTargets: ReadonlySet<string>;
+  /** Directories on the way to one of those — painted a step weaker. */
+  highlightAncestors: ReadonlySet<string>;
 }
 
 const INDENT_REM = 0.85;
@@ -45,6 +49,8 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
     onContextMenu,
     onClearSelection,
     entryBadge,
+    highlightTargets,
+    highlightAncestors,
   } = props;
 
   function renderDirBody(path: string, depth: number): ReactNode {
@@ -100,6 +106,14 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
     const isSelected = selected?.path === entry.path;
     const badge = entryBadge?.(entry);
 
+    // Targets first: a path can be both a marked folder and on the way to a deeper one, and the row is
+    // then what the host marked — the weaker shade is for levels that are only passed through.
+    const highlight = highlightTargets.has(entry.path)
+      ? styles.labelHighlight
+      : highlightAncestors.has(entry.path)
+      ? styles.labelHighlightAncestor
+      : '';
+
     return (
       <div key={entry.path} className={styles.node}>
         <div
@@ -133,7 +147,7 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
           <span className={styles.icon}>
             {entry.isDir ? isOpen ? <FolderOpenIcon size={14} /> : <FolderIcon size={14} /> : <FileIcon size={14} />}
           </span>
-          <span className={styles.label}>{entry.name}</span>
+          <span className={`${styles.label} ${highlight}`.trimEnd()}>{entry.name}</span>
           {/*
             Mounted only when the host returned something, so a row without a badge keeps the DOM — and the
             row `gap` — it had before. Truthiness rather than a `null` check on purpose: `entry.isDir && …`
