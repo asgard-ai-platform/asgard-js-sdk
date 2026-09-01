@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
@@ -480,7 +482,10 @@ describe('BUILD-064 — host extension points', () => {
     expect(seen.at(-1)).toMatchObject({ path: 'a.txt', isDir: false });
   });
 
-  it('drops the whole host section while readOnly (R3)', async () => {
+  // R3 originally read "drops the whole host section while readOnly" and is inverted by BUILD-075: the
+  // rule it appealed to is about this volume's files, which a host action usually does not touch. The
+  // case is kept here rather than moved, so the reversal is visible where the old expectation lived.
+  it('keeps the host section while readOnly, alongside the built-in suppression (R3, superseded by BUILD-075)', async () => {
     installVolume(SIMPLE);
     render(
       <SourceSetFileExplorer
@@ -493,7 +498,11 @@ describe('BUILD-064 — host extension points', () => {
 
     fireEvent.contextMenu(await screen.findByText('a.txt'));
 
-    expect(menuLabels()).toEqual([t('en-US', 'sourceSetExplorer.download'), t('en-US', 'sourceSetExplorer.refresh')]);
+    expect(menuLabels()).toEqual([
+      t('en-US', 'sourceSetExplorer.download'),
+      'Pull from external source',
+      t('en-US', 'sourceSetExplorer.refresh'),
+    ]);
   });
 
   it('renders a disabled host item inert but visible (R4)', async () => {
@@ -701,5 +710,376 @@ describe('BUG-009 — the SourceSet explorer can clear its selection', () => {
     for (const key of ['download', 'copy', 'cut', 'rename', 'delete']) {
       expect(requireToolButton(`sourceSetExplorer.${key}`).disabled).toBe(true);
     }
+  });
+});
+
+/**
+ * BUILD-075 — the four affordances a Search Paths panel beside the tree needs (asgard-sdk-pm#95).
+ *
+ * The shape they take is the point of each case: a host action survives `readOnly` while the built-in
+ * ones do not, a marked path reads differently from the way to it, a seed opens the folder itself and
+ * not merely its parent, and the panel is told what is selected without having to own the tree.
+ */
+describe('BUILD-075 — search-path affordances', () => {
+  /** Deep enough to have a chain: a marked folder, one that only leads to it, and one that is neither. */
+  const DEEP: FakeVolume = {
+    dirs: {
+      '': [dir('git'), dir('outside'), file('a.txt')],
+      git: [dir('skills'), file('README.md')],
+      'git/skills': [dir('csv'), dir('pdf')],
+      'git/skills/pdf': [file('SKILL.md')],
+      'git/skills/csv': [file('SKILL.md')],
+      outside: [file('z.txt')],
+    },
+    files: { 'git/README.md': '# repo' },
+  };
+
+  /** The span carrying an entry's name — the element `highlightPaths` colours. */
+  const nameOf = (name: string): HTMLElement => screen.getByText(name);
+
+  function menuLabels(): (string | null)[] {
+    return within(screen.getByRole('menu'))
+      .getAllByRole('menuitem')
+      .map(item => item.textContent);
+  }
+
+  it('asks the host for its actions while readOnly, with every built-in mutating one still gone (R1)', async () => {
+    installVolume(SIMPLE);
+    const seen: (FsEntry | null)[] = [];
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        readOnly
+        extraEntryActions={entry => {
+          seen.push(entry);
+
+          return [{ key: 'add', label: 'Add to search paths', onSelect: (): void => undefined }];
+        }}
+      />,
+    );
+
+    await screen.findByText('a.txt');
+    // R10 is untouched: the toolbar still offers only the two actions that change nothing.
+    expect(toolbarLabels()).toEqual([
+      t('en-US', 'sourceSetExplorer.download'),
+      t('en-US', 'sourceSetExplorer.refresh'),
+    ]);
+
+    fireEvent.contextMenu(screen.getByText('notes'));
+    await screen.findByRole('menu');
+
+    expect(menuLabels()).toContain('Add to search paths');
+    expect(menuLabels()).not.toContain(t('en-US', 'sourceSetExplorer.rename'));
+    expect(menuLabels()).not.toContain(t('en-US', 'sourceSetExplorer.delete'));
+    expect(menuLabels()).not.toContain(t('en-US', 'sourceSetExplorer.newFolder'));
+    // The host was asked, and asked about the row that was right-clicked.
+    expect(seen.at(-1)).toMatchObject({ path: 'notes', isDir: true });
+  });
+
+  it('paints the marked path and the way to it at two different strengths (R2)', async () => {
+    installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['git/skills/pdf']}
+        highlightPaths={['git/skills/pdf']}
+      />,
+    );
+
+    await screen.findByText('SKILL.md');
+    const target = nameOf('pdf').className;
+    const ancestor = nameOf('skills').className;
+    const unmarked = nameOf('csv').className;
+
+    // Three states, three renderings — the whole point of two strengths rather than one.
+    expect(new Set([target, ancestor, unmarked]).size).toBe(3);
+    expect(nameOf('git').className).toBe(ancestor);
+    expect(nameOf('README.md').className).toBe(unmarked);
+    // Weight, not only hue: the marked folder is the one that carries it.
+    expect(target).toContain('labelHighlight');
+    expect(ancestor).toContain('labelHighlightAncestor');
+    expect(target).not.toContain('labelHighlightAncestor');
+  });
+
+  it('declares both strengths in the stylesheet, off the same accent token (R2)', () => {
+    // The CSS-module proxy fabricates any key it is asked for, so the component wiring above would pass
+    // even against a stylesheet that declares neither class. This is what actually holds the two apart.
+    const sheet = readFileSync(join(__dirname, 'source-set-explorer.module.scss'), 'utf8');
+    const block = (selector: string): string => sheet.split(`.${selector} {`)[1]?.split('}')[0] ?? '';
+
+    expect(block('labelHighlight')).toContain('color: var(--asg-color-primary');
+    expect(block('labelHighlight')).toContain('font-weight: 600');
+    expect(block('labelHighlightAncestor')).toContain('--asg-color-primary');
+    expect(block('labelHighlightAncestor')).toContain('--asg-color-text-secondary');
+    // The mix space and ratio are the reference implementation's, not a preference: chat-kit paints
+    // `.is-search-path-parent` as `color-mix(in oklab, var(--primary) 62%, var(--text-secondary))`, and
+    // `in srgb` at the same ratio drifts 27/255 of red away from it under the consumer's own palette.
+    // Pinned here so a later tidy-up toward this file's other `in srgb` mixes has to be deliberate.
+    expect(block('labelHighlightAncestor')).toMatch(/color-mix\(in oklab,.*62%/);
+    // Only design-system tokens (F-025 R16): every colour here is a var() with a fallback, none is bare.
+    expect(block('labelHighlight')).not.toMatch(/color:\s*#/);
+    expect(block('labelHighlightAncestor')).not.toMatch(/color:\s*#/);
+  });
+
+  it('matches a path written the way a search path is written, slashes and all (R3)', async () => {
+    installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['/git/skills/']}
+        highlightPaths={['/git/skills/pdf/']}
+      />,
+    );
+
+    // The seed reached `git/skills` despite both slashes, so `pdf` is on screen at all…
+    await screen.findByText('pdf');
+    // …and the highlight matched it despite its own.
+    expect(nameOf('pdf').className).toContain('labelHighlight');
+    expect(nameOf('csv').className).not.toContain('labelHighlight');
+  });
+
+  it('opens each seeded path together with its chain, its own level included (R4)', async () => {
+    const probe = installVolume(DEEP);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" autoExpandPaths={['git/skills/pdf']} />);
+
+    // `SKILL.md` lives inside the seeded path itself: reaching it is what `initialPath` cannot do.
+    expect(await screen.findByText('SKILL.md')).toBeTruthy();
+    await waitFor(() =>
+      expect(probe.listedPaths()).toEqual(expect.arrayContaining(['', 'git', 'git/skills', 'git/skills/pdf'])),
+    );
+    // Only the chain — a sibling of the seeded path stays closed and unfetched.
+    expect(probe.listedPaths()).not.toContain('git/skills/csv');
+  });
+
+  it('never lists a seeded path that turns out to be a file (R4)', async () => {
+    const probe = installVolume(DEEP);
+    const onError = vi.fn();
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['git/README.md']}
+        onError={onError}
+      />,
+    );
+
+    // The chain above it still opens, so the file is on screen…
+    expect(await screen.findByText('README.md')).toBeTruthy();
+    // …but a file has nothing to list, and asking would reach the host as an error it cannot act on.
+    expect(probe.listedPaths()).not.toContain('git/README.md');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('reads autoExpandPaths once, so a later change leaves the tree as the user left it (R5)', async () => {
+    installVolume(DEEP);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k' };
+    const { rerender } = render(<SourceSetFileExplorer {...props} autoExpandPaths={['git/skills']} />);
+
+    await screen.findByText('pdf');
+
+    // The user collapses what the seed opened.
+    fireEvent.click(screen.getByText('skills'));
+    await waitFor(() => expect(screen.queryByText('pdf')).toBeNull());
+
+    // The host recomputes its Search Paths — which must not spring the tree back open underneath them.
+    rerender(<SourceSetFileExplorer {...props} autoExpandPaths={['git/skills', 'git/skills/csv']} />);
+
+    expect(screen.queryByText('pdf')).toBeNull();
+    expect(screen.queryByText('csv')).toBeNull();
+  });
+
+  it('reports every selection change, and nothing that was not one (R6)', async () => {
+    installVolume(SIMPLE);
+    const seen: (FsEntry | null)[] = [];
+    const onSelectEntry = (entry: FsEntry | null): void => void seen.push(entry);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" onSelectEntry={onSelectEntry} />);
+
+    await screen.findByText('a.txt');
+    // Mounting with nothing selected is not a change; the host is not told about it.
+    expect(seen).toEqual([]);
+
+    fireEvent.click(screen.getByText('a.txt'));
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toMatchObject({ path: 'a.txt', isDir: false });
+
+    // Clicking the same row again selects the same entry — nothing changed, so nothing is reported.
+    fireEvent.click(screen.getByText('a.txt'));
+    expect(seen).toHaveLength(1);
+
+    // The way out of a selection is a change like any other (BUG-009 E1).
+    fireEvent.click(screen.getByRole('tree'));
+    await waitFor(() => expect(seen).toHaveLength(2));
+    expect(seen[1]).toBeNull();
+  });
+
+  it('reports the clearing a rootPath change performs (R6)', async () => {
+    installVolume(SIMPLE);
+    const seen: (FsEntry | null)[] = [];
+    const onSelectEntry = (entry: FsEntry | null): void => void seen.push(entry);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k', onSelectEntry };
+    const { rerender } = render(<SourceSetFileExplorer {...props} rootPath="" />);
+
+    fireEvent.click(await screen.findByText('a.txt'));
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    rerender(<SourceSetFileExplorer {...props} rootPath="notes" />);
+
+    // The selection cannot survive a root change, and a panel holding "the selected folder" has to know.
+    await waitFor(() => expect(seen).toHaveLength(2));
+    expect(seen[1]).toBeNull();
+  });
+
+  it('clips both props to rootPath, and still never lists above it (R2, R4)', async () => {
+    const probe = installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        rootPath="git"
+        autoExpandPaths={['outside', 'git/skills/pdf']}
+        highlightPaths={['outside', 'git/skills/pdf/']}
+      />,
+    );
+
+    // Paths are volume-relative on both props, so the chain still resolves under a subtree root…
+    expect(await screen.findByText('SKILL.md')).toBeTruthy();
+    expect(nameOf('pdf').className).toContain('labelHighlight');
+    expect(nameOf('skills').className).toContain('labelHighlightAncestor');
+    // …and a path outside the subtree opens nothing, which is what keeps F-025 R11 intact: neither the
+    // volume root nor a sibling of `rootPath` is ever fetched, however the host writes them.
+    await waitFor(() => expect(probe.listedPaths()).toContain('git/skills/pdf'));
+    expect(probe.listedPaths()).not.toContain('outside');
+    expect(probe.listedPaths()).not.toContain('');
+  });
+
+  it('takes an empty list, and a path that is only the root, as no opinion (R7)', async () => {
+    const probe = installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" autoExpandPaths={[]} highlightPaths={['', '/']} />,
+    );
+
+    await screen.findByText('git');
+    // `pathChain('/')` is empty, so there is no level to mark and nothing extra to open — the root is
+    // not a row, and treating it as one would paint the whole tree.
+    await waitFor(() => expect(probe.listedPaths()).toEqual(['']));
+    expect(screen.getAllByRole('treeitem').every(row => !row.children[2].className.includes('labelHighlight'))).toBe(
+      true,
+    );
+  });
+
+  it('never lists a seeded path from Refresh either, not just at mount (R4)', async () => {
+    const probe = installVolume(DEEP);
+    const onError = vi.fn();
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['git/README.md', 'git/ghost/']}
+        onError={onError}
+      />,
+    );
+
+    await screen.findByText('README.md');
+    // The cascade held at mount; the question is whether one toolbar click walks around it. A seeded
+    // path that never resolved stays in `expanded` forever, so an unguarded Refresh would fire the same
+    // doomed request on every click for the life of the mount.
+    fireEvent.click(requireToolButton('sourceSetExplorer.refresh'));
+
+    await waitFor(() => expect(probe.listedPaths().filter(path => path === 'git').length).toBe(2));
+    expect(probe.listedPaths()).not.toContain('git/README.md');
+    expect(probe.listedPaths()).not.toContain('git/ghost');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('re-reads the seed only when the volume changes, not when locale does (R5)', async () => {
+    installVolume(DEEP);
+    const seen: (FsEntry | null)[] = [];
+    const onSelectEntry = (entry: FsEntry | null): void => void seen.push(entry);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k', autoExpandPaths: ['git/skills'], onSelectEntry };
+    const { rerender } = render(<SourceSetFileExplorer {...props} locale="en-US" />);
+
+    await screen.findByText('pdf');
+    fireEvent.click(screen.getByText('skills'));
+    await waitFor(() => expect(screen.queryByText('pdf')).toBeNull());
+
+    rerender(<SourceSetFileExplorer {...props} locale="zh-TW" />);
+
+    // `locale` reaches the error formatter, which the listing loader closes over — so before this was
+    // pinned, switching language re-ran the whole reset: tree re-seeded, selection dropped, listings
+    // refetched. R5 promises the seed is read once, and "once" has to survive every prop but the volume.
+    await screen.findByLabelText(t('zh-TW', 'sourceSetExplorer.refresh'));
+    expect(screen.queryByText('pdf')).toBeNull();
+    expect(seen.map(entry => entry?.path ?? null)).toEqual(['git/skills']);
+  });
+
+  it('survives a host that passes a fresh onError on every render (R5)', async () => {
+    const probe = installVolume(DEEP);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k' };
+    const { rerender } = render(<SourceSetFileExplorer {...props} onError={() => undefined} />);
+
+    fireEvent.click(await screen.findByText('git'));
+    await screen.findByText('skills');
+    const settled = probe.listedPaths();
+
+    // `onError={e => toast(e)}` is how everyone writes it, and it is a new function every host render.
+    rerender(<SourceSetFileExplorer {...props} onError={() => undefined} />);
+
+    await waitFor(() => expect(screen.queryByText('skills')).not.toBeNull());
+    expect(probe.listedPaths()).toEqual(settled);
+  });
+
+  it('re-selects when initialPath changes rather than leaving the host holding null (R6)', async () => {
+    installVolume(DEEP);
+    const seen: (FsEntry | null)[] = [];
+    const onSelectEntry = (entry: FsEntry | null): void => void seen.push(entry);
+    const props = { sourceSetEndpoint: ENDPOINT, apiKey: 'k', onSelectEntry };
+    const { rerender } = render(<SourceSetFileExplorer {...props} initialPath="git/README.md" />);
+
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    rerender(<SourceSetFileExplorer {...props} initialPath="git/skills" />);
+
+    // The reveal used to arm exactly once per mount, so a changed path cleared the selection and never
+    // replaced it — invisible until `onSelectEntry` gave a host something to hold.
+    await waitFor(() => expect(seen.at(-1)?.path).toBe('git/skills'));
+    expect(seen.map(entry => entry?.path ?? null)).not.toContain(null);
+  });
+
+  it('absorbs the trailing slash on rootPath too, not only on the two new props (R3)', async () => {
+    const probe = installVolume(DEEP);
+    const onError = vi.fn();
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        rootPath="git/"
+        autoExpandPaths={['git/skills/']}
+        highlightPaths={['git/skills/']}
+        onError={onError}
+      />,
+    );
+
+    // A host holds one `destination_path` and feeds it to every path prop; the backend writes that field
+    // with a trailing slash. Tolerating it on the new props while `rootPath` threw was the worse trap.
+    expect(await screen.findByText('pdf')).toBeTruthy();
+    expect(onError).not.toHaveBeenCalled();
+    expect(probe.listedPaths()).toEqual(['git', 'git/skills']);
+    expect(nameOf('skills').className).toContain('labelHighlight');
+  });
+
+  it('adds nothing at all when none of the four props is supplied (R7)', async () => {
+    const probe = installVolume(DEEP);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    await screen.findByText('a.txt');
+    // Only the root is opened and fetched, exactly as before.
+    expect(probe.listedPaths()).toEqual(['']);
+    expect(screen.queryByText('skills')).toBeNull();
+    // And no row's name carries a highlight class it did not carry before.
+    expect(nameOf('git').className).toBe(nameOf('a.txt').className);
+    expect(nameOf('git').className).not.toContain('labelHighlight');
   });
 });

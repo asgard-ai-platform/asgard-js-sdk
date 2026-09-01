@@ -95,3 +95,76 @@
   color: #4f46e5;
   cursor: help;
 }
+
+// The stand-in Search Paths panel. Odin puts its own beside the tree; here it sits under each mount so
+// the narrow column keeps its 320px and both mounts stay comparable. Host-side styling throughout — the
+// SDK contributes nothing to this box.
+.panel {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.panelTitle {
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.panelEmpty {
+  margin: 0;
+  opacity: 0.6;
+}
+
+.pathList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  code {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.pathRemove {
+  margin-left: auto;
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.2rem;
+  background: rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.panelAdd {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 0.3rem;
+  background: transparent;
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}

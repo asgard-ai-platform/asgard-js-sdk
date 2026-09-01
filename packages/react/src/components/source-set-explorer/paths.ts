@@ -29,6 +29,37 @@ export function isWithin(dir: string, path: string): boolean {
 }
 
 /**
+ * A path a *host* wrote, reduced to the way `entry.path` spells it: no leading slash, no trailing one.
+ *
+ * The two conventions genuinely differ and neither side is wrong. A search path is written as a
+ * directory — `git/skills/pdf/` — while an entry's path is a node's address, `git/skills/pdf`. Compare
+ * them raw and nothing ever matches, and the failure is silent: no highlight, no expansion, no error,
+ * which reads as "the feature was never built" rather than "one character differs".
+ */
+export function normalizeRefPath(path: string): string {
+  return path.replace(/^\/+/, '').replace(/\/+$/, '');
+}
+
+/**
+ * Every level of a path, from its first segment down to itself: `a/b/c` → `['a', 'a/b', 'a/b/c']`.
+ *
+ * The chain is what both host-path features need and what neither can build from `parentDir` alone —
+ * highlighting wants the last element apart from the rest, and seeding an expansion wants all of them.
+ */
+export function pathChain(path: string): string[] {
+  const parts = normalizeRefPath(path).split('/').filter(Boolean);
+
+  const chain: string[] = [];
+  let cur = '';
+  for (const part of parts) {
+    cur = joinPath(cur, part);
+    chain.push(cur);
+  }
+
+  return chain;
+}
+
+/**
  * A name that does not collide with `taken`, by appending ` (1)`, ` (2)`… before the extension.
  *
  * Pasting into a directory that already holds that name is the common case (copy → paste into the same

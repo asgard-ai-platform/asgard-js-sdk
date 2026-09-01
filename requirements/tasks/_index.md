@@ -276,3 +276,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-073` | Review: report consent reply failures through onSseError | —        | done   | [REVIEW-073-consent-reply-error-reporting.md](./REVIEW-073-consent-reply-error-reporting.md)             |
 | `BUILD-074`  | Close the remaining SSE error-guard gaps                 | High     | done   | [BUILD-074-sse-error-guard-gaps.md](./BUILD-074-sse-error-guard-gaps.md)                                 |
 | `REVIEW-074` | Review: close the remaining SSE error-guard gaps         | —        | done   | [REVIEW-074-sse-error-guard-gaps.md](./REVIEW-074-sse-error-guard-gaps.md)                               |
+| `BUILD-075`  | Host actions under readOnly, highlight and auto-expand   | M        | done   | [BUILD-075-explorer-search-path-affordances.md](./BUILD-075-explorer-search-path-affordances.md)         |
+| `REVIEW-075` | Review: readOnly host actions, highlight and auto-expand | —        | done   | [REVIEW-075-explorer-search-path-affordances.md](./REVIEW-075-explorer-search-path-affordances.md)       |

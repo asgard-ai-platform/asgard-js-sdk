@@ -199,6 +199,29 @@
   white-space: nowrap;
 }
 
+// The host's `highlightPaths`, in the two strengths the prop promises. The colour is the same accent the
+// selection and the focus ring already use (F-025 R16) — nothing new is introduced, and a host that
+// rethemes `--asg-color-primary` gets both levels moved with it.
+//
+// Weight carries the distinction as much as colour does: the marked folder is bold, and mixing the
+// accent back toward the secondary text colour leaves the levels on the way to it legible as a trail
+// without reading as marked themselves. Both survive a monochrome or high-contrast rendering, which a
+// hue difference alone would not.
+.labelHighlight {
+  color: var(--asg-color-primary, #4f46e5);
+  font-weight: 600;
+}
+
+// `in oklab` at 62%, matching the reference implementation exactly (chat-kit `SourceSetFileExplorer.tsx`,
+// `.ssfe-row-name.is-search-path-parent`). The rest of this stylesheet mixes `in srgb`, and the mismatch
+// is deliberate rather than an oversight: srgb at the same ratio drifts toward the accent's own hue, and
+// under Odin's emerald — the first consumer, and the palette the design was drawn in — that lands 27/255
+// of red away from what the prototype paints. oklab mixes perceptually, which is what "one step weaker"
+// asks for; nothing else here mixes two *colours*, so there is no consistency to preserve.
+.labelHighlightAncestor {
+  color: color-mix(in oklab, var(--asg-color-primary, #4f46e5) 62%, var(--asg-color-text-secondary, #6b7280));
+}
+
 // The host's badge slot. `margin-left: auto` parks it on the row's trailing edge (as the prototype does)
 // and `flex: none` keeps it whole, so a long name truncates before the marker does. Layout only — colour
 // and size come from whatever the host renders inside.

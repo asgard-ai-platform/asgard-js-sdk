@@ -91,6 +91,16 @@ function seed(): Map<string, Node> {
   fs.set('notes/todo.md', '# Todo\n\n- [ ] try renaming this file\n- [ ] try cut and paste into another folder\n');
   fs.set('notes/ideas.txt', 'plain text, opens in the highlighted read-only view\n');
 
+  // A SkillSet's shape (BUILD-075): a folder that only leads somewhere, two that sit at the same depth,
+  // and a file beside them. `highlightPaths` needs exactly this to show both of its strengths at once —
+  // a flat volume has no ancestor to paint a step weaker.
+  fs.set('skills', null);
+  fs.set('skills/README.md', '# skills\n\nEach folder below is a candidate search path.\n');
+  fs.set('skills/pdf', null);
+  fs.set('skills/pdf/SKILL.md', '---\nname: pdf\n---\n\nRead and split PDFs.\n');
+  fs.set('skills/csv', null);
+  fs.set('skills/csv/SKILL.md', '---\nname: csv\n---\n\nSummarize a CSV.\n');
+
   fs.set('empty', null);
 
   // 1,200 entries: more than one page at the server maximum of 1000, so expanding this walks two pages

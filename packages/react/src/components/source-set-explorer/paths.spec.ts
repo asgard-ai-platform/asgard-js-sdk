@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baseName, isWithin, joinPath, parentDir, sortEntries, uniqueName } from './paths';
+import { baseName, isWithin, joinPath, normalizeRefPath, parentDir, pathChain, sortEntries, uniqueName } from './paths';
 import type { FsEntry } from '../file-explorer/types';
 
 /**
@@ -54,6 +54,39 @@ describe('isWithin', () => {
 
   it('does not match a sibling that merely shares a prefix', () => {
     expect(isWithin('a', 'ab/c.txt')).toBe(false);
+  });
+});
+
+describe('normalizeRefPath', () => {
+  it('absorbs the trailing slash a search path is conventionally written with', () => {
+    expect(normalizeRefPath('git/skills/pdf/')).toBe('git/skills/pdf');
+    expect(normalizeRefPath('git/skills/pdf')).toBe('git/skills/pdf');
+  });
+
+  it('absorbs a leading slash, which the volume never uses', () => {
+    expect(normalizeRefPath('/git/skills')).toBe('git/skills');
+    expect(normalizeRefPath('//git//')).toBe('git');
+  });
+
+  it('reduces the root, however it was written, to the empty string', () => {
+    expect(normalizeRefPath('/')).toBe('');
+    expect(normalizeRefPath('')).toBe('');
+  });
+});
+
+describe('pathChain', () => {
+  it('walks from the first segment down to the path itself', () => {
+    expect(pathChain('a/b/c')).toEqual(['a', 'a/b', 'a/b/c']);
+    expect(pathChain('a')).toEqual(['a']);
+  });
+
+  it('normalizes before splitting, so a written search path chains the same', () => {
+    expect(pathChain('/git/skills/pdf/')).toEqual(['git', 'git/skills', 'git/skills/pdf']);
+  });
+
+  it('yields nothing for the root — it has no level of its own', () => {
+    expect(pathChain('')).toEqual([]);
+    expect(pathChain('/')).toEqual([]);
   });
 });
 
