@@ -105,6 +105,11 @@ export interface SourceSetFileExplorerProps {
    * A path equal to `rootPath` marks nothing, for the same reason it opens nothing: the root has no row
    * of its own to paint. A host whose marked folder *is* the subtree root should mount one level up so
    * that folder is a row — otherwise its panel lists a path the tree never acknowledges.
+   *
+   * Both levels are also announced, so the state survives a screen reader or a forced-colours rendering
+   * (#462). The wording is this prop's own vocabulary — "marked path", "on the way to a marked path" —
+   * because the component knows a path was marked, not what it was marked *as*. A host that wants its
+   * own noun said out loud can add it through {@link SourceSetFileExplorerProps.entryBadge}.
    */
   highlightPaths?: readonly string[];
   /** Hide every mutating action, including the file view's edit entry point. */
