@@ -724,11 +724,12 @@ describe('BUILD-075 — search-path affordances', () => {
   /** Deep enough to have a chain: a marked folder, one that only leads to it, and one that is neither. */
   const DEEP: FakeVolume = {
     dirs: {
-      '': [dir('git'), file('a.txt')],
+      '': [dir('git'), dir('outside'), file('a.txt')],
       git: [dir('skills'), file('README.md')],
       'git/skills': [dir('csv'), dir('pdf')],
       'git/skills/pdf': [file('SKILL.md')],
       'git/skills/csv': [file('SKILL.md')],
+      outside: [file('z.txt')],
     },
     files: { 'git/README.md': '# repo' },
   };
@@ -924,6 +925,44 @@ describe('BUILD-075 — search-path affordances', () => {
     // The selection cannot survive a root change, and a panel holding "the selected folder" has to know.
     await waitFor(() => expect(seen).toHaveLength(2));
     expect(seen[1]).toBeNull();
+  });
+
+  it('clips both props to rootPath, and still never lists above it (R2, R4)', async () => {
+    const probe = installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        rootPath="git"
+        autoExpandPaths={['outside', 'git/skills/pdf']}
+        highlightPaths={['outside', 'git/skills/pdf/']}
+      />,
+    );
+
+    // Paths are volume-relative on both props, so the chain still resolves under a subtree root…
+    expect(await screen.findByText('SKILL.md')).toBeTruthy();
+    expect(nameOf('pdf').className).toContain('labelHighlight');
+    expect(nameOf('skills').className).toContain('labelHighlightAncestor');
+    // …and a path outside the subtree opens nothing, which is what keeps F-025 R11 intact: neither the
+    // volume root nor a sibling of `rootPath` is ever fetched, however the host writes them.
+    await waitFor(() => expect(probe.listedPaths()).toContain('git/skills/pdf'));
+    expect(probe.listedPaths()).not.toContain('outside');
+    expect(probe.listedPaths()).not.toContain('');
+  });
+
+  it('takes an empty list, and a path that is only the root, as no opinion (R7)', async () => {
+    const probe = installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" autoExpandPaths={[]} highlightPaths={['', '/']} />,
+    );
+
+    await screen.findByText('git');
+    // `pathChain('/')` is empty, so there is no level to mark and nothing extra to open — the root is
+    // not a row, and treating it as one would paint the whole tree.
+    await waitFor(() => expect(probe.listedPaths()).toEqual(['']));
+    expect(screen.getAllByRole('treeitem').every(row => !row.children[2].className.includes('labelHighlight'))).toBe(
+      true,
+    );
   });
 
   it('adds nothing at all when none of the four props is supplied (R7)', async () => {
