@@ -8,6 +8,8 @@ import {
   FetchSsePayload,
   IAsgardServiceClient,
   LaunchedSandbox,
+  MessageFeedbackReply,
+  MessageFeedbackState,
   ObserverOrNext,
   RunKind,
   RunStatus,
@@ -497,7 +499,11 @@ export default class Channel {
             // every hop), so omitting it silently discards a consent prompt that arrived on an earlier,
             // traceId-less frame, stranding a run that is still waiting for the answer.
             this.conversation$.next(
-              new Conversation({ messages, pendingConsent: this.conversation$.value.pendingConsent }),
+              new Conversation({
+                messages,
+                pendingConsent: this.conversation$.value.pendingConsent,
+                pendingFeedback: this.conversation$.value.pendingFeedback,
+              }),
             );
           }
 
@@ -673,6 +679,43 @@ export default class Channel {
       },
       options,
     );
+  }
+
+  /**
+   * Rate one assistant reply Good or Bad (F-033 / UC-055, UC-056, UC-059). Posts the verdict, and only
+   * once the server has accepted it writes the rating into that reply's `feedback` — the SDK holds no
+   * open stream between runs, so the live `asgard.message.feedback` echo of its own post would never
+   * arrive; the next rejoin replays it from the transcript instead. A rejection leaves the conversation
+   * untouched (no optimistic update, UC-059 Alt B), so the caller can show the error and let the user try
+   * again with the same comment.
+   *
+   * Rating is **not** telling the agent: when the user also wants that, the caller sends an ordinary
+   * message composed by `composeFeedbackMessage()` through `sendMessage` after this resolves (UC-057).
+   */
+  public async sendMessageFeedback(messageId: string, feedback: MessageFeedbackState): Promise<MessageFeedbackReply> {
+    if (!this.client.sendMessageFeedback) {
+      throw new Error(
+        'This client cannot rate a reply: IAsgardServiceClient.sendMessageFeedback is not implemented. ' +
+          'Implement it (POST {base}/message/feedback) or use AsgardServiceClient.',
+      );
+    }
+
+    const reply = await this.client.sendMessageFeedback({
+      customChannelId: this.customChannelId,
+      messageId,
+      verdict: feedback.verdict,
+      comment: feedback.comment,
+    });
+
+    const comment = feedback.comment?.trim();
+    this.conversation$.next(
+      this.conversation$.value.applyFeedback(messageId, {
+        verdict: feedback.verdict,
+        ...(comment ? { comment } : {}),
+      }),
+    );
+
+    return reply;
   }
 
   public replyToolCallConsents(

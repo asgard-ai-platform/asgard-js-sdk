@@ -282,3 +282,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-076` | Review: announce the highlight levels                    | —        | done   | [REVIEW-076-highlight-accessible-name.md](./REVIEW-076-highlight-accessible-name.md)                     |
 | `BUILD-077`  | Deprecate `onAuthError` in favour of `onSseError`        | S        | done   | [BUILD-077-deprecate-on-auth-error.md](./BUILD-077-deprecate-on-auth-error.md)                           |
 | `REVIEW-077` | Review: deprecate `onAuthError`                          | —        | done   | [REVIEW-077-deprecate-on-auth-error.md](./REVIEW-077-deprecate-on-auth-error.md)                         |
+| `BUILD-078`  | Message feedback (Good / Bad response)                   | L        | done   | [BUILD-078-message-feedback.md](./BUILD-078-message-feedback.md)                                         |
+| `REVIEW-078` | Review: message feedback (Good / Bad response)           | —        | done   | [REVIEW-078-message-feedback.md](./REVIEW-078-message-feedback.md)                                       |

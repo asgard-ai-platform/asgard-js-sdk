@@ -68,6 +68,7 @@ import { JoinInitRoute } from './routes/join-init';
 import { StopGenerationRoute } from './routes/stop-generation';
 import { AllFeaturesRoute } from './routes/all-features';
 import { AllFeaturesWideRoute } from './routes/all-features-wide';
+import { MessageFeedbackRoute } from './routes/message-feedback';
 
 export function App(): React.ReactElement {
   return (
@@ -78,6 +79,7 @@ export function App(): React.ReactElement {
         <Route path="/question-template" element={<QuestionTemplateRoute />} />
         <Route path="/attachment-rejoin" element={<AttachmentRejoinRoute />} />
         <Route path="/canvas-card" element={<CanvasCardRoute />} />
+        <Route path="/message-feedback" element={<MessageFeedbackRoute />} />
         <Route path="/data-insight-style" element={<DataInsightStyle />} />
         <Route path="/features" element={<Features />} />
         <Route path="/theme" element={<Theme />} />

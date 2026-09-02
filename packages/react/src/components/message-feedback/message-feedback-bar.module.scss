@@ -1,0 +1,51 @@
+// F-033 — the 👍 / 👎 row under an assistant reply. Icon buttons only; the rated one is filled, the other
+// stays outlined so re-rating is one click on it (there is no un-rate, per the server contract).
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--asgard-feedback-muted, var(--asg-color-text-secondary));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--asgard-feedback-hover-bg, var(--asg-color-surface));
+    color: var(--asgard-feedback-fg, var(--asg-color-text-primary));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--asgard-feedback-accent, var(--asg-color-primary));
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.button--active {
+  color: var(--asgard-feedback-accent, var(--asg-color-primary));
+  background-color: var(--asgard-feedback-active-bg, var(--asg-color-primary-selected-bg));
+
+  &:hover:not(:disabled) {
+    color: var(--asgard-feedback-accent, var(--asg-color-primary));
+  }
+}

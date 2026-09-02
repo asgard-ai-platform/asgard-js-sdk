@@ -295,6 +295,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onReset,
     onClose,
     locale,
+    enableFeedback,
     onTemplateBtnClick,
     onErrorClick,
     errorMessageRenderer,
@@ -565,6 +566,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                 rather than this context. */}
             <AsgardTemplateContextProvider
               locale={locale}
+              enableFeedback={enableFeedback}
               onErrorClick={onErrorClick}
               errorMessageRenderer={errorMessageRenderer}
               onTemplateBtnClick={onTemplateBtnClick}

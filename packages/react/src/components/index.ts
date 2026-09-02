@@ -7,3 +7,4 @@ export * from './file-explorer';
 export * from './source-set-explorer';
 export * from './templates';
 export * from './tool-call-consent';
+export * from './message-feedback';

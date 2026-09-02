@@ -59,6 +59,10 @@ export enum EventType {
   // run seam / RunningIndicator. Fact shape aligns with asgard-sdk-go `{ sandboxName, blueprintName }`.
   SANDBOX_LAUNCH = 'asgard.sandbox.launch',
   SANDBOX_READY = 'asgard.sandbox.ready',
+  // A user's Good / Bad verdict on one assistant reply (F-033). A first-class transcript entry: delivered
+  // live and replayed on rejoin, so the rated state is restored from the server rather than remembered
+  // locally. Append-only — several frames may target the same reply and the latest one is the state.
+  MESSAGE_FEEDBACK = 'asgard.message.feedback',
   DONE = 'asgard.run.done',
   ERROR = 'asgard.run.error',
 }

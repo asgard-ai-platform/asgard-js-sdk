@@ -66,6 +66,7 @@ const navItems = [
   { to: '/attachment-rejoin', label: 'Replayed attachments (#448)' },
   { to: '/canvas-card', label: 'Canvas Card (F-030)' },
   { to: '/delete-channel', label: 'Delete Channel (F-032)' },
+  { to: '/message-feedback', label: 'Message Feedback (F-033)' },
 ];
 
 export function Layout({ children }: LayoutProps): ReactNode {

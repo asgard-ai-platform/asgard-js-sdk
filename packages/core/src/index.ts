@@ -28,6 +28,13 @@ export type { SubagentEvent } from './lib/subagent-reducer';
 
 export { reconcileLaunched } from './lib/launched-sandboxes';
 
+export {
+  composeFeedbackMessage,
+  feedbackCommentByteLength,
+  FEEDBACK_COMMENT_MAX_BYTES,
+  RESPONSE_FEEDBACK_PREFIX,
+} from './lib/feedback-message';
+
 export { resolveSandboxUri } from './lib/resolve-sandbox-uri';
 export type { SandboxUriIntent } from './lib/resolve-sandbox-uri';
 

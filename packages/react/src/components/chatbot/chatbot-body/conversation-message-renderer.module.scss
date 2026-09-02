@@ -1,0 +1,7 @@
+// F-033 — a completed assistant reply plus its feedback bar, kept together so the bar hangs 4px under the
+// content instead of taking a full 16px thread gap of its own above *and* below.
+.rated_message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

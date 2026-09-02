@@ -67,6 +67,14 @@ export interface ChannelTitleRendererProps {
 export interface AsgardTemplateContextValue {
   /** UI language for synthesized text (tool-call labels, …). Defaults to `en-US` (F-005). */
   locale?: Locale;
+  /**
+   * Show the 👍 / 👎 feedback bar under every completed assistant reply (F-033). Off by default. The bar
+   * is message-level chrome rendered after the message content — on the default renderer **and** on a
+   * `renderMessageContent` override — so a host that never calls `renderDefaultContent()` still gets
+   * it. Ratings post to `{botProviderEndpoint}/message/feedback`; "send to AI as well" follows up with an
+   * ordinary message (`composeFeedbackMessage`) through the normal send path.
+   */
+  enableFeedback?: boolean;
   onErrorClick?: (message: ConversationErrorMessage) => void;
   errorMessageRenderer?: (message: ConversationErrorMessage) => ReactNode;
   onTemplateBtnClick?: (payload: Record<string, unknown>, eventName: string, raw: string) => void;
@@ -95,6 +103,7 @@ export interface AsgardTemplateContextValue {
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   locale: 'en-US',
+  enableFeedback: undefined,
   onErrorClick: undefined,
   errorMessageRenderer: undefined,
   onTemplateBtnClick: undefined,
@@ -113,6 +122,7 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
 
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   locale?: Locale;
+  enableFeedback?: boolean;
   onErrorClick?: (message: ConversationErrorMessage) => void;
   errorMessageRenderer?: (message: ConversationErrorMessage) => ReactNode;
   onTemplateBtnClick?: (payload: Record<string, unknown>, eventName: string, raw: string) => void;
@@ -133,6 +143,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
   const {
     children,
     locale = 'en-US',
+    enableFeedback,
     onErrorClick,
     errorMessageRenderer,
     onTemplateBtnClick,
@@ -152,6 +163,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
   const contextValue = useMemo(
     () => ({
       locale,
+      enableFeedback,
       onErrorClick,
       errorMessageRenderer,
       onTemplateBtnClick,
@@ -169,6 +181,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
     }),
     [
       locale,
+      enableFeedback,
       errorMessageRenderer,
       onErrorClick,
       onTemplateBtnClick,

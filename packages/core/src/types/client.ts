@@ -1,6 +1,6 @@
 import { Subscription } from 'rxjs';
 import { EventType, FetchSseAction } from '../constants/enum';
-import { SseResponse, ToolCallConsentAnswer } from './sse-response';
+import { FeedbackVerdict, SseResponse, ToolCallConsentAnswer } from './sse-response';
 import { ChannelMetadata, StopGenerationOptions } from './channel';
 import { EventHandler } from './event-emitter';
 import { BlobUploadResponse } from './blob';
@@ -8,6 +8,30 @@ import { BlobUploadResponse } from './blob';
 export interface ChannelHomeDownloadResult {
   blob: Blob;
   filename: string;
+}
+
+/**
+ * Request body of `POST {base}/message/feedback` (F-033). `messageId` is the rated assistant reply —
+ * the `messageId` of a `message.complete` this client received live or on replay. Anything else (a
+ * thinking block, the user's own message, an unknown id) is a `404`. `comment` is at most 8 KiB of
+ * UTF-8 (see `FEEDBACK_COMMENT_MAX_BYTES`) — longer is a `400`. Shape mirrors asgard-sdk-go
+ * `MessageFeedback`.
+ */
+export interface MessageFeedbackRequest {
+  customChannelId: string;
+  messageId: string;
+  verdict: FeedbackVerdict;
+  comment?: string;
+}
+
+/**
+ * What `POST {base}/message/feedback` returns (F-033): the persisted feedback entry's own `messageId`
+ * (distinct from the rated reply's) and its transcript `seq` — the cursor at which a rejoining client
+ * sees this feedback replayed as an `asgard.message.feedback` event.
+ */
+export interface MessageFeedbackReply {
+  messageId: string;
+  seq: number;
 }
 
 export interface IAsgardServiceClient {
@@ -46,6 +70,13 @@ export interface IAsgardServiceClient {
    * conversation).
    */
   deleteChannel?(customChannelId: string): Promise<void>;
+  /**
+   * Rate one assistant reply Good or Bad (F-033) via `POST {base}/message/feedback`. Resolves to the
+   * persisted entry on 2xx; rejects with `HttpError` on `404` (not a ratable reply), `400` (bad verdict
+   * / comment over 8 KiB) or any other failure. Optional for backward compatibility — a client without
+   * it cannot rate, and the react layer renders no feedback bar against it.
+   */
+  sendMessageFeedback?(request: MessageFeedbackRequest): Promise<MessageFeedbackReply>;
   uploadFile?(file: File, customChannelId: string): Promise<BlobUploadResponse>;
   downloadChannelHomeFile?(relativePath: string, customChannelId: string): Promise<ChannelHomeDownloadResult>;
 }
