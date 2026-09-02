@@ -5,7 +5,7 @@
 - Task ID: `REVIEW-077`
 - Status: `done`
 - BUILD Task: `BUILD-077`
-- Reviewed commit: `<filled on commit>`
+- Reviewed commit: `80e61a44`
 - Reviewed branch: `fix/459-deprecate-on-auth-error`
 
 ---
