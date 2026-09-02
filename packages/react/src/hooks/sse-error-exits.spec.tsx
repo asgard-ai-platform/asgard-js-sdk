@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { ReactNode } from 'react';
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -227,5 +229,54 @@ describe('#459 §3 — the throw-guard covers every entrance', () => {
 
     expect(errors).toEqual([boom]);
     expect(connecting()).toBe(false);
+  });
+});
+
+/**
+ * asgard-js-sdk#459 §2 — the third item of the same issue, decided as *deprecate* rather than populate.
+ *
+ * `onAuthError` is documentation-only from here on: core has never constructed the shape it waits for,
+ * so against the first-party client it is unreachable, and R2 above pins that a *custom* client throwing
+ * that shape still reaches it. What the deprecation changes is therefore nothing at runtime — which is
+ * exactly why it needs pinning somewhere other than a JSDoc nobody diffs. Two things can rot:
+ *
+ *   1. someone re-documents the prop from one of the two declarations that are not `ChatbotProps`, and
+ *   2. the README and the types drift apart, which this repo has already had to fix once by hand.
+ */
+describe('#459 §2 — onAuthError is deprecated in favour of onSseError', () => {
+  const read = (relative: string): string => readFileSync(join(__dirname, relative), 'utf8');
+
+  /** Every declaration of the prop, not only the one on the public props type. */
+  const DECLARATIONS = [
+    '../components/chatbot/chatbot.tsx',
+    '../context/asgard-service-context.tsx',
+    './use-channel.ts',
+  ];
+
+  it('marks every declaration, not only the public one', () => {
+    for (const file of DECLARATIONS) {
+      const source = read(file);
+      const declaration = source.indexOf('onAuthError?:');
+      expect(declaration, `${file} no longer declares onAuthError`).toBeGreaterThan(-1);
+
+      // The tag has to sit on *this* member, so look only at the comment immediately above it rather
+      // than anywhere in the file — a `@deprecated` on some other prop would otherwise pass.
+      const preceding = source.slice(0, declaration);
+      const block = preceding.slice(preceding.lastIndexOf('/**'));
+      expect(block, `${file} declares onAuthError without a @deprecated block`).toContain('@deprecated');
+      expect(block, `${file} does not point at the replacement`).toContain('onSseError');
+    }
+  });
+
+  it('says the same thing in the README as in the types', () => {
+    // The README is the surface a consumer actually reads before wiring anything up, and it is the one
+    // that told them to use this prop in the first place.
+    const line = read('../../README.md')
+      .split('\n')
+      .find(text => text.startsWith('- **onAuthError?**'));
+
+    expect(line, 'the README no longer documents onAuthError').toBeTruthy();
+    expect(line).toContain('Deprecated');
+    expect(line).toContain('`onSseError`');
   });
 });

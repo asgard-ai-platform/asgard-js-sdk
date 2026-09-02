@@ -122,6 +122,18 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   // Auth state props
   authState?: AuthState;
   onApiKeySubmit?: (apiKey: string) => Promise<void>;
+  /**
+   * @deprecated Use {@link onSseError} instead; this never fires for the first-party client.
+   *
+   * `@asgard-js/core` has never constructed the `{ isAuthError, isBotProviderError }` shape — the string
+   * `isAuthError` does not appear anywhere in `packages/core/src`. So against `AsgardServiceClient` a real
+   * 401 / 403 arrives as a plain `HTTP 403: Forbidden`, every entrance's shape check returns `null`, and
+   * only `onSseError` is called. A consumer who wired this up got a callback that stays silent forever,
+   * with nothing to indicate they had wired the wrong one.
+   *
+   * Kept, not removed: a custom `IAsgardServiceClient` that throws that shape still reaches it, and the
+   * behaviour is unchanged by this deprecation. Scheduled for removal in the next major (#459 §2).
+   */
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
 
   /** Callback fired when SSE connection encounters an error */
