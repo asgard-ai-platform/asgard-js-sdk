@@ -343,7 +343,7 @@ config: {
 - **onClose**: `() => void` - Callback function when chat is closed
 - **authState?**: `AuthState` - Authentication state for dynamic API key management. Available states: `'loading'`, `'needApiKey'`, `'authenticated'`, `'error'`, `'invalidApiKey'`, `'subscriptionExpired'`, `'botNotFound'`
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
-- **onAuthError?**: `(error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void` - Callback fired when authentication or bot provider initialization fails. Useful for logging or showing a custom error UI.
+- **onAuthError?**: `(error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void` - **Deprecated — use `onSseError`.** This never fires for the first-party `AsgardServiceClient`: core has never constructed that error shape, so a real 401 / 403 arrives as a plain `HTTP 403: Forbidden` and reaches `onSseError` only. It still fires for a custom `IAsgardServiceClient` that throws the shape itself, which is why it is kept rather than removed; scheduled for removal in the next major.
 - **onSseError?**: `(error: unknown) => void` - Callback fired when the SSE connection encounters an error.
 - **onErrorClick?**: `(message: ConversationErrorMessage) => void` - Callback fired when the user clicks on an error message bubble. Useful for retry or diagnostic flows.
 - **errorMessageRenderer?**: `(message: ConversationErrorMessage) => ReactNode` - Custom renderer for error message bubbles. When provided, completely replaces the default error UI.
