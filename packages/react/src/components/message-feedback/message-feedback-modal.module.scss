@@ -1,0 +1,135 @@
+// F-033 — the submit dialog. Same shell as the tool-call consent modal (fixed backdrop, centred card);
+// tokens chain `--asgard-feedback-*` (inline, from the theme context) → `--asg-color-*` (palette).
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--asg-color-overlay-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  padding: 20px;
+  background-color: var(--asgard-feedback-modal-bg, var(--asg-color-surface));
+  border: 1px solid var(--asgard-feedback-border, var(--asg-color-border));
+  border-radius: 12px;
+  box-shadow: 0 16px 48px var(--asg-color-overlay-dark);
+  color: var(--asgard-feedback-fg, var(--asg-color-text-primary));
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--asgard-feedback-muted, var(--asg-color-text-secondary));
+}
+
+.textarea {
+  width: 100%;
+  min-height: 96px;
+  max-height: 240px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--asgard-feedback-fg, var(--asg-color-text-primary));
+  background-color: var(--asgard-feedback-input-bg, var(--asg-color-bg));
+  border: 1px solid var(--asgard-feedback-border, var(--asg-color-border));
+  border-radius: 8px;
+  resize: vertical;
+
+  &::placeholder {
+    color: var(--asg-color-text-placeholder);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--asgard-feedback-accent, var(--asg-color-primary));
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.send_to_ai {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--asgard-feedback-accent, var(--asg-color-primary));
+  }
+}
+
+.error {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--asg-color-error);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.button--secondary {
+  background: transparent;
+  color: var(--asgard-feedback-fg, var(--asg-color-text-primary));
+  border-color: var(--asgard-feedback-border, var(--asg-color-border));
+
+  &:hover:not(:disabled) {
+    background-color: var(--asgard-feedback-hover-bg, var(--asg-color-bg));
+  }
+}
+
+.button--primary {
+  background-color: var(--asgard-feedback-accent, var(--asg-color-primary));
+  color: var(--asgard-feedback-on-accent, var(--asg-color-primary-on-primary));
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+}

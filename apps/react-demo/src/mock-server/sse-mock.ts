@@ -247,6 +247,14 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     return;
   }
 
+  // F-033 — the feedback demo channels. A plain send gets a short reply; a `[Response Feedback: …]`
+  // message gets the interlude the platform's system prompt would produce.
+  if (customChannelId.startsWith('message-feedback-demo')) {
+    await handleMessageFeedbackSseMock(res, payload, customChannelId);
+
+    return;
+  }
+
   if (customChannelId === 'run-indicator-demo') {
     await handleRunIndicatorMock(res, payload);
 
@@ -1063,6 +1071,143 @@ async function handlePromptSuggestionMock(
 }
 
 // ---------------------------------------------------------------------------------------------------
+// F-033 — Good / Bad response feedback. Three mocks: the SSE reply (a normal turn, or the interlude an
+// agent gives to a `[Response Feedback: …]` message), `POST /message/feedback` (scripted failures by
+// message id / comment), and — in the rejoin handler further down — a transcript that already carries
+// `asgard.message.feedback` frames, so the rated state on this page always comes from replay.
+// ---------------------------------------------------------------------------------------------------
+
+const FEEDBACK_PREFIX_GOOD = '[Response Feedback: Good]';
+const FEEDBACK_PREFIX_BAD = '[Response Feedback: Bad]';
+
+/** The reply whose rating the mock refuses with 404 — stands in for "not a ratable message". */
+const FEEDBACK_UNRATABLE_MESSAGE_ID = 'a-fb-unratable';
+
+async function handleMessageFeedbackSseMock(
+  res: ServerResponse,
+  payload: ParsedPayload,
+  customChannelId: string,
+): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+  const replyTo = payload.customMessageId ?? '';
+  const messageId = randomUUID();
+  const text = (payload.text ?? '').trim();
+
+  let reply: string;
+  if (text.startsWith(FEEDBACK_PREFIX_GOOD)) {
+    const comment = text.slice(FEEDBACK_PREFIX_GOOD.length).trim();
+    reply = comment
+      ? `謝謝你的肯定，也記下了「${comment}」。回到剛才的數字：需要我把成長來源再拆細一點嗎？`
+      : '謝謝你的肯定！回到剛才的數字：需要我把成長來源再拆細一點嗎？';
+  } else if (text.startsWith(FEEDBACK_PREFIX_BAD)) {
+    const comment = text.slice(FEEDBACK_PREFIX_BAD.length).trim();
+    reply = comment
+      ? `了解，抱歉沒有達到預期。你提到「${comment}」——我會調整做法。回到剛才的問題，我重新整理一次給你。`
+      : '了解，抱歉沒有達到預期，我會調整做法。回到剛才的問題，我重新整理一次給你。';
+  } else if (text === '') {
+    reply = '您好，我是營運數據助理。每一則回覆下方都可以按 👍 / 👎 告訴我做得如何。';
+  } else {
+    reply = `關於「${text}」：上週營收 1,284 萬，較前週成長 12%，主要來自行動 App 的回購。`;
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+  await sleep(40);
+  writeEvent(res, messageFrame(header, 'asgard.message.start', messageId, replyTo, '', TEXT_TEMPLATE('')));
+
+  for (const chunk of chunkText(reply, 4)) {
+    await sleep(30);
+    writeEvent(res, messageFrame(header, 'asgard.message.delta', messageId, replyTo, chunk, null));
+  }
+
+  await sleep(60);
+  writeEvent(res, messageFrame(header, 'asgard.message.complete', messageId, replyTo, reply, TEXT_TEMPLATE(reply)));
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+  res.end();
+}
+
+let feedbackSeq = 100;
+
+/**
+ * Ratings accepted by the mock, per channel, in arrival order — replayed after the seeded transcript on
+ * rejoin so a reload shows exactly what the user rated (UC-058). In-memory only: gone on server restart.
+ */
+const acceptedFeedback = new Map<string, { targetMessageId: string; verdict: 'GOOD' | 'BAD'; text?: string }[]>();
+
+/**
+ * `POST /message/feedback`. Mirrors the edge server's contract: `{ customChannelId, messageId, verdict,
+ * comment? }` in, `{ data: { messageId, seq } }` out on 200. Scripted failures: the unratable reply id →
+ * 404; a comment containing 「爆」/ "boom" → 500; a bad verdict or an over-long comment → 400, exactly
+ * as the real handler answers.
+ */
+export async function handleMockMessageFeedback(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== 'POST') {
+    res.statusCode = 405;
+    res.end();
+
+    return;
+  }
+
+  const body = (await readBody(req)) as ParsedPayload & { messageId?: string; verdict?: string; comment?: string };
+  const json = (status: number, data: unknown): void => {
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+  };
+
+  if (!body.customChannelId || !body.messageId) {
+    json(400, { message: 'customChannelId and messageId are required' });
+
+    return;
+  }
+
+  if (body.verdict !== 'GOOD' && body.verdict !== 'BAD') {
+    json(400, { message: 'verdict must be GOOD or BAD' });
+
+    return;
+  }
+
+  if (Buffer.byteLength(body.comment ?? '', 'utf8') > 8 * 1024) {
+    json(400, { message: 'comment exceeds the maximum length' });
+
+    return;
+  }
+
+  if (body.messageId === FEEDBACK_UNRATABLE_MESSAGE_ID) {
+    json(404, { message: 'message not found or not ratable' });
+
+    return;
+  }
+
+  if (body.comment?.includes('爆') || body.comment?.toLowerCase().includes('boom')) {
+    json(500, { message: 'mock feedback failure' });
+
+    return;
+  }
+
+  // Deliberately slow enough to see the Submit button in its pending state.
+  await sleep(600);
+  feedbackSeq += 1;
+  const list = acceptedFeedback.get(body.customChannelId) ?? [];
+  list.push({
+    targetMessageId: body.messageId,
+    verdict: body.verdict,
+    ...(body.comment ? { text: body.comment } : {}),
+  });
+  acceptedFeedback.set(body.customChannelId, list);
+  json(200, { data: { messageId: `fb-${randomUUID()}`, seq: feedbackSeq } });
+}
+
+// ---------------------------------------------------------------------------------------------------
 // F-003 — run-indicator demo. One connection, two messages with a deliberate gap between them and a
 // complete→done tail. `isConnecting` stays true for the whole run, so the seam indicator must stay lit
 // continuously — no flicker per message, no disappearance in the gap (where the old placeholder blanked).
@@ -1726,6 +1871,69 @@ async function handleMockTranscriptRejoin(req: IncomingMessage, res: ServerRespo
     return;
   }
 
+  // F-033 / UC-058 — a transcript that already carries ratings. The first reply was rated twice (GOOD,
+  // then BAD) so the replay demonstrates latest-wins; the second is unrated; the third is the one the
+  // feedback endpoint refuses (see `handleMockMessageFeedback`). Prefix match so both shells replay it.
+  if (customChannelId.startsWith('message-feedback-demo')) {
+    const feedbackFrame = (targetMessageId: string, verdict: 'GOOD' | 'BAD', text?: string): object => ({
+      ...header,
+      eventType: 'asgard.message.feedback',
+      fact: {
+        ...emptyFact(),
+        messageFeedback: {
+          messageId: `fb-${targetMessageId}-${verdict}`,
+          targetMessageId,
+          verdict,
+          ...(text ? { text } : {}),
+        },
+      },
+    });
+    const replay: { event: object; id: string }[] = [
+      { event: userFrame('u-fb-1', '上週營收如何？', 'c-fb-1'), id: 'seq:1' },
+      {
+        event: botComplete('a-fb-1', '上週營收 1,284 萬，較前週成長 12%。成長主要來自行動 App 的回購，官網則持平。'),
+        id: 'seq:2',
+      },
+      { event: feedbackFrame('a-fb-1', 'GOOD'), id: 'seq:3' },
+      { event: feedbackFrame('a-fb-1', 'BAD', '官網為什麼持平沒有解釋'), id: 'seq:4' },
+      { event: userFrame('u-fb-2', '那行動 App 的回購拆成新客與舊客呢？', 'c-fb-2'), id: 'seq:5' },
+      {
+        event: botComplete('a-fb-2', '行動 App 回購 812 萬中，舊客占 71%、新客 29%；新客占比較前週提高 4 個百分點。'),
+        id: 'seq:6',
+      },
+      { event: userFrame('u-fb-3', '這一則是示範用的', 'c-fb-3'), id: 'seq:7' },
+      {
+        event: botComplete(
+          FEEDBACK_UNRATABLE_MESSAGE_ID,
+          '（示範：這則回覆的評價會被後端以 404 拒絕 —— 用來看失敗路徑：modal 不關、文字保留、顯示錯誤。）',
+        ),
+        id: 'seq:8',
+      },
+      // What this page's user rated since the server started, newest last — the same latest-wins fold.
+      ...(acceptedFeedback.get(customChannelId) ?? []).map((entry, index) => ({
+        event: feedbackFrame(entry.targetMessageId, entry.verdict, entry.text),
+        id: `seq:${9 + index}`,
+      })),
+    ];
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    });
+
+    for (const frame of replay) {
+      await sleep(60);
+      writeCursorEvent(res, frame.event, frame.id);
+    }
+
+    await sleep(40);
+    writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+    res.end();
+
+    return;
+  }
+
   // #448 — a transcript whose user turns carried attachments. Three shapes, in the order that matters:
   // a pure-attachment turn (empty text — the one that used to vanish entirely), an attachment+text turn,
   // and a legacy row with ids and no metadata, which is what every pre-fix conversation looks like
@@ -1940,6 +2148,15 @@ export async function handleMockChannelMetadata(req: IncomingMessage, res: Serve
   if (customChannelId === 'question-template-rejoin-demo') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ data: { title: '技術選型（重新進房）', runState: 'IDLE' } }));
+
+    return;
+  }
+
+  // F-033 — the feedback demo channels exist, so mounting takes the restore path and the replayed
+  // transcript (with its `asgard.message.feedback` frames) is where the rated state comes from.
+  if (customChannelId.startsWith('message-feedback-demo')) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ data: { title: '回應評價（重新進房）', runState: 'IDLE' } }));
 
     return;
   }

@@ -100,6 +100,11 @@ export interface AsgardServiceContextValue {
   stopGeneration?: UseChannelReturn['stopGeneration'];
   replyToolCallConsents?: UseChannelReturn['replyToolCallConsents'];
   /**
+   * Rate one assistant reply Good or Bad (F-033) — what the built-in feedback bar calls. Undefined in
+   * preview mode. Rejects on failure with the conversation untouched; see `UseChannelReturn`.
+   */
+  sendMessageFeedback?: UseChannelReturn['sendMessageFeedback'];
+  /**
    * Nudge an idle sandbox back to life (F-021 AC4) — invisible `action=NUDGE` turn. Runs through
    * `onBeforeSendMessage` like the other outbounds, so a session-level payload attaches on its own
    * (BUG-004).
@@ -343,6 +348,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     closeChannel,
     stopGeneration,
     replyToolCallConsents,
+    sendMessageFeedback,
     nudge,
   } = useChannel({
     client,
@@ -465,6 +471,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       closeChannel,
       stopGeneration,
       replyToolCallConsents: wrappedReplyToolCallConsents,
+      sendMessageFeedback,
       nudge: wrappedNudge,
       pendingConsent: conversation?.pendingConsent ?? null,
       botTypingPlaceholder,
@@ -508,6 +515,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       closeChannel,
       stopGeneration,
       wrappedReplyToolCallConsents,
+      sendMessageFeedback,
       wrappedNudge,
       botTypingPlaceholder,
       inputPlaceholder,

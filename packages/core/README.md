@@ -147,6 +147,7 @@ The main client class for interacting with the Asgard AI platform.
 - **rejoinSse(customChannelId, options?)**: Cold-start transcript rejoin — a `GET /message/sse` with an empty `Last-Event-ID` that replays the channel's collapsed history through the same reducer, so a returning user sees their prior conversation without re-POSTing. Optional on `IAsgardServiceClient` for backward compatibility
 - **deleteChannel(customChannelId)**: `Promise<void>` - End the conversation and release everything the channel holds — the in-flight run, transcript, uploaded blobs, tool-call allow-list, Sandbox and Channel Home — via `DELETE /channel`. Resolves once the teardown is **done** (up to about a minute when a live Sandbox has to terminate first, so do not impose a shorter timeout), after which the same `customChannelId` is a blank slate. Deleting a channel that does not exist is a success. Optional on `IAsgardServiceClient` for backward compatibility
 - **channelMetadata(customChannelId)**: `Promise<ChannelMetadata | null>` - Join-init existence + restore gate — `GET /channel/metadata`; resolves to the metadata on `200`, `null` on `404` (channel does not exist), and rejects on any other error. `ChannelMetadata` is `{ title: string | null; runState: 'RUNNING' | 'IDLE'; lastActivityAt?: string }`. Optional on `IAsgardServiceClient` for backward compatibility
+- **sendMessageFeedback(request)**: `Promise<MessageFeedbackReply>` - Rate one assistant reply Good or Bad (F-033) — `POST /message/feedback` with `{ customChannelId, messageId, verdict: 'GOOD' | 'BAD', comment? }`; resolves to `{ messageId, seq }` (the persisted entry's own id and transcript cursor). Rejects with `HttpError` on `404` (not a ratable reply: a thinking block, the user's own message, an unknown id), `400` (bad verdict / comment over 8 KiB of UTF-8) or any other failure. See [Message feedback](#message-feedback). Optional on `IAsgardServiceClient` for backward compatibility
 - **suspendChannel(customChannelId, options?)**: `Promise<void>` - Ask the backend to stop the channel's background run — `POST /message/suspend?custom_channel_id=…`, with optional `requestId` (stop only that run) and `force` (abandon it rather than let it wind down). Resolves on any 2xx **and** on `404` (channel never created = nothing to stop); rejects with `HttpError` otherwise. Resolving means _accepted_, not _stopped_ — see [Stopping generation](#stopping-generation). Optional on `IAsgardServiceClient` for backward compatibility
 - **on(event, handler)**: Listen to a specific SSE event. `event` must be an `EventType` value (e.g. `EventType.MESSAGE`), not a plain string; registering a listener for an event replaces any previous one
 - **detach({ timeoutMs })**: Detach from the owning component without aborting in-flight runs — the connection stays open so the backend can finish the current run, then auto-closes once all runs settle (or after `timeoutMs` as a safety net). Backs the React `keepConnectionOnUnmount` prop
@@ -182,6 +183,7 @@ Higher-level abstraction for managing a conversation channel with reactive state
 
 - **sendMessage(payload, options?)**: `Promise<void>` - Send a message through the channel
 - **replyToolCallConsents(answers, options?, payload?)**: `Promise<void>` - Reply to a pending tool-call consent prompt. `answers` is an array of `ToolCallConsentAnswer` (each `{ toolCallId, result, denyReason }`, where `result` is a `ToolCallConsentResult` value)
+- **sendMessageFeedback(messageId, feedback)**: `Promise<MessageFeedbackReply>` - Rate one assistant reply (F-033): posts `{ verdict, comment? }` via `client.sendMessageFeedback` and, once accepted, writes it into that reply's `feedback` (no optimistic update — a rejection leaves the conversation untouched). See [Message feedback](#message-feedback)
 - **stopGeneration(options?)**: `Promise<void>` - Ask the backend to stop the in-flight run. See [Stopping generation](#stopping-generation) — resolving means _accepted_, not _stopped_
 - **getTasks() / getSubagents() / getChannelTitle() / getRunStatus()**: `Task[]` / `Subagent[]` / `string | null` / `RunStatus` - Current immutable snapshots of the derived state (for `getSnapshot()`-style bridging; see [Derived State](#derived-state))
 - **setChannelTitle(title)**: `void` - Seed or override the reactive channel title (F-016)
@@ -291,6 +293,24 @@ next message continues the same conversation.
 > Requires a client implementing `suspendChannel()` (`AsgardServiceClient` does; it POSTs to
 > `${botProviderEndpoint}/message/suspend`). A custom `IAsgardServiceClient` without it falls back to
 > the old local-abort behavior.
+
+<a id="message-feedback"></a>
+<br/>
+
+### Message feedback (Good / Bad)
+
+A user can rate any completed assistant reply `GOOD` or `BAD`, optionally with a comment (F-033). The rating is a first-class transcript entry on the backend — persisted, published live, **replayed on rejoin**, and written to the audit log — so the SDK never remembers it locally:
+
+- **Rated state** — every `asgard.message.feedback` frame (`EventType.MESSAGE_FEEDBACK`) is folded by the `Conversation` reducer into the targeted bot message's `feedback: { verdict, comment? }`. The server is append-only and latest-wins, so a later frame for the same reply replaces the earlier one; there is no un-rate. After a reload the state comes back from the replay.
+- **Rating** — `channel.sendMessageFeedback(messageId, { verdict, comment? })` posts the verdict and, once the server accepts it, sets `feedback` on the reply. The SDK holds no open stream between runs, so it does not wait for its own live echo. A comment is at most 8 KiB of **UTF-8** (`FEEDBACK_COMMENT_MAX_BYTES`; measure with `feedbackCommentByteLength()`).
+- **Telling the agent** is a separate, optional act: send an ordinary message whose text is `composeFeedbackMessage(verdict, comment)` — `[Response Feedback: Good]` (or `Bad`), a blank line, then the comment. The prefix (`RESPONSE_FEEDBACK_PREFIX`) is a platform contract the backend's system prompt recognises; the agent treats the message as an interlude about its previous reply and then carries on. Send it only after the rating succeeded, through the normal `sendMessage` path (it opens a new run).
+
+```typescript
+import { composeFeedbackMessage } from '@asgard-js/core';
+
+await channel.sendMessageFeedback(replyId, { verdict: 'BAD', comment: 'The totals do not add up.' });
+await channel.sendMessage({ text: composeFeedbackMessage('BAD', 'The totals do not add up.') });
+```
 
 <a id="conversation"></a>
 <br/>

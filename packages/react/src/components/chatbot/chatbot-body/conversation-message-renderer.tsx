@@ -21,6 +21,8 @@ import {
   TemplateBoxContent,
 } from '../../templates';
 import { useAsgardTemplateContext, MessageContainerProps } from '../../../context';
+import { MessageFeedbackBar, isRatableReply } from '../../message-feedback';
+import styles from './conversation-message-renderer.module.scss';
 
 interface ConversationMessageRendererProps {
   message: ConversationMessage;
@@ -28,7 +30,7 @@ interface ConversationMessageRendererProps {
 
 export function ConversationMessageRenderer(props: ConversationMessageRendererProps): ReactNode {
   const { message } = props;
-  const { renderMessageContent } = useAsgardTemplateContext();
+  const { renderMessageContent, enableFeedback } = useAsgardTemplateContext();
 
   // Create MessageContainer component that wraps custom content in the SDK's chrome-free shell for this
   // message type — the bot message layout, the right-aligned user row, or the children as-is.
@@ -135,11 +137,23 @@ export function ConversationMessageRenderer(props: ConversationMessageRendererPr
     }
   }, [message]);
 
-  // If custom renderer is provided, use it
-  if (renderMessageContent) {
-    return renderMessageContent({ message, renderDefaultContent, MessageContainer });
+  const content = renderMessageContent
+    ? renderMessageContent({ message, renderDefaultContent, MessageContainer })
+    : renderDefaultContent();
+
+  // F-033 — the feedback bar is message-level chrome, mounted here *after* whatever rendered the
+  // content, and not inside `renderDefaultContent()` / `TemplateBoxContent`. That is deliberate: a host
+  // with a heavy `renderMessageContent` (Mimir's TABLE / CHART turns never call `renderDefaultContent`)
+  // would otherwise never see it. The wrapper exists only when the feature is on, so hosts that leave it
+  // off keep the exact DOM they had.
+  if (enableFeedback && isRatableReply(message)) {
+    return (
+      <div className={styles.rated_message}>
+        {content}
+        <MessageFeedbackBar message={message} />
+      </div>
+    );
   }
 
-  // Otherwise use default rendering
-  return renderDefaultContent();
+  return content;
 }

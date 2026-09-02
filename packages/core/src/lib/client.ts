@@ -8,6 +8,8 @@ import {
   SseEvents,
   BlobUploadResponse,
   ChannelHomeDownloadResult,
+  MessageFeedbackReply,
+  MessageFeedbackRequest,
   SandboxFsCopyMoveOptions,
   SandboxFsCopyResult,
   SandboxFsListResult,
@@ -317,6 +319,55 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     }
 
     throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
+  }
+
+  private deriveFeedbackEndpoint(): string | null {
+    const baseEndpoint = this.getBaseEndpoint();
+
+    return baseEndpoint ? `${baseEndpoint}/message/feedback` : null;
+  }
+
+  /**
+   * Rate one assistant reply Good or Bad (F-033): `POST {base}/message/feedback` with
+   * `{ customChannelId, messageId, verdict, comment? }`. Derived from `botProviderEndpoint` exactly like
+   * `/message/sse`, because every product relay exposes it at that same shape.
+   *
+   * Resolves to `{ messageId, seq }` — the persisted entry's own id and transcript cursor — on any 2xx
+   * (the relays wrap it in a `{ data }` envelope; a bare body is accepted too). `404` means the target is
+   * not a ratable reply (a thinking block, the user's own message, an unknown id), `400` a bad verdict
+   * or a comment over 8 KiB; both, like any other failure, reject with {@link HttpError}. Nothing is
+   * retried: the caller decides whether to offer another attempt, with the user's comment intact.
+   */
+  async sendMessageFeedback(request: MessageFeedbackRequest): Promise<MessageFeedbackReply> {
+    const endpoint = this.deriveFeedbackEndpoint();
+
+    if (!endpoint) {
+      throw new Error('Unable to derive message feedback endpoint. Please provide botProviderEndpoint in config.');
+    }
+
+    // `comment` is optional on the wire; an empty string is "no comment", not a comment.
+    const comment = request.comment?.trim();
+    const body: MessageFeedbackRequest = {
+      customChannelId: request.customChannelId,
+      messageId: request.messageId,
+      verdict: request.verdict,
+      ...(comment ? { comment } : {}),
+    };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { ...this.apiHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
+    }
+
+    const json: { data?: MessageFeedbackReply } & Partial<MessageFeedbackReply> = await response.json();
+    const data = json.data ?? (json as MessageFeedbackReply);
+
+    return { messageId: data.messageId, seq: data.seq };
   }
 
   private runSse(observable: Observable<SseResponse<EventType>>, options?: FetchSseOptions): Subscription {

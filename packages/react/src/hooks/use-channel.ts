@@ -10,6 +10,8 @@ import {
   EventType,
   FetchSsePayload,
   LaunchedSandbox,
+  MessageFeedbackReply,
+  MessageFeedbackState,
   RunStatus,
   SandboxPhase,
   SseResponse,
@@ -144,6 +146,14 @@ export interface UseChannelReturn {
    */
   stopGeneration?: (options?: StopGenerationOptions) => Promise<void>;
   replyToolCallConsents?: (answers: ToolCallConsentAnswer[], payload?: FetchSsePayload['payload']) => Promise<void>;
+  /**
+   * Rate one assistant reply Good or Bad (F-033). Posts the verdict and, once the server has accepted
+   * it, writes the rating into that reply's `feedback` — no optimistic update, so a rejection (`404`
+   * not a ratable reply, `400` comment over 8 KiB, network) leaves the thread as it was and the caller
+   * can offer another attempt. Rating does not tell the agent: for "send to AI as well" the caller
+   * follows up with `sendMessage({ text: composeFeedbackMessage(verdict, comment) })`.
+   */
+  sendMessageFeedback?: (messageId: string, feedback: MessageFeedbackState) => Promise<MessageFeedbackReply>;
   /**
    * Nudge an idle sandbox back to life (F-021 AC4) — invisible `action=NUDGE` turn, no reply rendered.
    *
@@ -669,6 +679,17 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     [channel, delayTime, client, onSseMessage, onAuthError, onSseError, conversation, notify, refuseWhileResetting],
   );
 
+  const sendMessageFeedback = useCallback(
+    async (messageId: string, feedback: MessageFeedbackState): Promise<MessageFeedbackReply> => {
+      refuseWhileResetting();
+
+      if (!channel) throw new Error('No channel: the conversation is not open yet.');
+
+      return channel.sendMessageFeedback(messageId, feedback);
+    },
+    [channel, refuseWhileResetting],
+  );
+
   const nudge = useCallback(
     async (payload?: FetchSsePayload['payload']): Promise<void> => {
       await channel?.nudge(
@@ -828,6 +849,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             closeChannel,
             stopGeneration,
             replyToolCallConsents,
+            sendMessageFeedback,
             nudge,
           },
     [
@@ -850,6 +872,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       closeChannel,
       stopGeneration,
       replyToolCallConsents,
+      sendMessageFeedback,
       nudge,
     ],
   );

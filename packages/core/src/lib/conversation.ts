@@ -1,12 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { EventType, MessageTemplateType } from '../constants/enum';
 import {
+  ConversationBotMessage,
   ConversationCanvasMessage,
   ConversationMessage,
   ConversationSubagentMessage,
   ConversationThinkingMessage,
   ConversationToolCallMessage,
   ConversationUserMessage,
+  MessageFeedbackState,
   SseResponse,
   ToolCallConsentEventData,
 } from '../types';
@@ -14,28 +16,37 @@ import {
 interface IConversation {
   messages: Map<string, ConversationMessage> | null;
   pendingConsent?: ToolCallConsentEventData | null;
+  /**
+   * Feedback frames whose target reply has not arrived yet (F-033), keyed by `targetMessageId`. The
+   * server writes a reply before anything can rate it, so in seq order the target always precedes its
+   * feedback — this only catches an out-of-order delivery, the same class of defect F-011 hardens
+   * against. Applied when the target's `message.complete` lands; never rendered on its own.
+   */
+  pendingFeedback?: Map<string, MessageFeedbackState> | null;
 }
 
 export default class Conversation implements IConversation {
   public messages: Map<string, ConversationMessage> | null = null;
   public pendingConsent: ToolCallConsentEventData | null = null;
+  public pendingFeedback: Map<string, MessageFeedbackState> | null = null;
 
-  constructor({ messages, pendingConsent = null }: IConversation) {
+  constructor({ messages, pendingConsent = null, pendingFeedback = null }: IConversation) {
     this.messages = messages;
     this.pendingConsent = pendingConsent ?? null;
+    this.pendingFeedback = pendingFeedback ?? null;
   }
 
   pushMessage(message: ConversationMessage): Conversation {
     const messages = new Map(this.messages);
     messages.set(message.messageId, message);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   clearPendingConsent(): Conversation {
     if (!this.pendingConsent) return this;
 
-    return new Conversation({ messages: this.messages, pendingConsent: null });
+    return new Conversation({ messages: this.messages, pendingConsent: null, pendingFeedback: this.pendingFeedback });
   }
 
   /**
@@ -46,7 +57,7 @@ export default class Conversation implements IConversation {
   restorePendingConsent(pendingConsent: ToolCallConsentEventData): Conversation {
     if (this.pendingConsent) return this;
 
-    return new Conversation({ messages: this.messages, pendingConsent });
+    return new Conversation({ messages: this.messages, pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   /**
@@ -83,7 +94,7 @@ export default class Conversation implements IConversation {
 
     if (!changed) return this;
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   /**
@@ -105,6 +116,8 @@ export default class Conversation implements IConversation {
         return this.onMessageComplete(response as SseResponse<EventType.MESSAGE_COMPLETE>);
       case EventType.MESSAGE_USER:
         return this.onMessageUser(response as SseResponse<EventType.MESSAGE_USER>);
+      case EventType.MESSAGE_FEEDBACK:
+        return this.onMessageFeedback(response as SseResponse<EventType.MESSAGE_FEEDBACK>);
       case EventType.MESSAGE_THINKING_START:
         return this.onThinkingStart(response as SseResponse<EventType.MESSAGE_THINKING_START>);
       case EventType.MESSAGE_THINKING_DELTA:
@@ -194,7 +207,7 @@ export default class Conversation implements IConversation {
       raw: '',
     });
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onMessageDelta(response: SseResponse<EventType.MESSAGE_DELTA>): Conversation {
@@ -225,7 +238,7 @@ export default class Conversation implements IConversation {
       raw: currentBot?.raw ?? '',
     });
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onMessageComplete(response: SseResponse<EventType.MESSAGE_COMPLETE>): Conversation {
@@ -237,6 +250,13 @@ export default class Conversation implements IConversation {
     const messages = new Map(this.messages);
 
     const currentMessage = messages.get(message.messageId);
+    const currentBot = currentMessage?.type === 'bot' ? currentMessage : undefined;
+
+    // F-033 — the rating is state *about* the reply, not part of the frame, so a late / duplicate
+    // `complete` must not wipe it. A feedback frame that arrived before this reply (out of order) is
+    // consumed here; it wins over whatever the reply carried, being the newer fact.
+    const pendingFeedback = this.pendingFeedback?.get(message.messageId);
+    const feedback = pendingFeedback ?? currentBot?.feedback;
 
     messages.set(message.messageId, {
       type: 'bot',
@@ -245,12 +265,59 @@ export default class Conversation implements IConversation {
       typingText: null,
       messageId: message.messageId,
       message,
+      ...(feedback ? { feedback } : {}),
       time: new Date(),
-      traceId: response.traceId ?? (currentMessage?.type === 'bot' ? currentMessage.traceId : undefined),
+      traceId: response.traceId ?? currentBot?.traceId,
       raw: JSON.stringify(response),
     });
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    let remainingPending = this.pendingFeedback;
+    if (pendingFeedback) {
+      remainingPending = new Map(this.pendingFeedback);
+      remainingPending.delete(message.messageId);
+    }
+
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: remainingPending });
+  }
+
+  /**
+   * `asgard.message.feedback` (F-033): fold a rating into the reply it targets. The server is
+   * append-only and latest-wins, so a later frame for the same target simply replaces the earlier
+   * state — on a replay the frames arrive in seq order and the last one standing is the current one.
+   * Only a bot reply can carry a rating; a frame naming anything else (or a reply that has not arrived
+   * yet) is parked in `pendingFeedback` and applied if that reply's `complete` shows up later.
+   */
+  onMessageFeedback(response: SseResponse<EventType.MESSAGE_FEEDBACK>): Conversation {
+    const data = response.fact.messageFeedback;
+    const feedback: MessageFeedbackState = {
+      verdict: data.verdict,
+      ...(data.text ? { comment: data.text } : {}),
+    };
+
+    return this.applyFeedback(data.targetMessageId, feedback);
+  }
+
+  /**
+   * Set the current rating of one bot reply (F-033). Used by the reducer for server frames and by
+   * `Channel.sendMessageFeedback` once this client's own POST has been accepted — the SDK has no open
+   * stream between runs, so the live echo of its own feedback would never reach it. A target that is not
+   * (yet) a bot reply is parked in `pendingFeedback`; see {@link onMessageComplete}.
+   */
+  applyFeedback(targetMessageId: string, feedback: MessageFeedbackState): Conversation {
+    const target = this.messages?.get(targetMessageId);
+
+    if (target?.type === 'bot') {
+      const messages = new Map(this.messages);
+      const rated: ConversationBotMessage = { ...target, feedback };
+      messages.set(targetMessageId, rated);
+
+      return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
+    }
+
+    const pendingFeedback = new Map(this.pendingFeedback);
+    pendingFeedback.set(targetMessageId, feedback);
+
+    return new Conversation({ messages: this.messages, pendingConsent: this.pendingConsent, pendingFeedback });
   }
 
   onThinkingStart(response: SseResponse<EventType.MESSAGE_THINKING_START>): Conversation {
@@ -273,7 +340,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(message.messageId, thinking);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onThinkingDelta(response: SseResponse<EventType.MESSAGE_THINKING_DELTA>): Conversation {
@@ -301,7 +368,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(message.messageId, thinking);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onThinkingComplete(response: SseResponse<EventType.MESSAGE_THINKING_COMPLETE>): Conversation {
@@ -326,7 +393,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(message.messageId, thinking);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onCanvasStart(response: SseResponse<EventType.MESSAGE_CANVAS_START>): Conversation {
@@ -349,7 +416,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(message.messageId, canvas);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onCanvasDelta(response: SseResponse<EventType.MESSAGE_CANVAS_DELTA>): Conversation {
@@ -379,7 +446,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(message.messageId, canvas);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onCanvasComplete(response: SseResponse<EventType.MESSAGE_CANVAS_COMPLETE>): Conversation {
@@ -400,7 +467,7 @@ export default class Conversation implements IConversation {
       const messages = new Map(this.messages);
       messages.delete(message.messageId);
 
-      return new Conversation({ messages, pendingConsent: this.pendingConsent });
+      return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
     }
 
     const currentMessage = this.messages?.get(message.messageId);
@@ -419,7 +486,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(message.messageId, canvas);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onMessageUser(response: SseResponse<EventType.MESSAGE_USER>): Conversation {
@@ -448,7 +515,7 @@ export default class Conversation implements IConversation {
     };
     messages.set(data.messageId, userMessage);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onMessageError(response: SseResponse<EventType.ERROR>): Conversation {
@@ -466,7 +533,7 @@ export default class Conversation implements IConversation {
       traceId: response.traceId,
     });
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onToolCallStart(response: SseResponse<EventType.TOOL_CALL_START>): Conversation {
@@ -501,7 +568,7 @@ export default class Conversation implements IConversation {
 
     messages.set(toolCallKey, toolCallMessage);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onToolCallComplete(response: SseResponse<EventType.TOOL_CALL_COMPLETE>): Conversation {
@@ -550,13 +617,17 @@ export default class Conversation implements IConversation {
       messages.set(toolCallKey, replayedMessage);
     }
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onToolCallConsent(response: SseResponse<EventType.TOOL_CALL_CONSENT>): Conversation {
     const consent = response.fact.toolCallConsent;
 
-    return new Conversation({ messages: this.messages, pendingConsent: consent });
+    return new Conversation({
+      messages: this.messages,
+      pendingConsent: consent,
+      pendingFeedback: this.pendingFeedback,
+    });
   }
 
   onSubagentStart(response: SseResponse<EventType.SUBAGENT_START>): Conversation {
@@ -582,7 +653,7 @@ export default class Conversation implements IConversation {
     messages.delete(key);
     messages.set(key, message);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 
   onSubagentComplete(response: SseResponse<EventType.SUBAGENT_COMPLETE>): Conversation {
@@ -608,6 +679,6 @@ export default class Conversation implements IConversation {
     messages.delete(key);
     messages.set(key, message);
 
-    return new Conversation({ messages, pendingConsent: this.pendingConsent });
+    return new Conversation({ messages, pendingConsent: this.pendingConsent, pendingFeedback: this.pendingFeedback });
   }
 }

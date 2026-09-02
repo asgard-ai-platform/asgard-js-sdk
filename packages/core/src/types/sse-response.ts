@@ -366,6 +366,24 @@ export interface SandboxEventData {
   blueprintName: string;
 }
 
+/** The two verdicts of a message feedback (F-033) — the exact wire literals, there is no third. */
+export type FeedbackVerdict = 'GOOD' | 'BAD';
+
+/**
+ * `asgard.message.feedback` — a user's verdict on one assistant reply (F-033). `messageId` identifies
+ * this feedback entry itself; `targetMessageId` is the rated reply (the `messageId` of its
+ * `message.complete`). `text` is the optional comment. Delivered live **and** replayed on a GET rejoin;
+ * append-only on the server, so when several frames target the same reply the latest one is the state
+ * to render. Shape aligns with asgard-sdk-go `GenericBotSseEventFactMessageFeedback`.
+ */
+export interface MessageFeedbackEventData {
+  messageId: string;
+  targetMessageId: string;
+  verdict: FeedbackVerdict;
+  text?: string;
+  identityHint?: string;
+}
+
 export interface Fact<Type extends EventType> {
   runInit: null;
   runDone: null;
@@ -374,6 +392,7 @@ export interface Fact<Type extends EventType> {
   messageDelta: IsEqual<Type, EventType.MESSAGE_DELTA, MessageEventData>;
   messageComplete: IsEqual<Type, EventType.MESSAGE_COMPLETE, MessageEventData>;
   messageUser: IsEqual<Type, EventType.MESSAGE_USER, MessageUserEventData>;
+  messageFeedback: IsEqual<Type, EventType.MESSAGE_FEEDBACK, MessageFeedbackEventData>;
   // Extended-thinking stream reuses the message shape (reasoning text in `message.text`) — F-001.
   messageThinkingStart: IsEqual<Type, EventType.MESSAGE_THINKING_START, MessageEventData>;
   messageThinkingDelta: IsEqual<Type, EventType.MESSAGE_THINKING_DELTA, MessageEventData>;

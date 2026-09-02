@@ -32,6 +32,18 @@ function asgardSseMockPlugin(): Plugin {
         }
       });
 
+      // F-033 — `POST /message/feedback`: the Good / Bad rating endpoint. Scripted by message id and
+      // comment text so the failure paths (404 / 400 / 500) can be walked without a real backend.
+      server.middlewares.use('/mock-asgard/message/feedback', async (req, res, next) => {
+        try {
+          const { handleMockMessageFeedback } = await import('./src/mock-server/sse-mock');
+
+          await handleMockMessageFeedback(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
+
       // F-015 — join-init existence gate. Must be mounted so `GET /channel/metadata` reaches the mock
       // (defaults to 404) instead of the SPA fallback, which would break every Chatbot's mount gate.
       server.middlewares.use('/mock-asgard/channel/metadata', async (req, res, next) => {

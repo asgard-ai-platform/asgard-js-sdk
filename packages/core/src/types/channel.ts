@@ -3,7 +3,7 @@ import { EventType } from '../constants/enum';
 import Conversation from '../lib/conversation';
 import { IAsgardServiceClient } from './client';
 import { MessageBlob } from './blob';
-import { ErrorMessage, Message } from './sse-response';
+import { ErrorMessage, FeedbackVerdict, Message } from './sse-response';
 import { Subagent, SubagentTerminalStatus } from './subagent';
 import { Task } from './task';
 
@@ -164,6 +164,17 @@ export type ConversationUserMessage = {
   traceId?: string;
 };
 
+/**
+ * The **current** rating of one assistant reply (F-033). The server is append-only (re-rating appends a
+ * newer entry, latest wins, no un-rate), so this is the fold of every `asgard.message.feedback` frame
+ * that targeted the reply — plus the one this client just posted — not the event stream itself.
+ */
+export interface MessageFeedbackState {
+  verdict: FeedbackVerdict;
+  /** The comment the user typed, when they typed one. */
+  comment?: string;
+}
+
 export type ConversationBotMessage = {
   type: 'bot';
   messageId: string;
@@ -171,6 +182,12 @@ export type ConversationBotMessage = {
   isTyping: boolean;
   typingText: string | null;
   message: Message;
+  /**
+   * The reply's current rating (F-033), or absent when unrated. Restored from the server on rejoin —
+   * never from local storage — and updated in place when this client's own `sendMessageFeedback`
+   * succeeds.
+   */
+  feedback?: MessageFeedbackState;
   /**
    * @deprecated The moment this frame was processed, not when the message was sent. A GET rejoin
    * replays history in one burst, so every replayed message carries the time the page opened (#422).
