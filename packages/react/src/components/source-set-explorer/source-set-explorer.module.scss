@@ -218,8 +218,34 @@
 // under Odin's emerald — the first consumer, and the palette the design was drawn in — that lands 27/255
 // of red away from what the prototype paints. oklab mixes perceptually, which is what "one step weaker"
 // asks for; nothing else here mixes two *colours*, so there is no consistency to preserve.
+// The plain declaration first is a fallback, not a duplicate: a browser that does not understand
+// `color-mix()` drops the second line and keeps this one. Worth having here and nowhere else in this
+// file, because the other mixes only tint a background — losing one costs a hover state. Losing this one
+// makes an ancestor render *identical to an unmarked row*, which is information disappearing rather than
+// polish. The secondary text colour is the honest degradation: still distinct from an unmarked name.
 .labelHighlightAncestor {
+  color: var(--asg-color-text-secondary, #6b7280);
   color: color-mix(in oklab, var(--asg-color-primary, #4f46e5) 62%, var(--asg-color-text-secondary, #6b7280));
+}
+
+// Announced but not painted (#462). The two highlight levels are conveyed by colour, and the weaker one
+// not even by weight — so a screen reader, or a forced-colours rendering, got nothing at all about the
+// one question this feature exists to answer. This carries that state into the row's accessible name
+// without changing a single pixel, which is also why it does not deviate from the design prototype:
+// the prototype specifies what you see, and this is what you hear.
+//
+// `clip-path` + 1px rather than `display: none` or `visibility: hidden` — both of those remove the text
+// from the accessibility tree too, which would make the element pointless.
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 // The host's badge slot. `margin-left: auto` parks it on the row's trailing edge (as the prototype does)
