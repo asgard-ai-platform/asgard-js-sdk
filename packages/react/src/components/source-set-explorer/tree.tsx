@@ -108,11 +108,17 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
 
     // Targets first: a path can be both a marked folder and on the way to a deeper one, and the row is
     // then what the host marked — the weaker shade is for levels that are only passed through.
-    const highlight = highlightTargets.has(entry.path)
-      ? styles.labelHighlight
-      : highlightAncestors.has(entry.path)
-      ? styles.labelHighlightAncestor
-      : '';
+    const isTarget = highlightTargets.has(entry.path);
+    const isAncestor = !isTarget && highlightAncestors.has(entry.path);
+    const highlight = isTarget ? styles.labelHighlight : isAncestor ? styles.labelHighlightAncestor : '';
+    // The same two levels, for readers that get no colour (#462). Wording is deliberately the prop's own
+    // vocabulary rather than any host's: the component knows a path was *marked*, not what it was marked
+    // *as* — Odin's "search path" is one use of `highlightPaths`, not its meaning.
+    const announced = isTarget
+      ? t(locale, 'sourceSetExplorer.markedPath')
+      : isAncestor
+      ? t(locale, 'sourceSetExplorer.markedPathAncestor')
+      : null;
 
     return (
       <div key={entry.path} className={styles.node}>
@@ -148,6 +154,13 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
             {entry.isDir ? isOpen ? <FolderOpenIcon size={14} /> : <FolderIcon size={14} /> : <FileIcon size={14} />}
           </span>
           <span className={`${styles.label} ${highlight}`.trimEnd()}>{entry.name}</span>
+          {/*
+            Mounted only for a marked row, on the same terms as the badge below: an unmarked row keeps the
+            DOM it had before this existed. The row's accessible name is composed from its contents, so
+            appending here reads as "pdf, marked path" — an `aria-label` would have *replaced* the name
+            and swallowed whatever the host's badge contributes.
+          */}
+          {announced ? <span className={styles.srOnly}>{announced}</span> : null}
           {/*
             Mounted only when the host returned something, so a row without a badge keeps the DOM — and the
             row `gap` — it had before. Truthiness rather than a `null` check on purpose: `entry.isDir && …`

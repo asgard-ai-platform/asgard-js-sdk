@@ -1070,6 +1070,70 @@ describe('BUILD-075 — search-path affordances', () => {
     expect(nameOf('skills').className).toContain('labelHighlight');
   });
 
+  it('announces both levels, so the state survives with no colour (#462)', async () => {
+    installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['git/skills/pdf']}
+        highlightPaths={['git/skills/pdf']}
+      />,
+    );
+
+    await screen.findByText('SKILL.md');
+    const rowFor = (name: string): HTMLElement => {
+      const found = screen.getAllByRole('treeitem').find(row => row.children[2].textContent === name);
+      if (!found) throw new Error(`no row for ${name}`);
+
+      return found;
+    };
+
+    // The row's accessible name is composed from its contents, so the state reads after the name rather
+    // than replacing it — that is the whole reason this is text and not an `aria-label`.
+    expect(rowFor('pdf').textContent).toBe(`pdf${t('en-US', 'sourceSetExplorer.markedPath')}`);
+    expect(rowFor('skills').textContent).toBe(`skills${t('en-US', 'sourceSetExplorer.markedPathAncestor')}`);
+    // A path that is both a target and an ancestor is announced as the target, matching what it paints.
+    expect(rowFor('csv').textContent).toBe('csv');
+    expect(rowFor('README.md').textContent).toBe('README.md');
+  });
+
+  it('announces in the supplied locale, not en-US (#462)', async () => {
+    installVolume(DEEP);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        locale="zh-TW"
+        autoExpandPaths={['git/skills/pdf']}
+        highlightPaths={['git/skills/pdf']}
+      />,
+    );
+
+    await screen.findByText('SKILL.md');
+    // One target (`pdf`) and two ancestors (`git`, `git/skills`) — the counts are part of the claim.
+    expect(screen.getAllByText(t('zh-TW', 'sourceSetExplorer.markedPath'))).toHaveLength(1);
+    expect(screen.getAllByText(t('zh-TW', 'sourceSetExplorer.markedPathAncestor'))).toHaveLength(2);
+    expect(screen.queryByText(t('en-US', 'sourceSetExplorer.markedPath'))).toBeNull();
+  });
+
+  it('declares the ancestor colour twice, so a browser without color-mix still differs (#462)', () => {
+    // `color-mix()` is one declaration: a browser that cannot parse it drops the whole line. For the
+    // other mixes in this file that costs a hover tint; here it would make an ancestor render *identical*
+    // to an unmarked row, which is the information vanishing. The plain declaration above it is the
+    // fallback, and its order is what makes it one.
+    const sheet = readFileSync(join(__dirname, 'source-set-explorer.module.scss'), 'utf8');
+    const block = sheet.split('.labelHighlightAncestor {')[1]?.split('}')[0] ?? '';
+    const declarations = block
+      .split(';')
+      .map(line => line.trim())
+      .filter(line => line.startsWith('color:'));
+
+    expect(declarations).toHaveLength(2);
+    expect(declarations[0]).not.toContain('color-mix');
+    expect(declarations[1]).toContain('color-mix');
+  });
+
   it('adds nothing at all when none of the four props is supplied (R7)', async () => {
     const probe = installVolume(DEEP);
     render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
