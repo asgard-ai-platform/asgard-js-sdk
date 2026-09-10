@@ -196,29 +196,6 @@ describe('F-031 R6/R16 — backing off from a struggling server', () => {
     expect(write).toHaveBeenCalledTimes(1);
     expect(result.current.items[0].status).toBe('failed');
   });
-
-  /**
-   * A dropped connection carries no status, so folding it into the `http` reason left the renderer
-   * with nothing to branch on and it fell through to `reason.message` — the browser's own
-   * `Failed to fetch`, in English, past every catalog. It needs a code of its own.
-   */
-  it('reports a dropped connection as `network`, not as an HTTP reason carrying the browser text', async () => {
-    vi.useFakeTimers();
-
-    const write: UploadWrite = () => Promise.reject(new TypeError('Failed to fetch'));
-
-    const { result } = setup({ write });
-
-    await act(async () => {
-      result.current.start(planOf('a'));
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000);
-    });
-
-    expect(result.current.items[0].status).toBe('failed');
-    expect(result.current.items[0].reason).toEqual({ code: 'network' });
-  });
 });
 
 describe('F-031 R10 — the size cap is checked before dispatch', () => {

@@ -588,8 +588,6 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
             return t(locale, 'sourceSetExplorer.uploadExistsSkipped');
           case 'cancelled':
             return t(locale, 'sourceSetExplorer.uploadCancelled');
-          case 'network':
-            return t(locale, 'sourceSetExplorer.uploadNetworkError');
           default:
             if (reason.status === 403) return t(locale, 'sourceSetExplorer.uploadForbidden');
 

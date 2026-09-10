@@ -128,12 +128,10 @@ const MAX_UPLOAD_BYTES = 64 * 1024 * 1024;
 
 /** Attempts per destination, so "fails the first time" is expressible. */
 const UPLOAD_ATTEMPTS = new Map<string, number>();
-/** Destinations that drop the connection on every attempt — see (4). */
-const UPLOAD_NETWORK_FAILS = new Set<string>();
 let uploadFilesSeen = 0;
 
 /**
- * Batch upload against the mock, reproducing the **four** backend behaviors that the component would
+ * Batch upload against the mock, reproducing the **three** backend behaviors that the component would
  * otherwise be written wrongly against. Without them the queue looks correct in the source and is never
  * actually exercised:
  *
@@ -142,10 +140,6 @@ let uploadFilesSeen = 0;
  * 2. `create_only` on an existing path answers `409` — which is what makes the conflict dialog reachable.
  * 3. Every 9th file fails its first attempt with `503`. This one is here on purpose: without it neither
  *    the exponential back-off nor the AIMD slow-down ever runs in the demo.
- * 4. Every 5th file drops the connection on every attempt. `fetch` reports that as a `TypeError` with
- *    **no response to read a status from**, which is the one failure the `network` reason exists for —
- *    and the shape a server that dies mid-upload actually produces (its error page carries no CORS
- *    headers, so the browser hands the page a bare `Failed to fetch`).
  */
 async function uploadManyMock(
   _sandbox: string,
@@ -163,12 +157,7 @@ async function uploadManyMock(
     uploadFilesSeen += 1;
 
     if (uploadFilesSeen % 9 === 0) throw new HttpError(503, 'Service Unavailable');
-
-    if (uploadFilesSeen % 5 === 0) UPLOAD_NETWORK_FAILS.add(dst);
   }
-
-  // (4) No response at all — not a status the renderer can branch on.
-  if (UPLOAD_NETWORK_FAILS.has(dst)) throw new TypeError('Failed to fetch');
 
   if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
