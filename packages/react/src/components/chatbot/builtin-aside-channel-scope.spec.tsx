@@ -4,13 +4,9 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * #470 — the built-in aside is the only place that knows which channel the panel is looking at, so it is
- * the place the sandbox relay's ownership parameter has to come from. Without it every fs call the aside
- * makes is a `400` at a relay such as `asgard-freyr-api`, and the aside opens straight onto an error.
- *
- * `createSandboxFsProviders` is deliberately **not** mocked here: what this pins is the whole path from the
- * channel context to the client call. The providers' own table (`channel-scope-forwarding.spec.ts`) proves
- * they forward what they are given; this proves the aside gives them anything at all.
+ * #470 — the aside is the only place that knows which channel the panel is looking at, so it is where the
+ * sandbox relay's ownership parameter comes from. `createSandboxFsProviders` is deliberately not mocked:
+ * the path from channel context to client call is the thing under test.
  */
 
 const panelProps: Record<string, unknown>[] = [];

@@ -3,14 +3,9 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import AsgardServiceClient from './client';
 import { SandboxChannelScope } from '../types';
 
-// #470 — a sandbox belongs to the channel that launched it, and a relay in front of asgard-core proves
-// that from `custom_channel_id` before it forwards anything. `asgard-freyr-api` (TASK-149) answers
-// `400 invalid_argument` / `custom_channel_id is required` on all eleven sandbox routes without it, which
-// is exactly what every one of these calls sent until this spec existed.
-//
-// The point of driving all eleven from one table is that this shipped as an *omission*: the parameter was
-// not wrong anywhere, it was absent everywhere. A per-method assertion written next to each method would
-// have been just as absent.
+// #470 — every sandbox relay is channel-scoped (`SandboxChannelScope`); a relay in front of asgard-core
+// rejects the call without it. All eleven are driven from one table because the defect was an omission in
+// all of them at once: an assertion written next to each method would have been just as absent.
 
 vi.mock('@microsoft/fetch-event-source', () => ({
   fetchEventSource: vi.fn(() => Promise.resolve()),

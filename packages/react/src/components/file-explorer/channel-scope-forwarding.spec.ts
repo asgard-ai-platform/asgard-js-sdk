@@ -4,10 +4,9 @@ import { AsgardServiceClient } from '@asgard-js/core';
 import { Observable } from 'rxjs';
 import { createSandboxFsProviders } from './create-sandbox-fs-providers';
 
-// #470 — the relay in front of asgard-core proves sandbox ownership from `custom_channel_id`, so every
-// provider the File Explorer calls has to carry the channel down to the client. One table over all twelve
-// provider entry points, because the defect this replaces was an omission in all of them at once: a
-// provider that quietly drops the scope looks exactly like one that never had it.
+// #470 — every provider the File Explorer calls has to carry the channel down to the client, so all twelve
+// entry points are driven from one table: a provider that drops the scope looks exactly like one that
+// never had it.
 
 /** Stub of the fs surface the providers touch — every method records what it was handed. */
 function makeClient(): { client: AsgardServiceClient; calls: Record<string, unknown[][]> } {

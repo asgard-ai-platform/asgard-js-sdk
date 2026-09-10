@@ -36,12 +36,8 @@ import { EventEmitter } from './event-emitter';
 const DEFAULT_SSE_BATCH_WINDOW_MS = 50;
 
 /**
- * Write the sandbox relay's channel scope onto a URL (`SandboxChannelScope`).
- *
- * `scope` is a **required** parameter whose type includes `undefined`: a new sandbox call has to write out
- * what it wants, so it cannot inherit the omission by accident. All eleven of them shipped without the
- * parameter, and the relay that requires it answers `400` for every one — a default would have hidden the
- * next one the same way.
+ * Write the sandbox channel scope onto a URL. `scope` is required although its type includes `undefined`:
+ * a new sandbox call must state what it wants rather than silently inherit an omission.
  */
 function withChannelScope(url: URL, scope: SandboxChannelScope | undefined): URL {
   if (scope?.customChannelId) url.searchParams.set('custom_channel_id', scope.customChannelId);

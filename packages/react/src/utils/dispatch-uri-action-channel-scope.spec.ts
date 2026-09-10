@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AsgardServiceClient } from '@asgard-js/core';
 import { dispatchUriAction } from './dispatch-uri-action';
 
-// #470 — the `sandbox://<name>/open-browser` card is the second surface the relay's ownership check
-// covers (`POST browser/open-url`). The channel id was already on `DispatchUriActionOptions` for
-// channel-home downloads and simply was not passed on, so the card failed with a `400` that only reached
-// a `console.error` — nothing about the click told the user, and nothing in the tree turned red.
+// #470 — `POST browser/open-url` is channel-scoped like the fs calls. The channel id was already on
+// `DispatchUriActionOptions` for channel-home downloads and simply was not passed on.
 
 const generateSandboxBrowserOpenUrl = vi.fn().mockResolvedValue('https://neko.example.com/t/abc');
 

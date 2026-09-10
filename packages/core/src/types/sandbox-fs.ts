@@ -21,20 +21,10 @@ export interface SandboxFsListResult {
 }
 
 /**
- * Channel scope for every sandbox relay call — the eleven `fs/*` endpoints and `browser/open-url`.
- *
- * A sandbox belongs to the channel that launched it, and a relay in front of asgard-core is expected to
- * prove that before forwarding anything. `asgard-freyr-api` does: since its `TASK-149` every sandbox route
- * answers `400 invalid_argument` / `custom_channel_id is required` when the parameter is missing, and then
- * checks that the caller owns that channel and that Core's current `ChannelMetadata.launchedSandboxes`
- * lists the `sandbox_name` in the path. An edge server that takes the sandbox from the path alone ignores
- * the parameter, the same way `suspendChannel` always sends it either way.
- *
- * So pass it whenever you have it. `@asgard-js/react` always does: the built-in File Explorer reads it
- * from the channel context, and so does the `sandbox://<name>/open-browser` card.
- *
- * Optional for backward compatibility only (`FRONTEND_RULE_COMMON` §1.7) — omitting it produces exactly
- * the URL these calls sent before, which is the one the relay rejects.
+ * Channel scope for every sandbox call, sent as `custom_channel_id`. An asgard-core edge server takes the
+ * sandbox from the path and ignores it; a relay in front of one uses it to prove the caller owns the
+ * sandbox and answers `400 custom_channel_id is required` without it. Optional only so existing callers
+ * keep compiling — pass it whenever there is a channel. See the README's channel-scope section.
  */
 export interface SandboxChannelScope {
   /** The channel that owns the sandbox, sent as the `custom_channel_id` query parameter. */
