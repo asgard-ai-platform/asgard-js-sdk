@@ -495,6 +495,36 @@ interface ChannelHomeDownloadResult {
 }
 ```
 
+<a id="sandbox-channel-scope"></a>
+<br/>
+
+### Sandbox calls are channel-scoped (`SandboxChannelScope`)
+
+A sandbox belongs to the channel that launched it. Every sandbox method — the ten `sandboxFs*` calls and
+`generateSandboxBrowserOpenUrl` — therefore takes an optional channel scope, and sends it as the
+`custom_channel_id` query parameter:
+
+```ts
+await client.sandboxFsList(sandboxName, '/work', { customChannelId });
+await client.generateSandboxBrowserOpenUrl(sandboxName, { customChannelId });
+
+// The scope rides along with each call's own options, it does not replace them:
+await client.sandboxFsWrite(sandboxName, '/work/a.txt', file, { customChannelId, createOnly: true });
+```
+
+**Pass it whenever you have a channel.** Talking straight to an asgard-core edge server, which takes the
+sandbox from the path, it is ignored. A relay in front of that edge server uses it to prove the caller owns
+the sandbox and rejects the call without it — `asgard-freyr-api` answers every sandbox route with:
+
+```json
+{ "code": "invalid_argument", "message": "custom_channel_id is required" }
+```
+
+It is optional only so that existing callers keep compiling. `@asgard-js/react` fills it in for you: the
+built-in File Explorer reads it from the channel context, and so does the `sandbox://<name>/open-browser`
+card. Assembling providers by hand is the one case that has to pass it —
+`createSandboxFsProviders(client, { customChannelId })`.
+
 <a id="derived-state"></a>
 <br/>
 

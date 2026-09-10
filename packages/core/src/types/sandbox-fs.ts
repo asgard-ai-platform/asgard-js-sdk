@@ -20,8 +20,19 @@ export interface SandboxFsListResult {
   truncated: boolean;
 }
 
+/**
+ * Channel scope for every sandbox call, sent as `custom_channel_id`. An asgard-core edge server takes the
+ * sandbox from the path and ignores it; a relay in front of one uses it to prove the caller owns the
+ * sandbox and answers `400 custom_channel_id is required` without it. Optional only so existing callers
+ * keep compiling — pass it whenever there is a channel. See the README's channel-scope section.
+ */
+export interface SandboxChannelScope {
+  /** The channel that owns the sandbox, sent as the `custom_channel_id` query parameter. */
+  customChannelId?: string;
+}
+
 /** Optional byte-range for `GET fs/file`. */
-export interface SandboxFsReadOptions {
+export interface SandboxFsReadOptions extends SandboxChannelScope {
   offsetBytes?: number;
   limitBytes?: number;
 }
@@ -36,7 +47,7 @@ export interface SandboxFsReadResult {
 }
 
 /** Options for `PUT fs/file`. */
-export interface SandboxFsWriteOptions {
+export interface SandboxFsWriteOptions extends SandboxChannelScope {
   /** Unix file mode in decimal (default 420 = 0644). */
   mode?: number;
   /** Fail with 409 if the file already exists. */
@@ -65,7 +76,7 @@ export interface SandboxFsStatResult {
 }
 
 /** Options for `POST fs/copy` / `POST fs/move` (F-021 Cycle 2). */
-export interface SandboxFsCopyMoveOptions {
+export interface SandboxFsCopyMoveOptions extends SandboxChannelScope {
   /** Overwrite an existing destination. */
   overwrite?: boolean;
 }

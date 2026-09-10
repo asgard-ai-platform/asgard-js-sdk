@@ -10,6 +10,7 @@ import {
   ChannelHomeDownloadResult,
   MessageFeedbackReply,
   MessageFeedbackRequest,
+  SandboxChannelScope,
   SandboxFsCopyMoveOptions,
   SandboxFsCopyResult,
   SandboxFsListResult,
@@ -33,6 +34,16 @@ import { EventEmitter } from './event-emitter';
  * adds, no matter how many frames land in it — see the rationale on the `bufferTime` call below.
  */
 const DEFAULT_SSE_BATCH_WINDOW_MS = 50;
+
+/**
+ * Write the sandbox channel scope onto a URL. `scope` is required although its type includes `undefined`:
+ * a new sandbox call must state what it wants rather than silently inherit an omission.
+ */
+function withChannelScope(url: URL, scope: SandboxChannelScope | undefined): URL {
+  if (scope?.customChannelId) url.searchParams.set('custom_channel_id', scope.customChannelId);
+
+  return url;
+}
 
 export default class AsgardServiceClient implements IAsgardServiceClient {
   private apiKey?: string;
@@ -569,10 +580,13 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
   /**
    * F-020 — 取得 sandbox 瀏覽器一次性接手 URL（`sandbox://<name>/open-browser` 卡的副作用）。
    * 呼叫 `POST {base}/sandbox/{sandboxName}/browser/open-url`（對標 asgard-core edgeserver
-   * `GenerateSandboxBrowserOpenUrl`：path 參數 namespace / bot-provider 已在 base、sandbox_name 在路徑，
-   * 不需 custom_channel_id）。回應 `{ data: { openURL } }`（envelope 容錯，比照 `channelMetadata`）。
+   * `GenerateSandboxBrowserOpenUrl`：path 參數 namespace / bot-provider 已在 base、sandbox_name 在路徑）。
+   * 回應 `{ data: { openURL } }`（envelope 容錯，比照 `channelMetadata`）。
+   *
+   * `options.customChannelId` 帶上該 sandbox 所屬的 channel（`SandboxChannelScope`）。直接對 edge server
+   * 呼叫時它會被忽略，但前置 relay 用它做 ownership 證明，缺了就是 `400`。
    */
-  async generateSandboxBrowserOpenUrl(sandboxName: string): Promise<string> {
+  async generateSandboxBrowserOpenUrl(sandboxName: string, options?: SandboxChannelScope): Promise<string> {
     const baseEndpoint = this.getBaseEndpoint();
 
     if (!baseEndpoint) {
@@ -581,14 +595,12 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       );
     }
 
-    const url = `${baseEndpoint}/sandbox/${encodeURIComponent(sandboxName)}/browser/open-url`;
+    const url = withChannelScope(
+      new URL(`${baseEndpoint}/sandbox/${encodeURIComponent(sandboxName)}/browser/open-url`),
+      options,
+    );
 
-    const headers: Record<string, string> = { ...this.customHeaders };
-    if (this.apiKey) {
-      headers['X-API-KEY'] = this.apiKey;
-    }
-
-    const response = await fetch(url, { method: 'POST', headers });
+    const response = await fetch(url.toString(), { method: 'POST', headers: this.apiHeaders() });
 
     if (!response.ok) {
       throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
@@ -617,6 +629,14 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     return `${baseEndpoint}/sandbox/${encodeURIComponent(sandboxName)}/fs`;
   }
 
+  /**
+   * F-021 — one sandbox fs URL, with the channel scope already on it. Every `fs/*` call goes through here
+   * so the ownership parameter cannot be forgotten in one of eleven places (see `withChannelScope`).
+   */
+  private sandboxFsUrl(sandboxName: string, op: string, scope: SandboxChannelScope | undefined): URL {
+    return withChannelScope(new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/${op}`), scope);
+  }
+
   /** The shared auth / custom headers for the client's plain-JSON REST calls (no SSE). */
   private apiHeaders(): Record<string, string> {
     const headers: Record<string, string> = { ...this.customHeaders };
@@ -631,8 +651,8 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
    * F-021 — 列出 sandbox 目錄內容（`GET fs/list?path=`）。回應 `{ data: { entries, truncated } }`（envelope
    * 容錯，比照 `channelMetadata`）。
    */
-  async sandboxFsList(sandboxName: string, path: string): Promise<SandboxFsListResult> {
-    const url = new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/list`);
+  async sandboxFsList(sandboxName: string, path: string, options?: SandboxChannelScope): Promise<SandboxFsListResult> {
+    const url = this.sandboxFsUrl(sandboxName, 'list', options);
     url.searchParams.set('path', path);
 
     const response = await fetch(url.toString(), { method: 'GET', headers: this.apiHeaders() });
@@ -652,7 +672,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
    * 檔案總長度 / 是否截斷走 `X-Total-Bytes` / `X-Truncated` header。
    */
   async sandboxFsRead(sandboxName: string, path: string, options?: SandboxFsReadOptions): Promise<SandboxFsReadResult> {
-    const url = new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/file`);
+    const url = this.sandboxFsUrl(sandboxName, 'file', options);
     url.searchParams.set('path', path);
     if (options?.offsetBytes != null) url.searchParams.set('offset_bytes', String(options.offsetBytes));
 
@@ -684,7 +704,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     content: Blob | string,
     options?: SandboxFsWriteOptions,
   ): Promise<SandboxFsWriteResult> {
-    const url = new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/file`);
+    const url = this.sandboxFsUrl(sandboxName, 'file', options);
     url.searchParams.set('path', path);
     if (options?.mode != null) url.searchParams.set('mode', String(options.mode));
 
@@ -716,8 +736,9 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     op: string,
     method: 'POST' | 'DELETE',
     query: Record<string, string>,
+    scope: SandboxChannelScope | undefined,
   ): Promise<unknown> {
-    const url = new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/${op}`);
+    const url = this.sandboxFsUrl(sandboxName, op, scope);
     Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, v));
 
     const response = await fetch(url.toString(), { method, headers: this.apiHeaders() });
@@ -730,8 +751,8 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
   }
 
   /** F-021 — stat a sandbox path (`GET fs/stat?path=`). */
-  async sandboxFsStat(sandboxName: string, path: string): Promise<SandboxFsStatResult> {
-    const url = new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/stat`);
+  async sandboxFsStat(sandboxName: string, path: string, options?: SandboxChannelScope): Promise<SandboxFsStatResult> {
+    const url = this.sandboxFsUrl(sandboxName, 'stat', options);
     url.searchParams.set('path', path);
 
     const response = await fetch(url.toString(), { method: 'GET', headers: this.apiHeaders() });
@@ -754,18 +775,18 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
   }
 
   /** F-021 — create a directory (`POST fs/mkdir?path=`). */
-  async sandboxFsMkdir(sandboxName: string, path: string): Promise<void> {
-    await this.sandboxFsRequest(sandboxName, 'mkdir', 'POST', { path });
+  async sandboxFsMkdir(sandboxName: string, path: string, options?: SandboxChannelScope): Promise<void> {
+    await this.sandboxFsRequest(sandboxName, 'mkdir', 'POST', { path }, options);
   }
 
   /** F-021 — delete a file (`DELETE fs/item?path=`). */
-  async sandboxFsRemove(sandboxName: string, path: string): Promise<void> {
-    await this.sandboxFsRequest(sandboxName, 'item', 'DELETE', { path });
+  async sandboxFsRemove(sandboxName: string, path: string, options?: SandboxChannelScope): Promise<void> {
+    await this.sandboxFsRequest(sandboxName, 'item', 'DELETE', { path }, options);
   }
 
   /** F-021 — recursively delete a directory (`DELETE fs/all?path=`). */
-  async sandboxFsRemoveAll(sandboxName: string, path: string): Promise<void> {
-    await this.sandboxFsRequest(sandboxName, 'all', 'DELETE', { path });
+  async sandboxFsRemoveAll(sandboxName: string, path: string, options?: SandboxChannelScope): Promise<void> {
+    await this.sandboxFsRequest(sandboxName, 'all', 'DELETE', { path }, options);
   }
 
   /** F-021 — copy a path (`POST fs/copy?src=&dst=[&overwrite]`) → bytes copied. */
@@ -778,7 +799,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     const query: Record<string, string> = { src, dst };
     if (options?.overwrite) query.overwrite = 'true';
 
-    const json = (await this.sandboxFsRequest(sandboxName, 'copy', 'POST', query)) as
+    const json = (await this.sandboxFsRequest(sandboxName, 'copy', 'POST', query, options)) as
       | ({ data?: SandboxFsCopyResult } & Partial<SandboxFsCopyResult>)
       | null;
     const data = json?.data ?? (json as SandboxFsCopyResult | null);
@@ -796,7 +817,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     const query: Record<string, string> = { src, dst };
     if (options?.overwrite) query.overwrite = 'true';
 
-    await this.sandboxFsRequest(sandboxName, 'move', 'POST', query);
+    await this.sandboxFsRequest(sandboxName, 'move', 'POST', query, options);
   }
 
   /**
@@ -804,8 +825,8 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
    * `SandboxFsWatchEvent`. The backend probes the path first, so a missing path errors as HTTP rather than
    * as a dead stream. Unsubscribing aborts the request, which ends the sandbox-side watcher.
    */
-  sandboxFsWatch(sandboxName: string, path: string): Observable<SandboxFsWatchEvent> {
-    const url = new URL(`${this.deriveSandboxFsEndpoint(sandboxName)}/watch`);
+  sandboxFsWatch(sandboxName: string, path: string, options?: SandboxChannelScope): Observable<SandboxFsWatchEvent> {
+    const url = this.sandboxFsUrl(sandboxName, 'watch', options);
     url.searchParams.set('path', path);
 
     return new Observable<SandboxFsWatchEvent>(subscriber => {

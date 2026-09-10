@@ -130,13 +130,20 @@ export function ChatbotFileExplorerAside({
   basePath?: string;
   maxUploadBytes?: number;
 }): ReactNode {
-  const { client, channel, nudge, isRunning, pendingConsent } = useAsgardContext();
+  const { client, channel, customChannelId, nudge, isRunning, pendingConsent } = useAsgardContext();
   const sandboxes = useLaunchedSandboxes(channel);
   // A sandbox whose fs calls keep failing is dropped from the dropdown (AC5); metadata stays authoritative.
+  // `customChannelId` is the sandbox relay's ownership proof (`SandboxChannelScope`): without it a relay
+  // such as `asgard-freyr-api` answers `400` for every fs call, so the aside would open onto an error.
   const providers = useMemo(
     () =>
-      client ? createSandboxFsProviders(client, { onSandboxUnreachable: name => channel?.dropSandbox(name) }) : null,
-    [client, channel],
+      client
+        ? createSandboxFsProviders(client, {
+            onSandboxUnreachable: name => channel?.dropSandbox(name),
+            customChannelId,
+          })
+        : null,
+    [client, channel, customChannelId],
   );
 
   if (!providers) return null;
