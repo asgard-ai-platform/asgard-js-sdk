@@ -143,10 +143,32 @@ None.
 3. **這條 400 不會把 sandbox 踢出下拉選單，所以缺陷現場是「無限重試、無可讀原因」。**
    `isSandboxLevelFailure` 只認 `412`／`5xx`，那個分類是對的（參數層的錯不代表 sandbox 死了），但使用者看到的
    只有一直失敗。要讓「參數／授權層的 4xx」有自己的呈現是另一個題目，記在 #470 附帶項，本 cycle 不擴大範圍。
-4. **`AsgardSourceSetClient` 不受影響（已確認）。** 它只在註解裡提到 `sandboxFs*`，沒有共用這條 URL 組裝路徑；
+4. 🔄 **（已修）scope 原本在建立 providers 時快照一次。** 我當時的理由是「aside 在 channel 變動時重建」——
+   那句話只涵蓋內建那條路。`createSandboxFsProviders` 是**公開 export**，自組面板的 host 不一定重建它
+   ⇒ 快照會讓它一直送舊 channel。已改成每次呼叫時算（成本相同），並新增一案「host 保留同一個 providers
+   實例、中途換 channel」，**反向驗證過**（改回快照 → 該案轉紅，改回來 → 綠）。
+   由 jasonluo07 於 PR #471 提出。
+5. **第十二支的守門是「名稱前綴掃 prototype」，有兩個盲區**：叫 `sandboxExec` 這種不合前綴的掃不到；
+   宣告成實例 arrow-function field 的也不在 prototype 上。限制可接受（它擋的是「照著現有命名新增一支
+   卻忘記帶 scope」這個實際發生過的形狀），已在 spec 裡以一行註明。
+6. 🔴 **自組面板那條公開路徑沒有被覆蓋，而且 TL;DR 原本說得太滿。**
+   `customChannelId` 選填 ⇒ 漏傳沒有型別錯誤，SDK 內也沒有 hook／provider 幫忙補值。
+   已知現場：`asgard-ai-agent-hub-web` 的 `file-explorer-context.tsx`（`fileExplorer="off"` ＋ 自持
+   controller ＋ 不帶 scope）；它今天不會壞（不在會做 ownership 檢查的 relay 後面）。
+   **刻意不併進本 PR**——要不要提供「從 context 取值」的東西是設計題（三條路代價不同），
+   已另開 `asgard-ai-platform/asgard-js-sdk#472`。本 cycle 只做能做的那一半：兩份 README 都寫明，
+   而 react README 那一節正是給這群人看的。
+7. **空字串 `customChannelId` 仍然被靜默丟掉（未接受修改，理由如下）。**
+   jasonluo07 指出「傳了值卻收到『參數缺少』的 400 會把人指向錯的地方」——現象成立，但兩個替代做法都更糟：
+   ① 照送 `custom_channel_id=` ⇒ 守門讀到的仍是空字串、回的仍是同一句 `required`，**對呼叫端沒有任何差別**，
+   只是網址多一個證明不了什麼的參數；② 在 client 內對空字串丟例外 ⇒ 那是唯一真的會發生空字串的地方
+   （host 把 `customChannelId=""` 傳給 `<Chatbot>`）從「畫面上一個錯誤」變成「render／callback 路徑丟例外」。
+   ⇒ 維持真值判斷，並在該案上方寫明理由（一行），讓下一個人看得到這是決定而不是漏想。
+8. **`AsgardSourceSetClient` 不受影響（已確認）。** 它只在註解裡提到 `sandboxFs*`，沒有共用這條 URL 組裝路徑；
    volume API 沒有 channel 概念。
-5. **十二個 provider 共用同一個 `scope` 物件。** 一個 providers 實例的 channel 不會中途改變（aside 在 channel
-   變動時重建），所以共用是安全的；若哪天 providers 變成長命物件，這裡要改成每次呼叫現取。已在該處註明。
+9. 📌 **`generateSandboxBrowserOpenUrl` 從字串改成 `new URL()` 之後，相對路徑的 `botProviderEndpoint` 會 throw。**
+   jasonluo07 查核後認定不需處理：client 其他地方（`157`／`191`／`262`／`312` 與全部 fs 方法）本來就用
+   `new URL()`，相對 base 早就不被支援 ⇒ 這只是把最後一個例外對齊。列此備查。
 
 ---
 
@@ -157,3 +179,9 @@ None.
   URL 組裝已收斂成單一出口、產物確實帶參數。
 - 2026-09-10: §3 — R1–R7 全 Pass。四組新斷言逐一反向驗證（11/24、14/14、2/3、守門那條以拿掉一支方法反證），
   紅的位置與預期一致。0 BLOCKER；5 個 Minor 全部是刻意的取捨或範圍外，逐條記在上面（Status: `done`）。
+- 2026-09-10: 收到 jasonluo07 的 review（PR #471）。**三處請修全接**（版號註解會隨 `.d.ts` 發出去、
+  scope 改每次算、PR body 改 `Refs`），**七項建議接六項**（open-url 改用 `apiHeaders()`、兩支 spec 補 global
+  teardown、`lastRequestUrl` 取最後一筆、守門盲區寫一行、react README 補一節、TL;DR 修正說法）。
+  未接受的那一項（空字串）理由記在 §Findings 6；範圍外的那一項另開
+  `asgard-ai-platform/asgard-js-sdk#472`。閘門重跑全綠、`test:packages` **802**
+  （319 core + 483 react）；新增那一案（換 channel）反向驗證過：改回快照 → 紅、改回來 → 綠。

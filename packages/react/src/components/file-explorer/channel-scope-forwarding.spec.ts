@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AsgardServiceClient } from '@asgard-js/core';
 import { Observable } from 'rxjs';
 import { createSandboxFsProviders } from './create-sandbox-fs-providers';
@@ -80,9 +80,15 @@ function scopeOf(args: unknown[]): unknown {
   return args.find(arg => typeof arg === 'object' && arg !== null && 'customChannelId' in arg);
 }
 
+const objectUrlStubs = { createObjectURL: (): string => 'blob:x', revokeObjectURL: (): void => undefined };
+
 beforeEach(() => {
   // jsdom has no object-URL implementation, and `download` builds one for its `<a download>`.
-  Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => undefined });
+  Object.assign(URL, objectUrlStubs);
+});
+
+afterEach(() => {
+  for (const key of Object.keys(objectUrlStubs)) delete (URL as unknown as Record<string, unknown>)[key];
 });
 
 describe('createSandboxFsProviders — channel scope forwarding (#470)', () => {
@@ -108,11 +114,24 @@ describe('createSandboxFsProviders — channel scope forwarding (#470)', () => {
     expect(calls.sandboxFsWrite[0][3]).toEqual({ customChannelId: CHANNEL, createOnly: true, signal });
   });
 
-  it('sends no scope at all when there is no channel, rather than an empty one', async () => {
+  it('sends no scope at all when there is no channel', async () => {
     const { client, calls } = makeClient();
 
     await createSandboxFsProviders(client, { customChannelId: null }).listDir('sb', '/work');
 
-    expect(calls.sandboxFsList[0][2]).toEqual({});
+    expect(calls.sandboxFsList[0][2]).toBeUndefined();
+  });
+
+  it('follows a channel switch on a providers instance the host keeps', async () => {
+    const { client, calls } = makeClient();
+    const options = { customChannelId: 'ch-1' };
+    const providers = createSandboxFsProviders(client, options);
+
+    await providers.listDir('sb', '/work');
+    options.customChannelId = 'ch-2';
+    await providers.listDir('sb', '/work');
+
+    expect(scopeOf(calls.sandboxFsList[0])).toMatchObject({ customChannelId: 'ch-1' });
+    expect(scopeOf(calls.sandboxFsList[1])).toMatchObject({ customChannelId: 'ch-2' });
   });
 });

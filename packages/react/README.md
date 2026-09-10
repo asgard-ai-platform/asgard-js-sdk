@@ -1789,6 +1789,25 @@ next message continues the same conversation. See the
 <a id="sourceset-file-explorer"></a>
 <br/>
 
+## Sandbox File Explorer and the channel scope
+
+Every sandbox call is scoped to the channel that owns the sandbox (`custom_channel_id`). An asgard-core
+edge server ignores it; a relay in front of one uses it to prove the caller owns the sandbox and answers
+`400 custom_channel_id is required` without it.
+
+`<Chatbot fileExplorer="builtin">` and the `sandbox://<name>/open-browser` card fill it in from the
+channel context — nothing to do. **Assembling the panel yourself is the case that has to pass it:**
+
+```tsx
+const providers = createSandboxFsProviders(client, {
+  customChannelId, // from useAsgardContext(); without it a relay rejects every fs call
+  onSandboxUnreachable: name => channel?.dropSandbox(name),
+});
+```
+
+It is read on each call, so one providers instance may outlive a channel switch. See the core README's
+channel-scope section for the endpoint-level contract.
+
 ## SourceSet File Explorer
 
 `SourceSetFileExplorer` browses and edits a **SourceSet volume** directly. There is no chat, no channel

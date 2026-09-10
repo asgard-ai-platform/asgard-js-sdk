@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AsgardServiceClient } from '@asgard-js/core';
 import { dispatchUriAction } from './dispatch-uri-action';
 
@@ -15,6 +15,10 @@ function makeClient(): AsgardServiceClient {
 beforeEach(() => {
   generateSandboxBrowserOpenUrl.mockClear();
   vi.stubGlobal('open', vi.fn());
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('dispatchUriAction — open-browser channel scope (#470)', () => {

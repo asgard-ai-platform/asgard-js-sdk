@@ -137,6 +137,11 @@ Files:
   形狀。用 options 之後十一支的形狀一致，而且既有型別 `extends` 一個共同介面就完成一半（§3.2）。
 - **`sandboxFsUrl()` 的 scope 參數是必填的 `SandboxChannelScope | undefined`。** 這是刻意的：選填會讓第十二支
   沿用「什麼都不寫」而編譯得過，而那正是這十一支的來歷。要不要 scope 必須寫出來。
+- 🔄 **scope 在 react 側「每次呼叫時算」，不是建立 providers 時快照一次。**
+  原本是快照——內建 aside 有 `useMemo` deps 護著沒問題，但 `createSandboxFsProviders` 是**公開 export**，
+  自組面板的 host 不一定會在 channel 變動時重建它 ⇒ 快照會讓它一直送舊 channel。成本相同，
+  所以沒有理由留著那個假設（`REVIEW-079` §Findings 3；由 jasonluo07 於 PR #471 提出）。
+  同時「沒有 channel」時傳的是 `undefined` 而不是空物件 `{}` ——後者會讓測試名稱與斷言互相矛盾。
 - **空字串當成沒有。** `withChannelScope` 用真值判斷。送一個空的 `custom_channel_id` 只會換一個 relay 讀不懂的
   400，而 react 那邊 `customChannelId` 在 preview／未建立 channel 時本來就可能是空。
 - **一張表驅動十一支，而不是十一段各自的斷言。** 這個缺陷不是「某一支寫錯」而是「全部都沒有」。寫在每支方法旁邊的
@@ -157,3 +162,13 @@ Files:
   `format:check` 乾淨、`typecheck` 三專案綠、`build:core`／`build:react` 乾淨、`test:packages` 801 通過
   （319 core + 482 react，新增 42）。四組新斷言逐一反向驗證過（把實作 stash 掉之後轉紅、還原後轉綠），
   數字見 `REVIEW-079` §3。
+- 2026-09-10: PR #471 收到 jasonluo07 的 review，**三處請修全部接受、七項建議接受六項**。
+  改動：① `.d.ts` 會隨 npm 發出去的註解不再提不存在的版號（`0.3.82` 的 bump 當天已從 `main` 回退）；
+  ② scope 改成每次呼叫時算（見上方 Decisions）；③ PR body 的 `Closes #470` 改 `Refs`
+  （收尾條件是發版後實測，比合併晚一個發版週期）；④ open-url 改用既有的 `apiHeaders()`；
+  ⑤ 兩支新 spec 補 global teardown；⑥ `lastRequestUrl` 改取最後一筆；⑦ react README 補
+  「自組面板要自己帶 scope」一節（該路徑的讀者只讀 react README）。
+  **未接受一項**（空字串改成報錯／照送）——理由見 `REVIEW-079` §Findings 6。
+  **範圍外一項**：自組面板沒有東西幫它補值 ⇒ 另開 `asgard-ai-platform/asgard-js-sdk#472`。
+  閘門重跑全綠、`test:packages` **802**（319 core + 483 react，新增 43），
+  新增那一案（換 channel）也做過反向驗證。

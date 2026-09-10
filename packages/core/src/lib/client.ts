@@ -600,12 +600,7 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       options,
     );
 
-    const headers: Record<string, string> = { ...this.customHeaders };
-    if (this.apiKey) {
-      headers['X-API-KEY'] = this.apiKey;
-    }
-
-    const response = await fetch(url.toString(), { method: 'POST', headers });
+    const response = await fetch(url.toString(), { method: 'POST', headers: this.apiHeaders() });
 
     if (!response.ok) {
       throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));

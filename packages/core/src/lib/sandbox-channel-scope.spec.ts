@@ -85,6 +85,9 @@ const RELAYS: Relay[] = [
  * Every `sandboxFs*` / sandbox-browser method on the prototype that this table does **not** drive. The
  * three private helpers are listed by name on purpose: a new public relay is not on this list, so it
  * turns this spec red instead of shipping without the ownership parameter the way all eleven did.
+ *
+ * Blind to a relay that neither starts with those prefixes nor lives on the prototype (an instance
+ * arrow-function field).
  */
 const PRIVATE_HELPERS = ['sandboxFsUrl', 'sandboxFsRequest', 'deriveSandboxFsEndpoint'];
 
@@ -93,7 +96,7 @@ function lastRequestUrl(relay: Relay): string {
 
   expect(calls.length, `${relay.name} sent no request`).toBeGreaterThan(0);
 
-  return String(calls[0][0]);
+  return String(calls[calls.length - 1][0]);
 }
 
 describe('sandbox relay channel scope (#470)', () => {
@@ -135,6 +138,8 @@ describe('sandbox relay channel scope (#470)', () => {
     ).toEqual([]);
   });
 
+  // An empty string cannot be a channel, and sending `custom_channel_id=` earns the same "required" 400
+  // as omitting it, so the url stays clean rather than carrying a value that proves nothing.
   it('keeps the parameter out when the scope is present but empty, rather than sending an empty channel', async () => {
     await makeClient().sandboxFsList('sb', '/work', { customChannelId: '' });
 
