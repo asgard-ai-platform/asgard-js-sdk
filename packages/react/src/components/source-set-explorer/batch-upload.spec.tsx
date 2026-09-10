@@ -30,6 +30,8 @@ interface VolumeConfig {
   failFirst?: Record<string, number[]>;
   /** Park every write until `release()`; the batch then stays running for as long as the test needs. */
   hold?: boolean;
+  /** Drop the connection on every write — `fetch` surfaces that as a `TypeError`, with no response. */
+  networkFail?: boolean;
 }
 
 interface VolumeProbe {
@@ -109,6 +111,8 @@ function installVolume(config: VolumeConfig = {}): VolumeProbe {
             }),
           ]);
         }
+
+        if (config.networkFail) throw new TypeError('Failed to fetch');
 
         const forced = remainingFailures[path]?.shift();
         if (forced) return new Response('{"message":"nope"}', { status: forced, statusText: 'Error' });
@@ -302,6 +306,28 @@ describe('BUG-008 R3 — progress is a count and a list, not a spinner', () => {
 
     await waitFor(() => expect(progressPanel().textContent).toContain('3 / 3'));
     expect(probe.writes.map(w => w.path)).toEqual(['b.txt']);
+  });
+});
+
+describe('a dropped connection reaches the user in their own language', () => {
+  it("names the failure from the catalog instead of showing the browser's `Failed to fetch`", async () => {
+    installVolume({ networkFail: true });
+    const { container } = renderExplorer();
+    await mounted();
+
+    await uploadThrough(container, 'files', [named('a.txt')]);
+
+    // Four attempts with back-off before it settles, so this outlasts the default `waitFor` budget.
+    await waitFor(
+      () => expect(progressPanel().textContent).toContain(t('en-US', 'sourceSetExplorer.uploadDoneWithFailures')),
+      {
+        timeout: 8000,
+      },
+    );
+
+    const panel = progressPanel();
+    expect(panel.textContent).toContain(t('en-US', 'sourceSetExplorer.uploadNetworkError'));
+    expect(panel.textContent).not.toContain('Failed to fetch');
   });
 });
 

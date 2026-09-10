@@ -690,6 +690,8 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
             return t(locale, 'fileExplorer.uploadExistsSkipped');
           case 'cancelled':
             return t(locale, 'fileExplorer.uploadCancelled');
+          case 'network':
+            return t(locale, 'fileExplorer.uploadNetworkError');
           default:
             if (reason.status === 403) return t(locale, 'fileExplorer.uploadForbidden');
 
