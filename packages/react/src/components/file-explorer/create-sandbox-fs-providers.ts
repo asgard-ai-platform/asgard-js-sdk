@@ -1,4 +1,4 @@
-import { AsgardServiceClient, isHttpError, SandboxFsListResult } from '@asgard-js/core';
+import { AsgardServiceClient, isHttpError, SandboxChannelScope, SandboxFsListResult } from '@asgard-js/core';
 import { FsListDir } from './file-explorer-panel';
 import { FsReadFile, FsSaveFile, FsUploadMany, FsWatchFile } from './types';
 
@@ -63,6 +63,13 @@ export interface SandboxFsProvidersOptions {
    * `/channel/metadata` refetch reconciles the authoritative truth either way.
    */
   onSandboxUnreachable?: (sandboxName: string) => void;
+  /**
+   * The channel that owns these sandboxes (`SandboxChannelScope`). A relay in front of asgard-core proves
+   * ownership from it and answers `400` without it — `asgard-freyr-api` does for all eleven sandbox
+   * endpoints — so pass `channel.customChannelId` whenever there is a channel. `null` / omitted keeps the
+   * pre-0.3.82 URL, which such a relay rejects.
+   */
+  customChannelId?: string | null;
 }
 
 /** Consecutive sandbox-level failures before a sandbox is considered gone (F-021 AC5). */
@@ -131,24 +138,27 @@ export function createSandboxFsProviders(
   options?: SandboxFsProvidersOptions,
 ): SandboxFsProviders {
   const track = createFailureTracker(options?.onSandboxUnreachable);
+  // One scope object for every call below: the channel cannot change under a given providers instance
+  // (the aside rebuilds them when it does), and spreading it keeps each call's own options intact.
+  const scope: SandboxChannelScope = options?.customChannelId ? { customChannelId: options.customChannelId } : {};
 
   return {
     listDir: (sandboxName: string, path: string): Promise<SandboxFsListResult> =>
-      track(sandboxName, () => client.sandboxFsList(sandboxName, path)),
+      track(sandboxName, () => client.sandboxFsList(sandboxName, path, scope)),
     readFile: (sandboxName: string, path: string): Promise<string> =>
       track(sandboxName, async () => {
-        const { content } = await client.sandboxFsRead(sandboxName, path);
+        const { content } = await client.sandboxFsRead(sandboxName, path, scope);
 
         return isImagePath(path) ? blobToDataUrl(content) : content.text();
       }),
     saveFile: (sandboxName: string, path: string, text: string): Promise<void> =>
       track(sandboxName, async () => {
-        await client.sandboxFsWrite(sandboxName, path, text);
+        await client.sandboxFsWrite(sandboxName, path, text, scope);
       }),
     // Not tracked: the stream lives for as long as the file is open, so a failure here says nothing
     // about whether the next one-shot fs call would succeed.
     watchFile: (sandboxName: string, path: string, onChange: () => void): (() => void) => {
-      const subscription = client.sandboxFsWatch(sandboxName, path).subscribe({
+      const subscription = client.sandboxFsWatch(sandboxName, path, scope).subscribe({
         next: () => onChange(),
         error: () => undefined,
       });
@@ -156,21 +166,21 @@ export function createSandboxFsProviders(
       return (): void => subscription.unsubscribe();
     },
     mkdir: (sandboxName: string, path: string): Promise<void> =>
-      track(sandboxName, () => client.sandboxFsMkdir(sandboxName, path)),
+      track(sandboxName, () => client.sandboxFsMkdir(sandboxName, path, scope)),
     remove: (sandboxName: string, path: string, isDir: boolean): Promise<void> =>
       track(sandboxName, () =>
-        isDir ? client.sandboxFsRemoveAll(sandboxName, path) : client.sandboxFsRemove(sandboxName, path),
+        isDir ? client.sandboxFsRemoveAll(sandboxName, path, scope) : client.sandboxFsRemove(sandboxName, path, scope),
       ),
     copy: (sandboxName: string, src: string, dst: string): Promise<void> =>
       track(sandboxName, async () => {
-        await client.sandboxFsCopy(sandboxName, src, dst);
+        await client.sandboxFsCopy(sandboxName, src, dst, scope);
       }),
     move: (sandboxName: string, src: string, dst: string): Promise<void> =>
-      track(sandboxName, () => client.sandboxFsMove(sandboxName, src, dst)),
+      track(sandboxName, () => client.sandboxFsMove(sandboxName, src, dst, scope)),
     upload: (sandboxName: string, dirPath: string, file: File): Promise<void> =>
       track(sandboxName, async () => {
         const dst = `${dirPath.replace(/\/$/, '')}/${file.name}`;
-        await client.sandboxFsWrite(sandboxName, dst, file);
+        await client.sandboxFsWrite(sandboxName, dst, file, scope);
       }),
     // Batch upload (F-031). `relPath` may span levels; the sandbox's own write creates the parent
     // directories, so nothing is pre-created here.
@@ -186,6 +196,7 @@ export function createSandboxFsProviders(
         async () => {
           const dst = `${dirPath.replace(/\/$/, '')}/${relPath}`;
           await client.sandboxFsWrite(sandboxName, dst, file, {
+            ...scope,
             createOnly: options.createOnly,
             signal: options.signal,
           });
@@ -194,7 +205,7 @@ export function createSandboxFsProviders(
       ),
     download: (sandboxName: string, path: string, name: string): Promise<void> =>
       track(sandboxName, async () => {
-        const { content } = await client.sandboxFsRead(sandboxName, path);
+        const { content } = await client.sandboxFsRead(sandboxName, path, scope);
         triggerBlobDownload(content, name);
       }),
   };

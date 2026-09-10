@@ -7,7 +7,10 @@ export type LinkTarget = '_blank' | '_self' | '_parent' | '_top';
 export interface DispatchUriActionOptions {
   /** The SDK client — needed for the sandbox browser open-url call and channel-home downloads. */
   client?: AsgardServiceClient | null;
-  /** Current channel id — needed for channel-home downloads. */
+  /**
+   * Current channel id — needed for channel-home downloads, and for the sandbox relay's ownership proof
+   * on `open-browser` (`SandboxChannelScope`; a relay answers `400` without it).
+   */
   customChannelId?: string | null;
   /** The action's own target, if any (takes precedence over `defaultLinkTarget` for plain links). */
   target?: string;
@@ -25,9 +28,17 @@ export interface DispatchUriActionOptions {
  * Default `open-browser` side effect (F-020 / UC-034): fetch the one-time browser URL from the client and
  * open it. Never falls back to `window.open`ing the raw `sandbox://` URI — on failure it just logs.
  */
-async function openSandboxBrowser(client: AsgardServiceClient, sandboxName: string, target: LinkTarget): Promise<void> {
+async function openSandboxBrowser(
+  client: AsgardServiceClient,
+  sandboxName: string,
+  target: LinkTarget,
+  customChannelId?: string | null,
+): Promise<void> {
   try {
-    const openUrl = await client.generateSandboxBrowserOpenUrl(sandboxName);
+    const openUrl = await client.generateSandboxBrowserOpenUrl(
+      sandboxName,
+      customChannelId ? { customChannelId } : undefined,
+    );
     safeWindowOpen(openUrl, target);
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -49,7 +60,12 @@ export function dispatchUriAction(uri: string, options: DispatchUriActionOptions
       if (options.onSandboxOpenBrowser) {
         options.onSandboxOpenBrowser(intent.sandboxName);
       } else if (options.client) {
-        void openSandboxBrowser(options.client, intent.sandboxName, options.sandboxBrowserOpenTarget ?? '_blank');
+        void openSandboxBrowser(
+          options.client,
+          intent.sandboxName,
+          options.sandboxBrowserOpenTarget ?? '_blank',
+          options.customChannelId,
+        );
       }
 
       return;

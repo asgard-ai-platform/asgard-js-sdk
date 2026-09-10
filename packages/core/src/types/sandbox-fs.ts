@@ -20,8 +20,29 @@ export interface SandboxFsListResult {
   truncated: boolean;
 }
 
+/**
+ * Channel scope for every sandbox relay call — the eleven `fs/*` endpoints and `browser/open-url`.
+ *
+ * A sandbox belongs to the channel that launched it, and a relay in front of asgard-core is expected to
+ * prove that before forwarding anything. `asgard-freyr-api` does: since its `TASK-149` every sandbox route
+ * answers `400 invalid_argument` / `custom_channel_id is required` when the parameter is missing, and then
+ * checks that the caller owns that channel and that Core's current `ChannelMetadata.launchedSandboxes`
+ * lists the `sandbox_name` in the path. An edge server that takes the sandbox from the path alone ignores
+ * the parameter, the same way `suspendChannel` always sends it either way.
+ *
+ * So pass it whenever you have it. `@asgard-js/react` always does: the built-in File Explorer reads it
+ * from the channel context, and so does the `sandbox://<name>/open-browser` card.
+ *
+ * Optional for backward compatibility only (`FRONTEND_RULE_COMMON` §1.7) — omitting it produces exactly
+ * the URL these calls sent before, which is the one the relay rejects.
+ */
+export interface SandboxChannelScope {
+  /** The channel that owns the sandbox, sent as the `custom_channel_id` query parameter. */
+  customChannelId?: string;
+}
+
 /** Optional byte-range for `GET fs/file`. */
-export interface SandboxFsReadOptions {
+export interface SandboxFsReadOptions extends SandboxChannelScope {
   offsetBytes?: number;
   limitBytes?: number;
 }
@@ -36,7 +57,7 @@ export interface SandboxFsReadResult {
 }
 
 /** Options for `PUT fs/file`. */
-export interface SandboxFsWriteOptions {
+export interface SandboxFsWriteOptions extends SandboxChannelScope {
   /** Unix file mode in decimal (default 420 = 0644). */
   mode?: number;
   /** Fail with 409 if the file already exists. */
@@ -65,7 +86,7 @@ export interface SandboxFsStatResult {
 }
 
 /** Options for `POST fs/copy` / `POST fs/move` (F-021 Cycle 2). */
-export interface SandboxFsCopyMoveOptions {
+export interface SandboxFsCopyMoveOptions extends SandboxChannelScope {
   /** Overwrite an existing destination. */
   overwrite?: boolean;
 }
