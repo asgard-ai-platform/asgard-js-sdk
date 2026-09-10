@@ -38,6 +38,13 @@ export type UploadReason =
   | { code: 'too-large'; maxBytes: number; size: number }
   | { code: 'exists-skipped' }
   | { code: 'cancelled' }
+  /**
+   * The request never came back with a response — a dropped connection, a blocked cross-origin
+   * reply, the tab going offline. Separate from `http` because it carries **no status**: folded in
+   * there it left every renderer with nothing to branch on but `message`, which is the browser's own
+   * untranslated `Failed to fetch`.
+   */
+  | { code: 'network' }
   | { code: 'http'; status?: number; message: string };
 
 export interface UploadItem {
@@ -397,7 +404,12 @@ export function useUploadQueue(options: UploadQueueOptions): UploadQueue {
 
             patch(item.id, {
               status: 'failed',
-              reason: { code: 'http', status: statusOf(error), message: messageOf(error) },
+              // `fetch` reports a network-layer failure as a TypeError and there is no response to
+              // read a status from — the same test `isRetryableUploadError` makes.
+              reason:
+                error instanceof TypeError
+                  ? { code: 'network' }
+                  : { code: 'http', status: statusOf(error), message: messageOf(error) },
             });
 
             return;
