@@ -15,10 +15,25 @@ export function parentDir(path: string): string {
   return i > 0 ? norm.slice(0, i) : '/';
 }
 
+/**
+ * Whether `path` sits inside the tree rooted at `root` (the root itself counts).
+ *
+ * Compared segment-wise rather than by string prefix: `/work` must not swallow `/workspace/x`. A card can
+ * legitimately point outside the root — an agent may write next to the user's attachment in the Channel Home
+ * while the explorer is rooted at the sandbox's `workingDirectory` — and that case has to be told apart from
+ * a path that merely starts with the same letters (F-034 AC7 / UC-061).
+ */
+export function isUnderRoot(root: string, path: string): boolean {
+  const normRoot = root.replace(/\/+$/, '');
+  const normPath = path.replace(/\/+$/, '');
+
+  return normPath === normRoot || normPath.startsWith(`${normRoot}/`);
+}
+
 /** Dirs whose expansion reveals `filePath` under `root` (excludes root + the file itself) — for the AC9 reveal. */
 export function ancestorDirs(root: string, filePath: string): string[] {
   const normRoot = root.replace(/\/+$/, '');
-  if (!filePath.startsWith(normRoot)) return [];
+  if (!isUnderRoot(normRoot, filePath)) return [];
 
   const parts = filePath.slice(normRoot.length).split('/').filter(Boolean);
   parts.pop();

@@ -32,7 +32,7 @@ import {
   type UploadWrite,
 } from '../upload-queue';
 import { useFileExplorerDialog } from './file-explorer-dialog';
-import { ancestorDirs, baseName, joinPath, parentDir, uniqueName } from './paths';
+import { ancestorDirs, baseName, isUnderRoot, joinPath, parentDir, uniqueName } from './paths';
 import { FsEntry, FsProviders, FsSource } from './types';
 
 export type Clipboard = { op: 'copy' | 'cut'; entry: FsEntry } | null;
@@ -91,6 +91,12 @@ export interface FileExplorerContextValue {
   targetDir: string;
   /** Shared so the paste hint reads identically in the toolbar and both context-menu variants. */
   pasteLabel: string;
+  /**
+   * The absolute path of a reveal request that fell **outside** the tree root, or `null`. Rendered by
+   * {@link FileExplorerNotice}: a card pointing outside the working directory cannot open anything, and
+   * silently doing nothing is the worst outcome — the user reads it as a broken card (F-034 AC7 / UC-061).
+   */
+  outOfRoot: string | null;
 
   // --- refs owned by <FileExplorerRoot> ---
   rootRef: RefObject<HTMLDivElement | null>;
@@ -100,6 +106,8 @@ export interface FileExplorerContextValue {
   uploadDirInputRef: RefObject<HTMLInputElement | null>;
 
   // --- actions ---
+  /** Dismiss the out-of-root notice (UC-061 ALT1); nothing else about the view changes. */
+  dismissOutOfRoot: () => void;
   setOpenFile: (entry: FsEntry | null) => void;
   setClipboard: (clipboard: Clipboard) => void;
   closeMenu: () => void;
@@ -247,6 +255,9 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   const [uploadMenu, setUploadMenu] = useState<OpenUploadMenu>(null);
   const [dropping, setDropping] = useState(false);
   const [nudging, setNudging] = useState(false);
+  // Not part of a source's remembered view: it describes one request that could not be served, not "where
+  // the user was". It is cleared on a source switch below, alongside the context menu.
+  const [outOfRoot, setOutOfRoot] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const uploadDirRef = useRef<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -296,33 +307,63 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     [updateView],
   );
 
+  const dismissOutOfRoot = useCallback((): void => setOutOfRoot(null), []);
+
   // The context menu is per-interaction chrome, not part of a source's remembered view — a menu left
-  // open while the source changes is stale in a way "where was I" state is not.
+  // open while the source changes is stale in a way "where was I" state is not. The out-of-root notice
+  // goes with it: it names a path in the source you just left (UC-061 ALT2).
   useEffect(() => {
     setMenu(null);
+    setOutOfRoot(null);
   }, [activeSourceId]);
 
-  // open-file intent (AC9): expand ancestors + highlight + open in the FileView.
+  // Reveal intent (F-021 AC9 / F-034 AC4): expand the ancestors, select, then follow the request's `kind`.
+  //
+  //   'file'   → open the FileView (read + watch), as before.
+  //   'folder' → also unfold the directory itself and stop on the tree: no read, no watch. The backend
+  //              rejects both for a directory (500 on `fs/file`, a dead `fs/watch`), so "try it as a file
+  //              and fall back" is not an available strategy — the card's action is the whole answer.
+  //
+  // A path outside the tree root is refused before any of that (UC-061): the node is not on the tree, so
+  // expanding is theatre and an fs call is a wasted round trip. Say so instead.
   useEffect(() => {
     const rf = controller.requestedFile;
     if (!rf || rf.sourceId !== activeSourceId || !rootPath) return;
 
+    if (!isUnderRoot(rootPath, rf.absolutePath)) {
+      setOutOfRoot(rf.absolutePath);
+
+      return;
+    }
+
+    setOutOfRoot(null);
+
+    const isDir = rf.kind === 'folder';
+    const entry: FsEntry = {
+      name: baseName(rf.absolutePath),
+      path: rf.absolutePath,
+      isDir,
+      sizeBytes: 0,
+      mtimeUnix: 0,
+      mode: 0,
+    };
+
     updateView(prev => {
       const next = new Set(prev.expanded);
       ancestorDirs(rootPath, rf.absolutePath).forEach(d => next.add(d));
+      // A folder reveal unfolds the target too — what the user asked for is to see inside it, not to see it.
+      if (isDir) next.add(entry.path);
 
       return {
         ...prev,
         expanded: next,
-        selectedPath: rf.absolutePath,
-        openFile: {
-          name: baseName(rf.absolutePath),
-          path: rf.absolutePath,
-          isDir: false,
-          sizeBytes: 0,
-          mtimeUnix: 0,
-          mode: 0,
-        },
+        selectedPath: entry.path,
+        // Selecting the entry (not just the path) is what lets the toolbar and the context menu act on what
+        // was just revealed — UC-060 ends with the user uploading into that directory.
+        selectedEntry: entry,
+        // Stay on the tree for a folder, and close any FileView that is covering it — otherwise the tree
+        // unfolds behind the viewer and the card looks like it did nothing.
+        openFile: isDir ? null : entry,
       };
     });
   }, [controller.requestedFile, activeSourceId, rootPath, updateView]);
@@ -766,9 +807,11 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       nudging,
       targetDir,
       pasteLabel,
+      outOfRoot,
       rootRef,
       uploadInputRef,
       uploadDirInputRef,
+      dismissOutOfRoot,
       setOpenFile,
       setClipboard,
       closeMenu,
@@ -818,6 +861,8 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       nudging,
       targetDir,
       pasteLabel,
+      outOfRoot,
+      dismissOutOfRoot,
       closeMenu,
       openContext,
       bumpRefresh,

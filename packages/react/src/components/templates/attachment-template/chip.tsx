@@ -3,6 +3,7 @@ import { ButtonAction, resolveSandboxUri } from '@asgard-js/core';
 import clsx from 'clsx';
 import DocumentSvg from '../../../icons/document.svg?react';
 import DownloadSvg from '../../../icons/download.svg?react';
+import FolderOpenSvg from '../../../icons/folder-open.svg?react';
 import GlobeSvg from '../../../icons/globe.svg?react';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
@@ -40,8 +41,14 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
   const { title, text, defaultAction, downloadAction, raw, customStyle } = props;
 
   const { sendMessage, client, customChannelId } = useAsgardContext();
-  const { onTemplateBtnClick, defaultLinkTarget, onSandboxOpenBrowser, onSandboxOpenFile, sandboxBrowserOpenTarget } =
-    useAsgardTemplateContext();
+  const {
+    onTemplateBtnClick,
+    defaultLinkTarget,
+    onSandboxOpenBrowser,
+    onSandboxOpenFile,
+    onSandboxOpenFolder,
+    sandboxBrowserOpenTarget,
+  } = useAsgardTemplateContext();
 
   const dispatchAction = useCallback(
     (action: ButtonAction): void => {
@@ -60,6 +67,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
             defaultLinkTarget,
             onSandboxOpenBrowser,
             onSandboxOpenFile,
+            onSandboxOpenFolder,
             sandboxBrowserOpenTarget,
           });
 
@@ -82,6 +90,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
       customChannelId,
       onSandboxOpenBrowser,
       onSandboxOpenFile,
+      onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
     ],
   );
@@ -114,12 +123,13 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
   );
 
   // The glyph follows the action, not the template type (BUILD-029): a chip that opens the sandbox browser
-  // gets a globe, everything else keeps the file glyph. Same resolver `dispatchUriAction` routes on, so the
-  // icon and the side effect can never disagree.
-  const isOpenBrowser = useMemo(() => {
-    if (defaultAction.type !== 'uri' && defaultAction.type !== 'URI') return false;
+  // gets a globe, one that opens a directory gets a folder (F-034 AC6), everything else keeps the file glyph.
+  // Same resolver `dispatchUriAction` routes on, so the icon and the side effect can never disagree — and the
+  // open-folder card stays in the same family as the open-file card, differing only in where it lands.
+  const sandboxIntentKind = useMemo(() => {
+    if (defaultAction.type !== 'uri' && defaultAction.type !== 'URI') return null;
 
-    return resolveSandboxUri(defaultAction.uri)?.kind === 'open-browser';
+    return resolveSandboxUri(defaultAction.uri)?.kind ?? null;
   }, [defaultAction]);
 
   const showDownloadIcon = isDownloadAction(downloadAction);
@@ -141,7 +151,13 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
       style={customStyle?.style}
     >
       <span className={styles.icon_box} style={customStyle?.iconBox?.style}>
-        {isOpenBrowser ? <GlobeSvg /> : <DocumentSvg />}
+        {sandboxIntentKind === 'open-browser' ? (
+          <GlobeSvg />
+        ) : sandboxIntentKind === 'open-folder' ? (
+          <FolderOpenSvg />
+        ) : (
+          <DocumentSvg />
+        )}
       </span>
       <span className={styles.body}>
         <span className={styles.title} style={customStyle?.title?.style}>

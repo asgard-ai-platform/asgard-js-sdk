@@ -8,6 +8,7 @@ import { FileView } from './file-view';
 import {
   ChevronDownIcon,
   ChevronRightIcon,
+  CircleAlertIcon,
   ClipboardPasteIcon,
   CopyIcon,
   DownloadIcon,
@@ -171,6 +172,41 @@ export function FileExplorerCwd({ children }: { children?: ReactNode }): ReactNo
   return (
     <div className={styles.cwd} title={typeof text === 'string' ? text : undefined}>
       {text}
+    </div>
+  );
+}
+
+/**
+ * The out-of-root notice (F-034 AC7 / UC-061): a card pointed at a path that is not on this tree, so nothing
+ * was expanded, nothing was selected, and no fs request went out.
+ *
+ * It exists because the alternative is the worst possible outcome — the user clicks a card and *nothing
+ * happens*, which reads as a broken card rather than as a location the explorer cannot reach. This really
+ * occurs: the tree is rooted at the sandbox's `workingDirectory`, while an agent may write next to the user's
+ * attachment in the Channel Home, outside it.
+ *
+ * Renders nothing when there is no such request. The path is shown verbatim, because identifying *which*
+ * location is the whole point of the message.
+ */
+export function FileExplorerNotice(): ReactNode {
+  const { outOfRoot, dismissOutOfRoot, locale } = useFileExplorer();
+  if (!outOfRoot) return null;
+
+  return (
+    <div className={styles.notice} role="status">
+      <CircleAlertIcon className={styles.noticeIcon} size={15} />
+      <span className={styles.noticeText}>
+        {t(locale, 'fileExplorer.outOfRoot')} <code className={styles.noticePath}>{outOfRoot}</code>
+      </span>
+      <button
+        type="button"
+        className={styles.noticeClose}
+        onClick={dismissOutOfRoot}
+        aria-label={t(locale, 'fileExplorer.outOfRootDismiss')}
+        title={t(locale, 'fileExplorer.outOfRootDismiss')}
+      >
+        <XIcon size={12} />
+      </button>
     </div>
   );
 }
@@ -659,6 +695,9 @@ export function FileExplorerEmptyState(): ReactNode {
 export function FileExplorerWorkspace(): ReactNode {
   return (
     <>
+      {/* Above the toolbar, and outside the FileView's hiding rule: the notice explains why the panel did
+          not move, so it has to survive whatever the panel is currently showing. */}
+      <FileExplorerNotice />
       <FileExplorerToolbar />
       <FileExplorerBody>
         <FileExplorerTree />

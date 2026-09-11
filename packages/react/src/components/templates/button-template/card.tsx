@@ -27,8 +27,14 @@ export function Card(props: CardProps): ReactNode {
   const { template, raw, customStyle } = props;
 
   const { sendMessage, client, customChannelId } = useAsgardContext();
-  const { onTemplateBtnClick, defaultLinkTarget, onSandboxOpenBrowser, onSandboxOpenFile, sandboxBrowserOpenTarget } =
-    useAsgardTemplateContext();
+  const {
+    onTemplateBtnClick,
+    defaultLinkTarget,
+    onSandboxOpenBrowser,
+    onSandboxOpenFile,
+    onSandboxOpenFolder,
+    sandboxBrowserOpenTarget,
+  } = useAsgardTemplateContext();
 
   const [imageError, setImageError] = useState(false);
 
@@ -68,6 +74,7 @@ export function Card(props: CardProps): ReactNode {
               defaultLinkTarget,
               onSandboxOpenBrowser,
               onSandboxOpenFile,
+              onSandboxOpenFolder,
               sandboxBrowserOpenTarget,
             });
 
@@ -91,6 +98,7 @@ export function Card(props: CardProps): ReactNode {
       customChannelId,
       onSandboxOpenBrowser,
       onSandboxOpenFile,
+      onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
     ],
   );

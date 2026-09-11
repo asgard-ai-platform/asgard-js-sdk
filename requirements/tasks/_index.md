@@ -294,3 +294,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-078` | Review: message feedback (Good / Bad response)           | —        | done   | [REVIEW-078-message-feedback.md](./REVIEW-078-message-feedback.md)                                       |
 | `BUILD-079`  | Scope every sandbox relay call to its channel            | S        | done   | [BUILD-079-sandbox-relay-channel-scope.md](./BUILD-079-sandbox-relay-channel-scope.md)                   |
 | `REVIEW-079` | Review: scope every sandbox relay call to its channel    | —        | done   | [REVIEW-079-sandbox-relay-channel-scope.md](./REVIEW-079-sandbox-relay-channel-scope.md)                 |
+| `BUILD-080`  | Sandbox open-folder card and directory reveal            | L        | done   | [BUILD-080-sandbox-open-folder-reveal.md](./BUILD-080-sandbox-open-folder-reveal.md)                     |
+| `REVIEW-080` | Review: sandbox open-folder card and directory reveal    | —        | draft  | [REVIEW-080-sandbox-open-folder-reveal.md](./REVIEW-080-sandbox-open-folder-reveal.md)                   |

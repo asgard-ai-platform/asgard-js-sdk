@@ -107,6 +107,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.uploadFiles': 'Upload files…',
     'fileExplorer.uploadFolder': 'Upload folder…',
     'fileExplorer.dropToUpload': 'Drop to upload to {dir}',
+    'fileExplorer.outOfRoot':
+      'That location is outside the current working directory, so the file explorer cannot show it:',
+    'fileExplorer.outOfRootDismiss': 'Dismiss notice',
     'fileExplorer.uploadProgress': 'Upload progress',
     'fileExplorer.uploading': 'Uploading',
     'fileExplorer.uploadCancelled': 'Cancelled',
@@ -361,6 +364,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.uploadFiles': 'ファイルをアップロード…',
     'fileExplorer.uploadFolder': 'フォルダーをアップロード…',
     'fileExplorer.dropToUpload': 'ドロップして {dir} にアップロード',
+    'fileExplorer.outOfRoot':
+      'この場所は現在の作業ディレクトリの外にあるため、ファイルエクスプローラーには表示できません:',
+    'fileExplorer.outOfRootDismiss': '通知を閉じる',
     'fileExplorer.uploadProgress': 'アップロードの進捗',
     'fileExplorer.uploading': 'アップロード中',
     'fileExplorer.uploadCancelled': 'キャンセルしました',
@@ -606,6 +612,8 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.uploadFiles': '上傳檔案…',
     'fileExplorer.uploadFolder': '上傳資料夾…',
     'fileExplorer.dropToUpload': '放開以上傳到 {dir}',
+    'fileExplorer.outOfRoot': '這個位置不在目前的工作目錄裡，檔案總管看不到：',
+    'fileExplorer.outOfRootDismiss': '關閉提示',
     'fileExplorer.uploadProgress': '上傳進度',
     'fileExplorer.uploading': '上傳中',
     'fileExplorer.uploadCancelled': '已取消',
