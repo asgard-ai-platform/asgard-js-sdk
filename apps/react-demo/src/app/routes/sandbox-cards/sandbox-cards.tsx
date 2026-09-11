@@ -73,6 +73,11 @@ export function SandboxCards(): ReactNode {
             config={{ botProviderEndpoint: 'skip' }}
             customChannelId="sandbox-cards-demo"
             initMessages={initMessages}
+            // The intents still fire on arrival (that is what fills the log); they just do not pull the
+            // built-in aside open. Left on, an arriving card opened an aside that takes `max-width: 60%` of
+            // the shell — 225px of the default theme's 375px — leaving the thread 150px and every chip title
+            // truncated to「開啟…」. This route is about the cards, and the aside has no sandbox to show here.
+            autoRevealOnOpenFileCard={false}
             onSandboxOpenBrowser={sandboxName => append(`open-browser → sandboxName="${sandboxName}"`)}
             onSandboxOpenFile={(sandboxName, absolutePath) =>
               append(`open-file → sandboxName="${sandboxName}", absolutePath="${absolutePath}"`)

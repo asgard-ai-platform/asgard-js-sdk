@@ -159,14 +159,17 @@ Each new behavior was confirmed to actually be under test, by reverting it and r
 
 ### Not covered
 
-- **No real backend.** Every fs provider in the demo is in-memory, so "no `fs/file`, no `fs/watch` for a
-  directory" is proven by the provider mocks never being called, not by an empty Network panel against a live
-  sandbox. The 500 this ticket removes has not been observed to be gone on a deployed environment.
-- **The full card → built-in aside path.** `/sandbox-cards` proves card → dispatcher → host callback, and
-  `/file-explorer` proves controller → panel, but no demo route has both a live sandbox and the cards, so the
-  two halves were verified separately rather than end to end.
+- **No real backend.** The demo's `fs/list` is a real HTTP request, but to the demo's own mock server rather
+  than asgard-core's edge server. So "no `fs/file`, no `fs/watch` for a directory" rests on that mock's
+  request log (three `fs/list` calls and nothing else), not on watching the 500 this ticket removes disappear
+  on a deployed environment.
 - **Downstream untested.** `asgard-ai-agent-hub-web` wires `onSandboxOpenFile` → `requestFile` itself and
   will need `onSandboxOpenFolder` → `requestFolder` after this ships; nothing was installed into it.
+
+> The third gap that stood here — "the full card → built-in aside path was verified in halves" — was closed
+> during the handover pass rather than reported: the built-in-aside demo channel already advertises a live
+> sandbox, so replaying two `open-folder` cards on its transcript walks the whole path in one go. That is
+> also where the fs request log above comes from.
 
 ---
 
@@ -192,12 +195,23 @@ None.
 2. **[§1.7] `RequestedFile.kind` is required, not optional.** Deliberate (BUILD-080 Decision 1), but it does
    mean a consumer that constructs a `RequestedFile` gets a compile error on upgrade. Worth a line in the
    release notes when this version ships.
-3. **Pre-existing demo defect fixed in passing.** `/sandbox-cards` rebuilt `initMessages` with fresh
+3. **Two reveal cards arriving in one React tick: only the last one acts.** `controller.requestedFile` is a
+   single latest-wins slot (F-021's own design — the field is documented as "the latest request"), so a replay
+   that delivers two cards inside one batch drops the first. Observed while building the demo transcript,
+   where it made the end state depend on how the SSE frames happened to batch. Not changed: an agent pushes
+   one card per turn, and "the newest instruction wins" is the right resolution when two do arrive together.
+   The demo now orders the cards so the outcome is fixed either way, with a comment saying why.
+4. **Pre-existing demo defect fixed in passing.** `/sandbox-cards` rebuilt `initMessages` with fresh
    `nanoid()` ids on every render, and preview mode rebuilds the conversation whenever `initMessages` changes
    identity, so the arrival scan saw new cards forever — the unmodified route logged 390 intents in 2.5s. The
    `useMemo` fix is in the demo only; the SDK's (message id, uri) key is correct and was not changed. Flagged
    here because it is outside the stated scope, and because it means the AC8 evidence would have been
    unreadable without it.
+5. **`/sandbox-cards` auto-opened the built-in aside on card arrival, squeezing the thread to 150px.** The
+   default theme's shell is 375px and the aside takes `max-width: 60%` (225px), so every chip title truncated
+   to「開啟…」. Pre-existing (an arriving open-file card did the same), and fixed in the demo only by passing
+   `autoRevealOnOpenFileCard={false}` on that route — the intents still fire on arrival. Whether auto-reveal
+   is right at phone width is an F-021 design question and was deliberately not touched here.
 
 ---
 
@@ -209,3 +223,6 @@ None.
   format and both builds green. §3 complete — R1–R12 all Pass, with four reverse-verification runs and a
   browser walk at both widths; one uncovered case (per-source round trip after a folder reveal) was found and
   closed with a new test rather than reported as a finding. 0 BLOCKERs (Status: `in-progress → done`).
+- 2026-09-11: During the handover pass the "verified in halves" gap was closed by replaying the cards on the
+  built-in-aside channel, which also produced the fs request log. Two further pre-existing demo issues were
+  found and recorded as Minor 3 and Minor 5. Full gate re-run green (core 324 / react 512).

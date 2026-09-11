@@ -566,6 +566,13 @@ export function FileExplorer(): ReactNode {
           <strong>不會兩件事都發生</strong>——面板任何位置（工具列、header、上傳進度面板都算）放下只會上傳，chatbot 的
           全域「拖曳檔案到此」浮層不會跟面板自己的「上傳到 …」高亮同時亮。
         </p>
+        <p style={{ fontSize: '0.85rem', color: '#666' }}>
+          <strong>F-034：</strong>這個頻道的 transcript 還會重播兩張 <code>open-folder</code> 卡。這裡是
+          整條路徑唯一一次走完的地方——卡片抵達就觸發一次、把 aside 拉出來並在樹上展開 <code>out/archive</code>
+          ；第二張指向 <code>/work/生活市集</code>，面板改為顯示越界提示。 mock 的 fs 是真的 HTTP 端點，所以 DevTools
+          Network 可以核對：資料夾卡只會打 <code>fs/list</code>， 不會出現 <code>fs/file</code> 或 <code>fs/watch</code>
+          。
+        </p>
         <div style={{ height: '560px' }}>
           <Chatbot
             title="File Explorer（builtin）"

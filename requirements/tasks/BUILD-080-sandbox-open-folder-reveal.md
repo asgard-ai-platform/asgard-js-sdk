@@ -217,7 +217,18 @@ Files:
    無法判讀**，所以在同一個檔案裡以 `useMemo` 修掉。SDK 側不改：以 (message id, uri) 去重是對的，
    真正換了一則訊息就該再觸發一次。
 
-6. **下游跟版不在本票。** `asgard-ai-agent-hub-web` 目前自行接 `onSandboxOpenFile` → `requestFile`，
+6. **demo 的 `/file-explorer` 補上整條路徑的走查。** 原本兩個 demo 面只能各證明一半（`/sandbox-cards` 證
+   卡片 → 宿主 callback，`/file-explorer` 的獨立面板證 controller → 面板）。內建 aside 那個頻道本來就有一台
+   live sandbox，所以把兩張 `open-folder` 卡加進它的 transcript 重播，一次走完「卡片抵達 → `resolveSandboxUri`
+   → 宿主 handler → 共用 controller → aside」。**不是用 `initMessages` 種**：那個頻道在 metadata mock 裡已存在，
+   SDK 走 restore 路徑，只有 init 路徑會讀 `initMessages`。附帶好處是 mock 的 fs 是真的 HTTP 端點，於是
+   「對目錄不打 `fs/file`／`fs/watch`」有了請求紀錄可查（只有三支 `fs/list`）。
+7. **`/sandbox-cards` 關掉卡片到站時的自動拉開側欄（`autoRevealOnOpenFileCard={false}`）。** 那一頁的 shell 是
+   預設 theme 的 375px，側欄一開就吃掉 `max-width: 60%` ＝ 225px，對話區只剩 150px、卡片標題被截成「開啟…」。
+   這是既有行為（F-021 AC9，開檔案卡也一樣），不是本票造成；但那一頁存在的理由就是看卡片。intent 仍照常在
+   到站時觸發，所以 AC8 的證據沒有變弱。**SDK 側不改**——窄 shell 上自動拉開側欄是否合適，是 F-021 的設計問題，
+   不該在這張票裡順手改掉。
+8. **下游跟版不在本票。** `asgard-ai-agent-hub-web` 目前自行接 `onSandboxOpenFile` → `requestFile`，
    要吃到資料夾卡得等本 SDK 發版後另外接 `onSandboxOpenFolder` → `requestFolder`。issue #102 的「下游評估」
    以另開票處理，不混進這個 cycle。
 
@@ -233,3 +244,6 @@ Files:
   忽略 `kind` → folder 三案紅；拿掉越界守衛 → 越界五案紅；core 還原 → 3 案紅；
   `ancestorDirs` 改回 `startsWith` → prefix 那案紅（且會憑空產出 `/work/space` 這種祖先）。
   瀏覽器實走 `/file-explorer`（寬 + 343px 窄並排）與 `/sandbox-cards`（Status: `in-progress → done`）。
+- 2026-09-11: 產驗收文件時把兩個 demo 缺口補掉（見 Decisions 6／7），整條卡片 → aside 路徑改成一次走完，
+  並取得「只有三支 `fs/list`、零 `fs/file`／`fs/watch`」的實際請求紀錄。重跑全部閘門仍全綠
+  （react 512 案）。驗收文件：`local-verification/asgard-js-sdk/F-034-sandbox-open-folder-reveal.html`。
