@@ -51,14 +51,19 @@ function collectUris(message: ConversationMessage): string[] {
 }
 
 /**
- * Arrival-side of the open-file intent (F-021 AC9, notify-not-force): scan the conversation for `open-file`
- * `sandbox://` cards and fire `onIntent` once per (message, uri) — on arrival, without a click. Renders
- * nothing. Must live inside the service context (reads `conversation`).
+ * Arrival-side of the reveal intents (F-021 AC9 notify-not-force, F-034 AC8): scan the conversation for
+ * `open-file` and `open-folder` `sandbox://` cards and fire the matching handler once per (message, uri) —
+ * on arrival, without a click. Renders nothing. Must live inside the service context (reads `conversation`).
+ *
+ * The two kinds are routed to two handlers rather than one handler plus a flag, for the same reason the
+ * backend ships two uri actions: their destinations are not interchangeable.
  */
 export function FileExplorerArrivalBridge({
-  onIntent,
+  onFileIntent,
+  onFolderIntent,
 }: {
-  onIntent: (sandboxName: string, absolutePath: string) => void;
+  onFileIntent: (sandboxName: string, absolutePath: string) => void;
+  onFolderIntent: (sandboxName: string, absolutePath: string) => void;
 }): ReactNode {
   const { conversation } = useAsgardContext();
   const seen = useRef<Set<string>>(new Set());
@@ -70,16 +75,17 @@ export function FileExplorerArrivalBridge({
     for (const message of messages.values()) {
       for (const uri of collectUris(message)) {
         const intent = resolveSandboxUri(uri);
-        if (intent?.kind !== 'open-file') continue;
+        if (intent?.kind !== 'open-file' && intent?.kind !== 'open-folder') continue;
 
         const key = `${message.messageId}:${uri}`;
         if (seen.current.has(key)) continue;
 
         seen.current.add(key);
-        onIntent(intent.sandboxName, intent.absolutePath);
+        const fire = intent.kind === 'open-folder' ? onFolderIntent : onFileIntent;
+        fire(intent.sandboxName, intent.absolutePath);
       }
     }
-  }, [conversation, onIntent]);
+  }, [conversation, onFileIntent, onFolderIntent]);
 
   return null;
 }

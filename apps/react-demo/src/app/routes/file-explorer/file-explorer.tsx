@@ -55,6 +55,7 @@ interface MemEntry {
 
 const DIRS: Record<string, MemEntry[]> = {
   '/home/user/project': [
+    { name: 'out', isDir: true, sizeBytes: 0 },
     { name: 'src', isDir: true, sizeBytes: 0 },
     { name: 'README.md', isDir: false, sizeBytes: 92 },
     { name: 'notes.txt', isDir: false, sizeBytes: 34 },
@@ -63,9 +64,21 @@ const DIRS: Record<string, MemEntry[]> = {
     { name: 'index.ts', isDir: false, sizeBytes: 48 },
     { name: 'app.tsx', isDir: false, sizeBytes: 60 },
   ],
+  // F-034 — two levels below the root, so a folder reveal has an ancestor to unfold as well as the target.
+  '/home/user/project/out': [
+    { name: 'archive', isDir: true, sizeBytes: 0 },
+    { name: 'manifest.json', isDir: false, sizeBytes: 51 },
+  ],
+  '/home/user/project/out/archive': [
+    { name: 'chapter-1.md', isDir: false, sizeBytes: 28 },
+    { name: 'chapter-2.md', isDir: false, sizeBytes: 28 },
+  ],
 };
 
 const FILES: Record<string, string> = {
+  '/home/user/project/out/manifest.json': '{ "generated": 2, "format": "markdown" }\n',
+  '/home/user/project/out/archive/chapter-1.md': '# 第一章\n\n解壓縮出來的內容。\n',
+  '/home/user/project/out/archive/chapter-2.md': '# 第二章\n\n解壓縮出來的內容。\n',
   '/home/user/project/README.md':
     '# Demo Workspace\n\n這是 **File Explorer** 展示用的 in-memory 檔案。\n\n- 點資料夾展開\n- 點檔案預覽\n- 切到編輯打字（右上角出現未存圓點）\n- 工具列 / 右鍵選單：新增、重新命名、刪除、複製貼上',
   '/home/user/project/notes.txt': 'plain text note — 切到編輯試打字。',
@@ -205,6 +218,80 @@ async function writeExternally(path: string): Promise<void> {
   });
 }
 
+/** F-034 paths, named once: the two reveal targets and the one that is deliberately off the tree. */
+const FOLDER_TARGET = '/home/user/project/out/archive';
+const FILE_TARGET = '/home/user/project/out/manifest.json';
+/** Outside the tree root — the shape of the 2026-09-09 incident, where the card pointed next to the attachment. */
+const OUT_OF_ROOT_TARGET = '/work/生活市集';
+
+/**
+ * Locale picker for the standalone panels. They sit outside any Chatbot, so nothing supplies a locale and
+ * they would render en-US only — and a missing key is invisible in English, because the code's own fallback
+ * *is* the English string. Both sections below share one state so they are never in different languages.
+ */
+function LocaleSwitch({ value, onChange }: { value: Locale; onChange: (locale: Locale) => void }): ReactNode {
+  return (
+    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.6rem' }}>
+      <span style={{ fontSize: '0.8rem', color: '#666' }}>locale：</span>
+      {(['zh-TW', 'en-US', 'ja-JP'] as Locale[]).map(l => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => onChange(l)}
+          style={{
+            padding: '0.15rem 0.5rem',
+            fontSize: '0.78rem',
+            cursor: 'pointer',
+            fontWeight: l === value ? 700 : 400,
+          }}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The three simulated cards, rendered under each panel of the F-034 pair. */
+function FolderCardButtons({
+  controller,
+  idPrefix,
+}: {
+  controller: ReturnType<typeof useFileExplorerController>;
+  idPrefix: string;
+}): ReactNode {
+  const style = { padding: '0.3rem 0.6rem', fontSize: '0.78rem', cursor: 'pointer' };
+
+  return (
+    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+      <button
+        type="button"
+        data-testid={`${idPrefix}-open-folder`}
+        onClick={() => controller.requestFolder(FIXED_SOURCE.id, FOLDER_TARGET)}
+        style={style}
+      >
+        開啟資料夾 → out/archive
+      </button>
+      <button
+        type="button"
+        data-testid={`${idPrefix}-open-file`}
+        onClick={() => controller.requestFile(FIXED_SOURCE.id, FILE_TARGET)}
+        style={style}
+      >
+        開啟檔案 → out/manifest.json
+      </button>
+      <button
+        type="button"
+        data-testid={`${idPrefix}-out-of-root`}
+        onClick={() => controller.requestFolder(FIXED_SOURCE.id, OUT_OF_ROOT_TARGET)}
+        style={style}
+      >
+        樹根外 → /work/生活市集
+      </button>
+    </div>
+  );
+}
+
 export function FileExplorer(): ReactNode {
   const controller = useFileExplorerController({ open: true });
   // A second, independent controller so the composed panel below does not fight the one above.
@@ -212,6 +299,10 @@ export function FileExplorer(): ReactNode {
   // Two more so the batch-upload pair below does not fight each other or the panels above.
   const batchWideController = useFileExplorerController({ activeSourceId: FIXED_SOURCE.id });
   const batchNarrowController = useFileExplorerController({ activeSourceId: FIXED_SOURCE.id });
+  // And two for the F-034 pair, for the same reason: one shared controller would make both panels react to
+  // every click and there would be nothing to compare.
+  const folderWideController = useFileExplorerController({ activeSourceId: FIXED_SOURCE.id });
+  const folderNarrowController = useFileExplorerController({ activeSourceId: FIXED_SOURCE.id });
   // The standalone panels sit outside any Chatbot, so nothing supplies a locale and they would render
   // en-US only. Acceptance happens in zh-TW, and a missing key is invisible in English (the code's own
   // fallback *is* the English string), so the switch has to exist here.
@@ -327,24 +418,7 @@ export function FileExplorer(): ReactNode {
           （於是指數退避與 AIMD 降速真的會跑，面板會顯示「伺服器忙碌，已降到同時 N 個」）。 單檔上限填的是
           <strong>目標值 64MB</strong>；上線值仍是 8MB，所以大檔那一條要等 asgard-core#230。
         </p>
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.6rem' }}>
-          <span style={{ fontSize: '0.8rem', color: '#666' }}>locale：</span>
-          {(['zh-TW', 'en-US', 'ja-JP'] as Locale[]).map(l => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setBatchLocale(l)}
-              style={{
-                padding: '0.15rem 0.5rem',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                fontWeight: l === batchLocale ? 700 : 400,
-              }}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
+        <LocaleSwitch value={batchLocale} onChange={setBatchLocale} />
         <AsgardTemplateContextProvider locale={batchLocale}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 28rem', minWidth: 0, height: '560px' }}>
@@ -396,6 +470,67 @@ export function FileExplorer(): ReactNode {
           </div>
         </AsgardTemplateContextProvider>
 
+        <h3 style={{ marginTop: '1.5rem' }}>資料夾卡與樹根外提示（F-034）——寬窄並排</h3>
+        <p style={{ fontSize: '0.85rem', color: '#666' }}>
+          三顆按鈕模擬 agent 推來的三種卡片。<strong>開啟資料夾</strong>走 <code>controller.requestFolder</code>：沿路
+          祖先（<code>out</code>）<strong>與該目錄自己</strong>（<code>archive</code>）都展開、選取它、停在樹上——
+          全程不呼叫 <code>fs/file</code>、不掛 <code>fs/watch</code>（DevTools Network 可核對）。
+          <strong>開啟檔案</strong>維持舊行為、進檔案檢視器；先開檔再按資料夾卡，檢視器會關掉，否則展開的樹被蓋住、
+          看起來像沒反應。<strong>樹根外</strong>那顆指向 <code>/work/生活市集</code>（樹根是{' '}
+          <code>/home/user/project</code>）：不展開、不選取、不發任何 fs 請求，改在面板頂端說明並附上那條路徑。
+        </p>
+        <LocaleSwitch value={batchLocale} onChange={setBatchLocale} />
+        <AsgardTemplateContextProvider locale={batchLocale}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 28rem', minWidth: 0 }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                寬（full-bleed，實裝形態）
+              </div>
+              <div style={{ height: '420px' }}>
+                <FileExplorerPanel
+                  sandboxes={SANDBOXES}
+                  controller={folderWideController}
+                  listDir={providers.listDir}
+                  readFile={providers.readFile}
+                  saveFile={providers.saveFile}
+                  mkdir={providers.mkdir}
+                  remove={providers.remove}
+                  copy={providers.copy}
+                  move={providers.move}
+                  upload={providers.upload}
+                  uploadMany={providers.uploadMany}
+                  download={providers.download}
+                  maxUploadBytes={MAX_UPLOAD_BYTES}
+                />
+              </div>
+              <FolderCardButtons controller={folderWideController} idPrefix="wide" />
+            </div>
+            <div style={{ flex: '0 0 343px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                窄（343px，預設 theme 寬度）
+              </div>
+              <div style={{ width: '343px', height: '420px' }}>
+                <FileExplorerPanel
+                  sandboxes={SANDBOXES}
+                  controller={folderNarrowController}
+                  listDir={providers.listDir}
+                  readFile={providers.readFile}
+                  saveFile={providers.saveFile}
+                  mkdir={providers.mkdir}
+                  remove={providers.remove}
+                  copy={providers.copy}
+                  move={providers.move}
+                  upload={providers.upload}
+                  uploadMany={providers.uploadMany}
+                  download={providers.download}
+                  maxUploadBytes={MAX_UPLOAD_BYTES}
+                />
+              </div>
+              <FolderCardButtons controller={folderNarrowController} idPrefix="narrow" />
+            </div>
+          </div>
+        </AsgardTemplateContextProvider>
+
         <h3 style={{ marginTop: '1.5rem' }}>自行組裝零件（單一固定來源，沒有選台）</h3>
         <p style={{ fontSize: '0.85rem', color: '#666' }}>
           同一組零件、換一個標頭：<code>FileExplorer.Provider</code> 收下一個非 sandbox 的來源，標頭只放名稱、
@@ -430,6 +565,13 @@ export function FileExplorer(): ReactNode {
           檢查擋掉，就走不到附件那一步。issue #446 的檢查點是拖進 aside
           <strong>不會兩件事都發生</strong>——面板任何位置（工具列、header、上傳進度面板都算）放下只會上傳，chatbot 的
           全域「拖曳檔案到此」浮層不會跟面板自己的「上傳到 …」高亮同時亮。
+        </p>
+        <p style={{ fontSize: '0.85rem', color: '#666' }}>
+          <strong>F-034：</strong>這個頻道的 transcript 還會重播兩張 <code>open-folder</code> 卡。這裡是
+          整條路徑唯一一次走完的地方——卡片抵達就觸發一次、把 aside 拉出來並在樹上展開 <code>out/archive</code>
+          ；第二張指向 <code>/work/生活市集</code>，面板改為顯示越界提示。 mock 的 fs 是真的 HTTP 端點，所以 DevTools
+          Network 可以核對：資料夾卡只會打 <code>fs/list</code>， 不會出現 <code>fs/file</code> 或 <code>fs/watch</code>
+          。
         </p>
         <div style={{ height: '560px' }}>
           <Chatbot

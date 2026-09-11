@@ -99,17 +99,27 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   onSandboxOpenBrowser?: (sandboxName: string) => void;
   /** Host handler for a `sandbox://<name>/open-file` card (F-020) — the File Explorer destination (F-021). */
   onSandboxOpenFile?: (sandboxName: string, absolutePath: string) => void;
+  /**
+   * Host handler for a `sandbox://<name>/open-folder` card (F-034) — the File Explorer **tree** destination:
+   * the directory is unfolded and selected, and nothing is read or watched. Separate from `onSandboxOpenFile`
+   * because a directory cannot go through the viewer at all (the backend refuses `fs/file` and `fs/watch`).
+   */
+  onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   /** Where the default open-browser handler opens the one-time URL (F-020). Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
 
   /**
    * Built-in File Explorer side panel (F-021). `'builtin'` (default) is the stock layout of AC6 — a folder
    * toggle on the header, opening a right-side aside. `'off'` opts out of both so the consumer can place the
-   * exported `<FileExplorerPanel>` wherever it likes (AC7). Either way an `open-file` card hits the panel via
-   * the shared controller.
+   * exported `<FileExplorerPanel>` wherever it likes (AC7). Either way an `open-file` / `open-folder` card hits
+   * the panel via the shared controller.
    */
   fileExplorer?: 'builtin' | 'off';
-  /** Whether an arriving `open-file` card auto-reveals the built-in aside (F-021 AC9). Defaults to true; a mid-edit dirty file suppresses the yank (AC10). */
+  /**
+   * Whether an arriving `open-file` **or** `open-folder` card auto-reveals the built-in aside (F-021 AC9,
+   * F-034 AC8). Defaults to true; a mid-edit dirty file suppresses the yank (AC10). The name predates the
+   * folder card and is kept for compatibility — one flag, because "may a card pull the panel out" is one question.
+   */
   autoRevealOnOpenFileCard?: boolean;
   /** Override the File Explorer tree root (absolute path) instead of the sandbox `workingDirectory` (F-021 AC2). */
   fileExplorerBasePath?: string;
@@ -325,6 +335,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     channelTitleHidden,
     onSandboxOpenBrowser,
     onSandboxOpenFile,
+    onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
     fileExplorer = 'builtin',
     autoRevealOnOpenFileCard = true,
@@ -354,6 +365,21 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
       }
     },
     [onSandboxOpenFile, builtinFileExplorer, autoRevealOnOpenFileCard, fileExplorerController],
+  );
+
+  // open-folder intent (F-034 AC2 / AC8): same shape as above, different destination — `requestFolder` stops
+  // on the tree. `autoRevealOnOpenFileCard` gates both kinds: the flag answers "may an arriving card pull the
+  // panel out", which is one question, not two.
+  const handleSandboxOpenFolder = useCallback(
+    (sandboxName: string, absolutePath: string): void => {
+      onSandboxOpenFolder?.(sandboxName, absolutePath);
+
+      if (builtinFileExplorer) {
+        const reveal = autoRevealOnOpenFileCard && !fileExplorerController.isEditingDirty;
+        fileExplorerController.requestFolder(sandboxName, absolutePath, { reveal });
+      }
+    },
+    [onSandboxOpenFolder, builtinFileExplorer, autoRevealOnOpenFileCard, fileExplorerController],
   );
 
   const dragCounterRef = useRef(0);
@@ -489,8 +515,13 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                 <ChatbotBody hideRunChrome={hideRunChrome} />
               </div>
             </div>
-            {/* F-021 AC9 — fire the open-file intent on card arrival (not only on click). */}
-            {builtinFileExplorer && <FileExplorerArrivalBridge onIntent={handleSandboxOpenFile} />}
+            {/* F-021 AC9 / F-034 AC8 — fire the open-file / open-folder intent on card arrival, not only on click. */}
+            {builtinFileExplorer && (
+              <FileExplorerArrivalBridge
+                onFileIntent={handleSandboxOpenFile}
+                onFolderIntent={handleSandboxOpenFolder}
+              />
+            )}
             {renderMenu?.()}
             {/* BUILD-034 — the thread↔input seam, bound to the whole connection (F-003). It sits here, as a
                 sibling of the footer slot, rather than inside `ChatbotFooter`, so that a consumer-supplied
@@ -580,6 +611,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               channelTitleHidden={channelTitleHidden}
               onSandboxOpenBrowser={onSandboxOpenBrowser}
               onSandboxOpenFile={handleSandboxOpenFile}
+              onSandboxOpenFolder={handleSandboxOpenFolder}
               sandboxBrowserOpenTarget={sandboxBrowserOpenTarget}
             >
               <FileDropContextProvider>

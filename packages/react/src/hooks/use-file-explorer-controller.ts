@@ -8,8 +8,18 @@ import type { FsEntry } from '../components/file-explorer/types';
 // in `fileExplorer="off"` mode. Binding all three to one controller means an open-file intent hits the
 // panel wherever it lives — placement and behavior stay separate. Framework-light: pure state + actions.
 
-/** One "reveal this file" request; the nonce lets a repeat request for the same file re-trigger the reveal. */
+/** One "reveal this path" request; the nonce lets a repeat request for the same path re-trigger the reveal. */
 export interface RequestedFile {
+  /**
+   * Where the reveal ends: `'file'` opens the viewer (read + watch), `'folder'` only unfolds and selects the
+   * directory on the tree (F-034 AC3).
+   *
+   * This comes **from the card**, never from a guess: the panel has not listed that level yet when the reveal
+   * arrives, so it cannot tell a file from a directory — and trying it as a file first is not an option, since
+   * the backend answers `500` for `fs/file` on a directory and drops the `fs/watch` connection. `open-file` and
+   * `open-folder` are two separate uri actions for exactly this reason.
+   */
+  kind: 'file' | 'folder';
   /**
    * The source this request targets. Always equal to {@link RequestedFile.sandboxName} — the explorer
    * generalized "which sandbox" to "which source" (a sandbox is one kind of source, a Sindri directory
@@ -22,7 +32,7 @@ export interface RequestedFile {
   nonce: number;
 }
 
-/** Options for {@link FileExplorerController.requestFile}. */
+/** Options for {@link FileExplorerController.requestFile} / {@link FileExplorerController.requestFolder}. */
 export interface RequestFileOptions {
   /** Also open the built-in aside (F-021 AC9 — "fire intent" and "open panel" are separate; default true). */
   reveal?: boolean;
@@ -68,7 +78,7 @@ export interface FileExplorerController {
   activeSourceId: string | null;
   /** @deprecated Use {@link FileExplorerController.activeSourceId}; same value, kept as an alias. */
   activeSandboxName: string | null;
-  /** The latest "reveal + select this file" request (the panel expands ancestors + highlights + previews). */
+  /** The latest "reveal + select this path" request (the panel expands ancestors, highlights, then follows `kind`). */
   requestedFile: RequestedFile | null;
   /** Whether a file is currently being edited with unsaved changes (F-021 AC10 — mid-edit guard). */
   isEditingDirty: boolean;
@@ -88,11 +98,16 @@ export interface FileExplorerController {
   /** @deprecated Use {@link FileExplorerController.selectSource}; same function, kept as an alias. */
   selectSandbox: (sandboxName: string) => void;
   /**
-   * open-file card / deep-link entry: select the source + request a reveal of `absolutePath`. `reveal`
-   * (default true) also opens the built-in aside; pass `reveal: false` to expose the intent without
-   * yanking the panel (F-021 AC9 notify-not-force).
+   * open-file card / deep-link entry: select the source + request a reveal of `absolutePath`, ending in the
+   * viewer. `reveal` (default true) also opens the built-in aside; pass `reveal: false` to expose the intent
+   * without yanking the panel (F-021 AC9 notify-not-force).
    */
   requestFile: (sourceId: string, absolutePath: string, options?: RequestFileOptions) => void;
+  /**
+   * open-folder card entry (F-034): the same request, ending **on the tree** — the directory and its ancestors
+   * are unfolded and it is selected, with nothing read and nothing watched.
+   */
+  requestFolder: (sourceId: string, absolutePath: string, options?: RequestFileOptions) => void;
   /** FileView reports its dirty state here so the arrival wiring can decline to yank mid-edit (AC10). */
   setEditingDirty: (dirty: boolean) => void;
   /** Read one source's view, falling back to {@link EMPTY_SOURCE_VIEW} for a source never visited. */
@@ -136,13 +151,29 @@ export function useFileExplorerController({
     setRequestedFile(rf => (rf && rf.sourceId !== sourceId ? null : rf));
   }, []);
 
-  const requestFile = useCallback((sourceId: string, absolutePath: string, options?: RequestFileOptions): void => {
-    nonce.current += 1;
-    if (options?.reveal ?? true) setOpen(true);
+  // One implementation behind both entries: the only difference between them is the `kind` they stamp on the
+  // request, and splitting the body would be two copies of "bump the nonce, open, select the source".
+  const request = useCallback(
+    (kind: 'file' | 'folder', sourceId: string, absolutePath: string, options?: RequestFileOptions): void => {
+      nonce.current += 1;
+      if (options?.reveal ?? true) setOpen(true);
 
-    setActiveSandboxName(sourceId);
-    setRequestedFile({ sourceId, sandboxName: sourceId, absolutePath, nonce: nonce.current });
-  }, []);
+      setActiveSandboxName(sourceId);
+      setRequestedFile({ kind, sourceId, sandboxName: sourceId, absolutePath, nonce: nonce.current });
+    },
+    [],
+  );
+
+  const requestFile = useCallback(
+    (sourceId: string, absolutePath: string, options?: RequestFileOptions): void =>
+      request('file', sourceId, absolutePath, options),
+    [request],
+  );
+  const requestFolder = useCallback(
+    (sourceId: string, absolutePath: string, options?: RequestFileOptions): void =>
+      request('folder', sourceId, absolutePath, options),
+    [request],
+  );
 
   const setEditingDirty = useCallback((dirty: boolean): void => setIsEditingDirty(dirty), []);
 
@@ -174,6 +205,7 @@ export function useFileExplorerController({
       selectSource,
       selectSandbox: selectSource,
       requestFile,
+      requestFolder,
       setEditingDirty,
       sourceView,
       updateSourceView,
@@ -189,6 +221,7 @@ export function useFileExplorerController({
       toggle,
       selectSource,
       requestFile,
+      requestFolder,
       setEditingDirty,
       sourceView,
       updateSourceView,

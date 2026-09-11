@@ -20,6 +20,13 @@ export interface DispatchUriActionOptions {
   onSandboxOpenBrowser?: (sandboxName: string) => void;
   /** Host handler for `sandbox://<name>/open-file` — the File Explorer preview destination (F-021). */
   onSandboxOpenFile?: (sandboxName: string, absolutePath: string) => void;
+  /**
+   * Host handler for `sandbox://<name>/open-folder` (F-034) — the File Explorer **tree** destination: expand
+   * that directory and stop there. Deliberately a separate handler from `onSandboxOpenFile` rather than a
+   * flag on it, because the two destinations cannot be swapped: the backend refuses both `fs/file` and
+   * `fs/watch` for a directory, so routing a folder into the viewer cannot succeed.
+   */
+  onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   /** Where the default open-browser handler opens the one-time URL. Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: LinkTarget;
 }
@@ -71,8 +78,14 @@ export function dispatchUriAction(uri: string, options: DispatchUriActionOptions
       return;
     }
 
-    // open-file → hand the typed intent to the host (File Explorer preview lands in F-021); no-op if unwired.
-    options.onSandboxOpenFile?.(intent.sandboxName, intent.absolutePath);
+    // open-file → the File Explorer preview (F-021); open-folder → expand that directory on the tree (F-034).
+    // The destination follows the card's own action, never a guess about the path: "try it as a file and fall
+    // back to a folder" is the behavior this pair exists to remove. No-op if the host wired neither.
+    if (intent.kind === 'open-folder') {
+      options.onSandboxOpenFolder?.(intent.sandboxName, intent.absolutePath);
+    } else {
+      options.onSandboxOpenFile?.(intent.sandboxName, intent.absolutePath);
+    }
 
     return;
   }

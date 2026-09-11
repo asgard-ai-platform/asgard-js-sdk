@@ -1821,6 +1821,33 @@ async function handleMockTranscriptRejoin(req: IncomingMessage, res: ServerRespo
     },
   });
 
+  // F-034 — a bot turn whose template is a single ATTACHMENT card carrying a `sandbox://` uri, i.e. what
+  // `open_sandbox_folder` actually pushes. Replayed rather than seeded through `initMessages`: this channel
+  // already exists in the metadata mock, so the SDK restores it and the init path (the only one that reads
+  // `initMessages`) never runs.
+  const sandboxCardComplete = (messageId: string, title: string, text: string, uri: string): object => ({
+    ...header,
+    eventType: 'asgard.message.complete',
+    fact: {
+      ...emptyFact(),
+      messageComplete: {
+        message: {
+          messageId,
+          replyToCustomMessageId: '',
+          text: '',
+          payload: null,
+          isDebug: false,
+          idx: null,
+          template: {
+            type: 'ATTACHMENT',
+            attachments: [{ title, text, defaultAction: { type: 'uri', uri } }],
+            quickReplies: [],
+          },
+        },
+      },
+    },
+  });
+
   const questionComplete = (messageId: string, questions: MockQuestion[]): object => ({
     ...header,
     eventType: 'asgard.message.complete',
@@ -1979,6 +2006,54 @@ async function handleMockTranscriptRejoin(req: IncomingMessage, res: ServerRespo
       { event: botComplete('a-att-2', '兩者都納入了。'), id: 'seq:4' },
       { event: userAttachmentFrame('u-att-3', '', ['2087428865445072896']), id: 'seq:5' },
       { event: botComplete('a-att-3', '（這一則是舊 transcript 列：只有 blob id，沒有 metadata。）'), id: 'seq:6' },
+    ];
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    });
+
+    for (const frame of replay) {
+      await sleep(60);
+      writeCursorEvent(res, frame.event, frame.id);
+    }
+
+    await sleep(40);
+    writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+    res.end();
+
+    return;
+  }
+
+  // F-034 — the built-in-aside channel replays two open-folder cards, so one walk covers the whole path:
+  // the card arrives → `resolveSandboxUri` → the host handler → the shared controller → the aside. The first
+  // points inside the tree root (`/home/user/project`), the second outside it.
+  if (customChannelId === 'file-explorer-demo') {
+    const replay: { event: object; id: string }[] = [
+      { event: userFrame('u-f034-1', '把那包 zip 解開，然後給我看結果', 'c-f034-1'), id: 'seq:1' },
+      { event: botComplete('a-f034-1', '解壓縮完成，內容在 out/archive 底下。'), id: 'seq:2' },
+      {
+        event: sandboxCardComplete(
+          'a-f034-out-of-root',
+          '開啟資料夾 生活市集',
+          '（反例）這條路徑不在工作目錄底下',
+          'sandbox://sbx-demo/open-folder?absolute_path=%2Fwork%2F%E7%94%9F%E6%B4%BB%E5%B8%82%E9%9B%86',
+        ),
+        id: 'seq:3',
+      },
+      // Last on purpose. `controller.requestedFile` is a single latest-wins slot (F-021), so when a replay
+      // hands the bridge both cards inside one React tick, only the last one reaches the panel — with the
+      // order reversed, whether the tree ended up expanded depended on how the frames happened to batch.
+      {
+        event: sandboxCardComplete(
+          'a-f034-folder',
+          '開啟資料夾 archive',
+          '點此在檔案總管展開此目錄',
+          'sandbox://sbx-demo/open-folder?absolute_path=%2Fhome%2Fuser%2Fproject%2Fout%2Farchive',
+        ),
+        id: 'seq:4',
+      },
     ];
 
     res.writeHead(200, {
@@ -2203,6 +2278,7 @@ interface FsDirEntry {
 
 const FS_DIRS: Record<string, FsDirEntry[]> = {
   '/home/user/project': [
+    { name: 'out', isDir: true, sizeBytes: 0 },
     { name: 'src', isDir: true, sizeBytes: 0 },
     { name: 'README.md', isDir: false, sizeBytes: 92 },
     { name: 'notes.txt', isDir: false, sizeBytes: 34 },
@@ -2211,9 +2287,21 @@ const FS_DIRS: Record<string, FsDirEntry[]> = {
     { name: 'index.ts', isDir: false, sizeBytes: 48 },
     { name: 'app.tsx', isDir: false, sizeBytes: 60 },
   ],
+  // F-034 — two levels down, so an open-folder card has an ancestor to unfold as well as the target.
+  '/home/user/project/out': [
+    { name: 'archive', isDir: true, sizeBytes: 0 },
+    { name: 'manifest.json', isDir: false, sizeBytes: 51 },
+  ],
+  '/home/user/project/out/archive': [
+    { name: 'chapter-1.md', isDir: false, sizeBytes: 28 },
+    { name: 'chapter-2.md', isDir: false, sizeBytes: 28 },
+  ],
 };
 
 const FS_FILES: Record<string, string> = {
+  '/home/user/project/out/manifest.json': '{ "generated": 2, "format": "markdown" }\n',
+  '/home/user/project/out/archive/chapter-1.md': '# 第一章\n\n解壓縮出來的內容。\n',
+  '/home/user/project/out/archive/chapter-2.md': '# 第二章\n\n解壓縮出來的內容。\n',
   '/home/user/project/README.md':
     '# Demo Workspace\n\n這是 **File Explorer** 展示用的 mock 檔案。\n\n- 點資料夾展開\n- 點檔案預覽\n- 切換編輯後打字會存檔',
   '/home/user/project/notes.txt': 'plain text note — 切到編輯試打字。',

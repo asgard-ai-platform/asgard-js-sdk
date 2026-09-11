@@ -17,6 +17,7 @@ const DOWNLOAD_URI: ButtonAction = { type: 'uri', uri: 'channel-home://report.js
 const DOWNLOAD_EMIT: ButtonAction = { type: 'emit', eventName: 'download_file', payload: {} };
 const OPEN_BROWSER: ButtonAction = { type: 'uri', uri: 'sandbox://box-1/open-browser' };
 const OPEN_FILE: ButtonAction = { type: 'uri', uri: 'sandbox://box-1/open-file?path=/app/a.txt' };
+const OPEN_FOLDER: ButtonAction = { type: 'uri', uri: 'sandbox://box-1/open-folder?absolute_path=/app/out' };
 const PLAIN_LINK: ButtonAction = { type: 'uri', uri: 'https://example.com/' };
 
 function markup(defaultAction: ButtonAction, downloadAction?: ButtonAction): string {
@@ -74,5 +75,31 @@ describe('AttachmentChip body click', () => {
     expect(markup(DOWNLOAD_URI, DOWNLOAD_URI)).toContain('aria-label="Download"');
     expect(markup(OPEN_BROWSER, DOWNLOAD_URI)).toContain('aria-label="Download"');
     expect(markup(OPEN_BROWSER)).not.toContain('aria-label="Download"');
+  });
+});
+
+/**
+ * F-034 AC6 — the glyph follows the action, so the open-folder card reads as a folder while staying in the
+ * same family as the open-file card: same chip, same chrome, different destination. Matched on each icon's
+ * own path data, since all three render as a bare `<svg>` with no class of their own.
+ */
+const GLOBE = '<circle';
+const FOLDER = 'm6 14 1.5-2.9';
+const DOCUMENT = 'M15 2H6a2 2 0';
+
+describe('AttachmentChip glyph (F-034 AC6)', () => {
+  it('gives an open-folder card the folder icon', () => {
+    const html = markup(OPEN_FOLDER);
+
+    expect(html).toContain(FOLDER);
+    expect(html).not.toContain(DOCUMENT);
+    expect(html).not.toContain(GLOBE);
+  });
+
+  it('leaves the other three cards exactly as they were', () => {
+    expect(markup(OPEN_BROWSER)).toContain(GLOBE);
+    expect(markup(OPEN_FILE)).toContain(DOCUMENT);
+    expect(markup(PLAIN_LINK)).toContain(DOCUMENT);
+    expect(markup(OPEN_FILE)).not.toContain(FOLDER);
   });
 });

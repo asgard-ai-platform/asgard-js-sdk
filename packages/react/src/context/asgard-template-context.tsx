@@ -97,6 +97,11 @@ export interface AsgardTemplateContextValue {
   onSandboxOpenBrowser?: (sandboxName: string) => void;
   /** Host handler for a `sandbox://<name>/open-file` card (F-020) — the File Explorer destination (F-021). */
   onSandboxOpenFile?: (sandboxName: string, absolutePath: string) => void;
+  /**
+   * Host handler for a `sandbox://<name>/open-folder` card (F-034) — the File Explorer **tree** destination
+   * (expand that directory and stop there), as opposed to `onSandboxOpenFile`'s viewer destination.
+   */
+  onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   /** Where the default open-browser handler opens the one-time URL (F-020). Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
@@ -117,6 +122,7 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   channelTitleHidden: undefined,
   onSandboxOpenBrowser: undefined,
   onSandboxOpenFile: undefined,
+  onSandboxOpenFolder: undefined,
   sandboxBrowserOpenTarget: undefined,
 });
 
@@ -136,6 +142,7 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   channelTitleHidden?: boolean;
   onSandboxOpenBrowser?: (sandboxName: string) => void;
   onSandboxOpenFile?: (sandboxName: string, absolutePath: string) => void;
+  onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
 }
 
@@ -157,6 +164,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
     channelTitleHidden,
     onSandboxOpenBrowser,
     onSandboxOpenFile,
+    onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
   } = props;
 
@@ -177,6 +185,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       channelTitleHidden,
       onSandboxOpenBrowser,
       onSandboxOpenFile,
+      onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
     }),
     [
@@ -195,6 +204,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       channelTitleHidden,
       onSandboxOpenBrowser,
       onSandboxOpenFile,
+      onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
     ],
   );
