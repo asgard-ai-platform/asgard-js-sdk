@@ -12,6 +12,9 @@ import type {
 // offerer, candidates arrive before the offer, and a refused control request is answered with nothing.
 // A mock cannot catch those in a browser — but it can pin the wire behavior, which is what is done here.
 
+/** XK_Shift_L. Declared here so the expectations below read as the protocol, not as a magic number. */
+const XK_SHIFT_L = 0xffe1;
+
 interface SentFrame {
   event: string;
   payload?: Record<string, unknown>;
@@ -599,6 +602,55 @@ describe('input forwarding (spec §7)', () => {
       { keysym: 0x01000000 | 0x597d },
     ]);
     expect(socket.sentOf('control/keyup')).toHaveLength(2);
+  });
+
+  // Measured against a real container: an uppercase letter sent as a bare keysym arrives **lowercase**.
+  // `XKeysymToKeycode(XK_A)` finds the same keycode as 'a' — 'A' is its shifted level — and the server
+  // presses it without asserting Shift. Shifted *symbols* are fine, because no existing keycode produces
+  // them at level 1, so the server allocates a fresh mapping and the character comes through exactly.
+  // A–Z is therefore the only class that needs the modifier stated explicitly.
+  it('wraps an uppercase letter in Shift, because the remote otherwise types it lowercase', async () => {
+    const { session, socket } = await connect({ control: true });
+
+    session.sendKey({ type: 'text', text: 'A' });
+
+    expect(socket.sent.filter(f => f.event.startsWith('control/key')).map(f => [f.event, f.payload])).toEqual([
+      ['control/keydown', { keysym: XK_SHIFT_L }],
+      ['control/keydown', { keysym: 0x41 }],
+      ['control/keyup', { keysym: 0x41 }],
+      ['control/keyup', { keysym: XK_SHIFT_L }],
+    ]);
+  });
+
+  it.each([
+    ['lowercase', 'a', 0x61],
+    ['a digit', '7', 0x37],
+    ['a shifted symbol', '!', 0x21],
+    ['CJK', '你', 0x01000000 | 0x4f60],
+  ])('sends %s without a Shift wrapper', async (_label, character, keysym) => {
+    const { session, socket } = await connect({ control: true });
+
+    session.sendKey({ type: 'text', text: character });
+
+    expect(socket.sent.filter(f => f.event.startsWith('control/key')).map(f => [f.event, f.payload])).toEqual([
+      ['control/keydown', { keysym }],
+      ['control/keyup', { keysym }],
+    ]);
+  });
+
+  it('wraps each uppercase letter individually in a mixed string', async () => {
+    const { session, socket } = await connect({ control: true });
+
+    session.sendKey({ type: 'text', text: 'aB' });
+
+    expect(socket.sent.filter(f => f.event.startsWith('control/key')).map(f => [f.event, f.payload])).toEqual([
+      ['control/keydown', { keysym: 0x61 }],
+      ['control/keyup', { keysym: 0x61 }],
+      ['control/keydown', { keysym: XK_SHIFT_L }],
+      ['control/keydown', { keysym: 0x42 }],
+      ['control/keyup', { keysym: 0x42 }],
+      ['control/keyup', { keysym: XK_SHIFT_L }],
+    ]);
   });
 
   // charCodeAt would split this into two meaningless keysyms.

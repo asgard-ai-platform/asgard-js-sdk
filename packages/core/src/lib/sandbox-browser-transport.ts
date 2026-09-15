@@ -24,7 +24,21 @@ import type {
   SandboxBrowserTransport,
   SandboxBrowserTransportHandlers,
 } from '../types/sandbox-browser';
-import { charToKeysym } from './keysym';
+import { charToKeysym, XK } from './keysym';
+
+/**
+ * Uppercase ASCII letters are the one class of character the text path cannot send as a bare keysym.
+ *
+ * Measured against a real container: `A` arrives as `a`. `XKeysymToKeycode(XK_A)` finds the *same* keycode
+ * as `a` — `A` is that key's shifted level — and the server presses it without asserting Shift. Shifted
+ * symbols (`!`, `@`, `+`) are unaffected: no existing keycode produces them at level 1, so the server
+ * allocates a fresh mapping and they come through exactly. CJK is unaffected for the same reason.
+ *
+ * So the remedy is narrow and does not need a keyboard-layout model: state the modifier for A–Z.
+ */
+function needsShift(keysym: number): boolean {
+  return keysym >= 0x41 && keysym <= 0x5a;
+}
 
 /** How often to tell the server we are still here. Upstream's interval. */
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -327,8 +341,13 @@ export function createSandboxBrowserTransport(options: SandboxBrowserTransportOp
             // two meaningless surrogate halves.
             for (const character of event.text ?? '') {
               const keysym = charToKeysym(character);
+              const shift = needsShift(keysym);
+
+              if (shift) sendControlled('control/keydown', { keysym: XK.Shift_L });
+
               sendControlled('control/keydown', { keysym });
               sendControlled('control/keyup', { keysym });
+              if (shift) sendControlled('control/keyup', { keysym: XK.Shift_L });
             }
 
             return;

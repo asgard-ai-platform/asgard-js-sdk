@@ -53,6 +53,7 @@ export const KEYSYM: Readonly<Record<string, number>> = {
 /** The modifier keysyms the macOS remap reads and writes. Named so the mapping below is legible. */
 export const XK = {
   ISO_Level3_Shift: 0xfe03,
+  Shift_L: 0xffe1,
   Mode_switch: 0xff7e,
   Control_L: 0xffe3,
   Meta_L: 0xffe7,

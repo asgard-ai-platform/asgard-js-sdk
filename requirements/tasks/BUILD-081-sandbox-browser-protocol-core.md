@@ -199,7 +199,16 @@ live connection to a local `ghcr.io/m1k1o/neko/chromium:3.1.4` container.
    `getBaseEndpoint()` null guard is kept for consistency with `generateSandboxBrowserOpenUrl`, but the
    constructor already refuses a config with neither endpoint, so the criterion now states the guarantee
    that actually holds.
-4. **`system/init`'s control-owner field shape confirmed against the real server**, not guessed:
+4. **An uppercase letter sent through the text path arrived lowercase** — found while walking §10.2 during
+   BUILD-082's acceptance, fixed here because the text-to-keysym conversion lives in this package.
+   `XKeysymToKeycode(XK_A)` finds the same keycode as `a` (`A` is its shifted level) and the server presses
+   it without asserting Shift. Shifted _symbols_ (`!`, `@`, `+`) and CJK are unaffected — no existing
+   keycode produces them at level 1, so the server allocates a fresh mapping and they come through exactly.
+   That makes the remedy narrow and layout-independent: wrap A–Z in `Shift_L`. Four cases added (one red
+   first), and re-confirmed on the real container — `aA1!@#-_=+中文` now arrives intact.
+   **Note for the spec owner:** the prototype's transport has the identical bare-keysym loop, so §10.2's
+   "Shift + 字母打出大寫" cannot have been passing there either.
+5. **`system/init`'s control-owner field shape confirmed against the real server**, not guessed:
    `control_host: { id: "", has_host: false }`. The transport reads `control_host.id`, matching
    `control/host`'s `host_id` semantics.
 
@@ -215,10 +224,10 @@ npm run format:check      ✅
 npm run typecheck         ✅  (3 projects: core, react, react-demo)
 npm run build:core        ✅
 npm run build:react       ✅
-npm run test:packages     ✅  core 415 · react 512
+npm run test:packages     ✅  core 421 · react 587
 ```
 
-Core went from 326 to 415 tests: **89 new cases** (36 keysym, 44 transport, 7 client, 2 added relay rows).
+Core went from 326 to 421 tests: **95 new cases** (36 keysym, 44 transport, 7 client, 2 added relay rows).
 
 **Reverse verification** — each spec was confirmed to catch the silent failure it exists for by mutating the
 implementation and checking that exactly the right cases went red, then restoring:
@@ -281,4 +290,5 @@ Recorded at plan time; revisit if the build contradicts them.
 - 2026-09-15: Plan confirmed by the user; two-pair split and vendored Guacamole keyboard agreed (Status: `draft → ready`).
 - 2026-09-15: Implementation started on `feat/109-sandbox-browser-panel` (Status: `ready → in-progress`).
 - 2026-09-15: REVIEW-081 §1 raised one Critical finding (a socket leaked when `connect()` failed); fixed in this task with two regression cases written red first. Gate and live smoke re-run clean.
+- 2026-09-15: while walking §10.2 for BUILD-082, uppercase letters were found to arrive lowercase; fixed in this package (`Shift_L` wrapper for A–Z), 6 new cases, re-confirmed on the real container.
 - 2026-09-15: T1–T7 complete. R1–R15 satisfied; lint / format / typecheck / build / 925 tests green; 87 new core cases reverse-verified by mutation; live connection smoke passed against a local neko container (Status: `in-progress → done`).
