@@ -7,6 +7,7 @@ export type * from './subagent';
 export type * from './event-emitter';
 export type * from './blob';
 export type * from './sandbox-fs';
+export type * from './sandbox-browser';
 export type * from './source-set-fs';
 export { HttpError, isHttpError } from './http-error';
 export { ChannelBusyError, isChannelBusyError } from './channel-busy-error';
