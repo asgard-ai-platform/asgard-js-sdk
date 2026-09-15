@@ -3,7 +3,9 @@ import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardAppInitializationContext } from '../../../context/asgard-app-initialization-context';
 import { Locale, t } from '../../../i18n';
 import { FileExplorerController } from '../../../hooks/use-file-explorer-controller';
+import { SandboxBrowserController } from '../../../hooks/use-sandbox-browser-controller';
 import { FolderTreeIcon } from '../../file-explorer/icons';
+import { GlobeIcon } from '../../sandbox-browser/icons';
 import { ChatHeader, ChatHeaderAction, ChatHeaderRendererArgs, ChatHeaderTitleRendererArgs } from './chat-header';
 import { DownloadIcon, RefreshIcon, XIcon } from './icons';
 
@@ -34,6 +36,9 @@ export interface ChatHeaderHostProps {
   /** The shared File Explorer controller; the built-in toggle action is added when `builtinFileExplorer`. */
   fileExplorerController: FileExplorerController;
   builtinFileExplorer: boolean;
+  /** The shared sandbox browser controller; its toggle is added when `builtinSandboxBrowser` (F-035). */
+  sandboxBrowserController: SandboxBrowserController;
+  builtinSandboxBrowser: boolean;
 }
 
 export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
@@ -51,6 +56,8 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
     renderHeader,
     fileExplorerController,
     builtinFileExplorer,
+    sandboxBrowserController,
+    builtinSandboxBrowser,
   } = props;
 
   const {
@@ -96,6 +103,16 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
         label: t(locale, 'header.fileExplorer'),
         active: fileExplorerController.open,
         onClick: fileExplorerController.toggle,
+      });
+    }
+
+    if (builtinSandboxBrowser) {
+      list.push({
+        id: 'sandbox-browser',
+        icon: <GlobeIcon size={18} />,
+        label: t(locale, 'header.sandboxBrowser'),
+        active: sandboxBrowserController.open,
+        onClick: sandboxBrowserController.toggle,
       });
     }
 
@@ -151,6 +168,9 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
     builtinFileExplorer,
     fileExplorerController.open,
     fileExplorerController.toggle,
+    builtinSandboxBrowser,
+    sandboxBrowserController.open,
+    sandboxBrowserController.toggle,
     enableExport,
     messages,
     handleExport,

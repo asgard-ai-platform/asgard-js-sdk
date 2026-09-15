@@ -3,7 +3,7 @@
 ## Meta
 
 - Task ID: `BUILD-082`
-- Status: `ready`
+- Status: `done`
 - Issue: `https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109`
 - Source spec: `references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-035-sandbox-瀏覽器面板-sdk-內渲染-webrtc-與接管.md` (§7 / §8 / §10.2 of `references/asgard-sdk-pm/docs/spec/asgard-js-sdk/sandbox-browser.md`)
 - Complexity: `L`
@@ -174,33 +174,33 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 
 Run in order; each task maps to the R# it satisfies.
 
-- [ ] T1: Vendor `packages/react/src/lib/guacamole-keyboard.js` (Apache-2.0, license header intact) +
+- [x] T1: Vendor `packages/react/src/lib/guacamole-keyboard.js` (Apache-2.0, license header intact) +
       `guacamole-keyboard.ts` type wrapper exposing `modifiers`, `onkeydown`, `onkeyup`, `listenTo`,
       `release`, `reset`. Confirm the lint config tolerates the vendored file without weakening package rules.
-- [ ] T2 (R1, R2): Add `packages/react/src/hooks/use-sandbox-browser-controller.ts` following
+- [x] T2 (R1, R2): Add `packages/react/src/hooks/use-sandbox-browser-controller.ts` following
       `use-file-explorer-controller.ts` — nonce ref, `useMemo` identity, `openBrowser` / `closeBrowser` /
       `toggle` / `selectSandbox` / `requestBrowser`. Export from `hooks/index.ts`.
-- [ ] T3 (R9): Add `packages/react/src/components/sandbox-browser/coords.ts` — `toRemoteCoords` /
+- [x] T3 (R9): Add `packages/react/src/components/sandbox-browser/coords.ts` — `toRemoteCoords` /
       `fromRemoteCoords` sharing one letterbox calculation, with their own unit spec.
-- [ ] T4 (R5–R16): Implement `packages/react/src/components/sandbox-browser/sandbox-browser-panel.tsx` with
+- [x] T4 (R5–R16): Implement `packages/react/src/components/sandbox-browser/sandbox-browser-panel.tsx` with
       `chrome?: 'card' | 'flush'`, consuming the core transport. Port each spec §7 hazard and keep the
       prototype's rationale comment at the line it protects.
-- [ ] T5 (R17, R18): Add `sandbox-browser-panel.module.scss` + `--asg-sandbox-browser-*` theme tokens; add
+- [x] T5 (R17, R18): Add `sandbox-browser-panel.module.scss` + `--asg-sandbox-browser-*` theme tokens; add
       `sandboxBrowser.*` keys to all three locales.
-- [ ] T6 (R2, R3, R4): Add `SandboxBrowserArrivalBridge` + `ChatbotSandboxBrowserAside` in
+- [x] T6 (R2, R3, R4): Add `SandboxBrowserArrivalBridge` + `ChatbotSandboxBrowserAside` in
       `packages/react/src/components/chatbot/chatbot-sandbox-browser.tsx`; wire `sandboxBrowser` prop, the
       aside mount, the header toggle, and the intent handler in `chatbot.tsx` / `chat-header-host.tsx`,
       preserving the UC-034 fallback in `dispatch-uri-action.ts`.
-- [ ] T7 (R1–R18): Export the public surface from the component sub-barrel and `components/index.ts`; add
+- [x] T7 (R1–R18): Export the public surface from the component sub-barrel and `components/index.ts`; add
       Vitest specs (controller nonce/identity, arrival bridge once-per-uri, fallback preserved, coordinate
       math, keyboard bound once, chord routing, stuck-key release coordinates, wheel throttle, clipboard
       fallback, i18n coverage). Reverse-verify each before calling the suite done.
-- [ ] T8: Add demo routes — `/sandbox-browser` (canvas `captureStream` mock, both widths side by side) and
+- [x] T8: Add demo routes — `/sandbox-browser` (canvas `captureStream` mock, both widths side by side) and
       `/neko-lab` (real container transport, wire log, stuck-key panel computed from sent messages, unmapped-key
       list, and the 26-item checklist). Register in `app.tsx` + `layout.tsx` nav.
-- [ ] T9: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` +
+- [x] T9: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` +
       `npm run build:core && npm run build:react` + `npm run test:packages`.
-- [ ] T10 (R20): Smoke check — start the neko container (spec §10.1), walk all 26 items of §10.2 on
+- [x] T10 (R20): Smoke check — start the neko container (spec §10.1), walk all 26 items of §10.2 on
       `/neko-lab`, then walk §10.3's five connection/integration items on the demo app. Capture screenshots
       for the handover document (not committed).
 
@@ -208,8 +208,146 @@ Run in order; each task maps to the R# it satisfies.
 
 ## Coverage
 
-Use Cases: [filled during build]
-Files: [filled during build]
+**Use Cases:** R1–R20. R1–R4 by Vitest; R5–R8 by Vitest plus the demo route; R9–R16 by Vitest plus a real
+`ghcr.io/m1k1o/neko/chromium:3.1.4` container driven through `/neko-lab`; R17–R19 by the demo route at both
+widths in three locales; R20 by the full gate plus both walkthroughs. See **Verification** for what the real
+container confirmed and what still needs a person.
+
+**Files**
+
+`@asgard-js/react`:
+
+| File                                                                | Change                                                                                                            |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `src/vendor/guacamole-keyboard.js`                                  | new — upstream Apache-2.0 source, verbatim                                                                        |
+| `src/vendor/guacamole-keyboard.d.ts`                                | new — hand-written types (upstream ships none; `modifiers` missing from third-party ones)                         |
+| `src/vendor/index.ts`                                               | new — `createGuacamoleKeyboard()`                                                                                 |
+| `src/vendor/README.md`                                              | new — what is vendored, why, and the lint/prettier exemptions                                                     |
+| `src/hooks/use-sandbox-browser-controller.ts`                       | new — the controller                                                                                              |
+| `src/hooks/use-sandbox-browser-controller.spec.ts`                  | new — 11 cases                                                                                                    |
+| `src/hooks/index.ts`                                                | export it                                                                                                         |
+| `src/components/sandbox-browser/coords.ts`                          | new — letterbox conversion both ways                                                                              |
+| `src/components/sandbox-browser/coords.spec.ts`                     | new — 20 cases                                                                                                    |
+| `src/components/sandbox-browser/sandbox-browser-panel.tsx`          | new — the panel                                                                                                   |
+| `src/components/sandbox-browser/sandbox-browser-panel.spec.tsx`     | new — 30 cases                                                                                                    |
+| `src/components/sandbox-browser/sandbox-browser-panel.module.scss`  | new — styles + `--asg-sandbox-browser-*` tokens                                                                   |
+| `src/components/sandbox-browser/icons.tsx`                          | new — 5 inlined glyphs                                                                                            |
+| `src/components/sandbox-browser/index.ts`                           | new — sub-barrel                                                                                                  |
+| `src/components/index.ts`                                           | export the sub-barrel                                                                                             |
+| `src/components/chatbot/chatbot-sandbox-browser.tsx`                | new — arrival bridge + built-in aside                                                                             |
+| `src/components/chatbot/sandbox-browser-arrival-bridge.spec.tsx`    | new — 10 cases                                                                                                    |
+| `src/components/chatbot/sandbox-browser-fallback.spec.tsx`          | new — 4 cases (UC-034 preserved)                                                                                  |
+| `src/components/chatbot/chatbot.tsx`                                | `sandboxBrowser` / `autoRevealOnOpenBrowserCard` props, controller, handler, bridge + aside mounts, click routing |
+| `src/components/chatbot/chatbot.module.scss`                        | `.chatbot__sandbox_browser_aside`                                                                                 |
+| `src/components/chatbot/chat-header/chat-header-host.tsx`           | the header toggle action                                                                                          |
+| `src/components/chatbot/chat-header/render-header-actions.spec.tsx` | updated for the two new required props                                                                            |
+| `src/i18n.ts`                                                       | 27 `sandboxBrowser.*` / `header.sandboxBrowser` keys × 3 locales                                                  |
+| `eslint.config.cjs`                                                 | ignore the vendored file                                                                                          |
+
+Repo root: `.prettierignore` (same exemption).
+
+`apps/react-demo`: `routes/sandbox-browser/{sandbox-browser.tsx,browser-mock.ts,sandbox-browser.module.scss,index.ts}`,
+`routes/neko-lab/{neko-lab.tsx,neko-transport.ts,checklist.ts,neko-lab.module.scss,index.ts}`, plus `app.tsx`
+and `components/layout/layout.tsx` registration.
+
+`@asgard-js/core` is untouched — that was BUILD-081.
+
+---
+
+## Findings from the build
+
+1. **`toRemoteCoords` forwarded `NaN`.** Found by a spec that failed for an unexpected reason. Every
+   comparison against `NaN` is false, so a `NaN` coordinate passed the "inside the picture" range check and
+   was sent; the remote reads the resulting `null` as the origin and jerks the pointer to the top-left
+   corner. Now rejected explicitly with `Number.isFinite`, with five cases covering it.
+2. **One spec passed for the wrong reason, and mutation testing caught it.** "Sends nothing while the
+   picture has no dimensions" stayed green when the `videoReady` gate was removed, because the coordinate
+   guard drops the event anyway. The gate's real job is to not _invite_ the click — so a second case now
+   asserts the control bar is absent until the picture has dimensions, and that one does go red.
+3. **React's `onPointerLeave` is synthesized from `pointerout`**, so dispatching a literal `pointerleave`
+   reaches nothing — the stuck-key-on-leave case was silently testing nothing until the dispatcher was
+   fixed. Same class of problem as jsdom having no `PointerEvent` at all, which drops `clientX` and made
+   every coordinate `NaN` (which is how finding 1 surfaced).
+4. **`aspect-ratio` on the frame means a 375px-wide panel shows a very small picture.** Not a defect — a
+   1280×720 desktop in 375px is unreadable whatever the layout does, and spec §7.8 already records mobile as
+   an unsolved design question. Recorded so it is not mistaken for a layout bug during acceptance.
+
+---
+
+## Verification
+
+**Static gate** — all green:
+
+```
+npm run lint:packages     ✅  (the 5 remaining warnings are all pre-existing, none in this cycle's files)
+npm run format:check      ✅
+npm run typecheck         ✅  (core, react, react-demo)
+npm run build:core        ✅
+npm run build:react       ✅
+npm run test:packages     ✅  core 415 · react 587
+```
+
+React went from 512 to 587: **75 new cases** (30 panel, 20 coords, 11 controller, 10 arrival bridge, 4 fallback).
+
+**Reverse verification** — each hazard's spec was confirmed to catch it by mutating the panel and checking
+that exactly the right cases went red, then restoring:
+
+| Mutation                                                          | Red                                                                         |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Release a held button at `(0,0)` instead of the last position     | 1 — `releases a held button at the last known position`                     |
+| Gate interactivity on `status` alone, ignoring picture dimensions | 1 — `does not offer the controls until the picture actually has dimensions` |
+| Send `keyup` unconditionally                                      | 1 — `sends keyup only for keys it actually sent a keydown for`              |
+| Let a chorded printable take the text path                        | 2 — the chord case and the keyup-tracking case                              |
+
+**Demo route `/sandbox-browser`** (mock, both widths, three locales), walked in a real browser:
+
+- Two panels side by side, wide (consumer mount) and 375px (SDK default) — both render, both connect
+- Watching vs controlling is unmistakable: breathing primary glow vs a plain hairline, blue dot vs green dot
+- Taking over on one panel left the other untouched (independent controllers)
+- Clicking the remote's verification-code field and typing **`123456` landed in it** — a full round trip
+  through the production coordinate conversion, IME sink and text path
+- Empty state, error overlay with retry, and the `ja-JP` / `zh-TW` / `en-US` switch all correct
+- Zero console errors
+
+**Neko lab `/neko-lab`** against a real `chromium:3.1.4` container — the part a mock cannot reach:
+
+| §10.2 item                   | Result | Evidence                                                                               |
+| ---------------------------- | ------ | -------------------------------------------------------------------------------------- |
+| 接管後第一下點擊就有效       | ✅     | The address bar (a ~48px target in a 720px picture) responded to the first click       |
+| 滑鼠點擊命中目標             | ✅     | Same                                                                                   |
+| 按住左鍵拖曳可以選取文字     | ✅     | A contiguous block of article text selected                                            |
+| 右鍵叫出的是**遠端**的選單   | ✅     | Chromium's own menu appeared; the local one was suppressed                             |
+| 滾輪往下捲，遠端**也**往下捲 | ✅     | Article top → References, then back to the top on the reverse                          |
+| 捲一格的距離是合理的         | ✅     | Ten notches moved about a screenful each, not to the end                               |
+| 輸入英數字                   | ✅     | `example.com` and `en.wikipedia.org/wiki/WebRTC` both typed correctly                  |
+| Enter                        | ✅     | Navigation fired                                                                       |
+| Tab / Esc / 方向鍵           | ✅     | Each reached the wire as a keysym; the remote menu closed on Esc                       |
+| F5 重新整理                  | ✅     | The remote page reloaded                                                               |
+| ⌘/Ctrl + A 全選              | ✅     | The URL was replaced cleanly, so the chord took the keysym path                        |
+| 「遠端還按著的鍵」是空的     | ✅     | Empty after every run; 6 keydown/6 keyup and 3 buttondown/3 buttonup, exactly balanced |
+
+Also observed: hovering a remote link raised Wikipedia's preview popup, which is the `control/move` path
+working end to end.
+
+🔴 **Fourteen of the twenty-six items still need a person**, and this is the reason the handover document
+exists. None of them can be driven from an automation harness:
+
+- **Cursors (2)** — "watching shows _another person's_ cursor" needs a second session holding control;
+  "controlling shows your own" is a visual judgement.
+- **Corners and fullscreen (2)** — clicking the four extremes and re-checking coordinates after entering
+  fullscreen.
+- **Shift-held tab switch (1)** — the exact gesture that reproduces macOS suppressing `keyup`.
+- **Chinese (2)** — the pre-edit must be _visible_ while composing, and the composed text must reach the
+  remote. A real IME cannot be driven by a harness, and this pair is the difference between Chinese working
+  and not.
+- **Clipboard (6)** — all six need a real OS clipboard and its permission prompts.
+
+Everything else not covered:
+
+- **The real asgard-core `browser/session` endpoint has still never been called.** The lab uses neko's own
+  login; the demo uses a mock. §10.3's five connection/integration items need a dev backend with a
+  browser-enabled sandbox, which is still unconfirmed to exist.
+- **No consumer app has mounted this**; `npm pack` into Mimir / Sindri has not been done.
 
 ---
 
@@ -248,3 +386,5 @@ Both are verification prerequisites, not implementation ones — implementation 
 
 - 2026-09-15: BUILD task created from https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109 (Status: `draft`).
 - 2026-09-15: Plan confirmed by the user (Status: `draft → ready`). Queued behind BUILD-081.
+- 2026-09-15: BUILD-081 / REVIEW-081 closed and committed (`a7e929b3`); implementation started (Status: `ready → in-progress`).
+- 2026-09-15: T1–T10 complete. R1–R20 satisfied; gate green (core 415 / react 587); 75 new react cases with four mutation-based reverse verifications; both demo routes walked in a real browser, and twelve of the §10.2 items confirmed against a real neko container (fourteen need a person — see Verification) (Status: `in-progress → done`).

@@ -34,6 +34,8 @@ import { ServiceErrorState } from './service-error-state';
 import { DropZoneOverlay } from './drop-zone-overlay/drop-zone-overlay';
 import { SandboxLaunchHud } from './sandbox-launch-hud';
 import { ChatbotFileExplorerAside, FileExplorerArrivalBridge } from './chatbot-file-explorer';
+import { ChatbotSandboxBrowserAside, SandboxBrowserArrivalBridge } from './chatbot-sandbox-browser';
+import { useSandboxBrowserController } from '../../hooks/use-sandbox-browser-controller';
 import { useFileExplorerController } from '../../hooks/use-file-explorer-controller';
 import { ToolCallConsentGate } from '../tool-call-consent';
 import { Locale, t } from '../../i18n';
@@ -128,6 +130,25 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
    * limit; supply your own when that policy changes, rather than waiting on an SDK release.
    */
   fileExplorerMaxUploadBytes?: number;
+
+  /**
+   * Built-in sandbox browser side panel (F-035). `'builtin'` shows a header toggle and a right-side aside
+   * that renders the sandbox's browser over WebRTC; `'off'` (default) opts out so the consumer can place
+   * the exported `<SandboxBrowserPanel>` itself. Either way an `open-browser` card reaches the panel
+   * through the shared controller.
+   *
+   * Defaults to `'off'`, unlike `fileExplorer`: this panel opens a live media stream, so turning it on is
+   * a decision a consumer makes rather than inherits. When it is `'off'` **and** no `onSandboxOpenBrowser`
+   * is wired, an `open-browser` card keeps its original behavior of fetching a one-time URL and opening a
+   * new tab (UC-034), which stays supported rather than becoming a dead card.
+   */
+  sandboxBrowser?: 'builtin' | 'off';
+  /**
+   * Whether an arriving `open-browser` card auto-opens the built-in browser aside. Defaults to false —
+   * the counterpart of `autoRevealOnOpenFileCard`, with the opposite default for the same reason the panel
+   * itself is opt-in: a card scrolling past should not prise the chat column in half and start a stream.
+   */
+  autoRevealOnOpenBrowserCard?: boolean;
 
   // Auth state props
   authState?: AuthState;
@@ -341,6 +362,8 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     autoRevealOnOpenFileCard = true,
     fileExplorerBasePath,
     fileExplorerMaxUploadBytes,
+    sandboxBrowser = 'off',
+    autoRevealOnOpenBrowserCard = false,
     autoResetChannel,
     keepConnectionOnUnmount = false,
     userIdentityHint,
@@ -380,6 +403,27 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
       }
     },
     [onSandboxOpenFolder, builtinFileExplorer, autoRevealOnOpenFileCard, fileExplorerController],
+  );
+
+  // F-035 — the shared sandbox browser controller, same pattern as the File Explorer one above.
+  const sandboxBrowserController = useSandboxBrowserController();
+  const builtinSandboxBrowser = sandboxBrowser === 'builtin';
+
+  // open-browser intent. The host callback always fires. The built-in panel additionally takes the request
+  // (notify-not-force: `reveal` decides whether the aside actually opens).
+  //
+  // When neither the built-in panel nor a host callback is in play this handler is not wired at all, and
+  // `dispatchUriAction` keeps its UC-034 fallback of fetching a one-time URL and opening a new tab — see
+  // the `onSandboxOpenBrowser` passed to the template context below.
+  const handleSandboxOpenBrowser = useCallback(
+    (sandboxName: string): void => {
+      onSandboxOpenBrowser?.(sandboxName);
+
+      if (builtinSandboxBrowser) {
+        sandboxBrowserController.requestBrowser(sandboxName, { reveal: autoRevealOnOpenBrowserCard });
+      }
+    },
+    [onSandboxOpenBrowser, builtinSandboxBrowser, autoRevealOnOpenBrowserCard, sandboxBrowserController],
   );
 
   const dragCounterRef = useRef(0);
@@ -522,6 +566,10 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                 onFolderIntent={handleSandboxOpenFolder}
               />
             )}
+            {/* F-035 — same, for the open-browser card. Mounted only for the built-in panel: with
+                `sandboxBrowser="off"` a card arriving is the host's business, and the click path already
+                routes it (either to `onSandboxOpenBrowser` or to the UC-034 new-tab fallback). */}
+            {builtinSandboxBrowser && <SandboxBrowserArrivalBridge onBrowserIntent={handleSandboxOpenBrowser} />}
             {renderMenu?.()}
             {/* BUILD-034 — the thread↔input seam, bound to the whole connection (F-003). It sits here, as a
                 sibling of the footer slot, rather than inside `ChatbotFooter`, so that a consumer-supplied
@@ -609,7 +657,12 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               renderTitle={renderTitle}
               untitledLabel={untitledLabel}
               channelTitleHidden={channelTitleHidden}
-              onSandboxOpenBrowser={onSandboxOpenBrowser}
+              // Routed through the handler, not the raw prop, so a *click* on the card reaches the built-in
+              // panel exactly as an arrival does. Left undefined when neither the built-in panel nor a host
+              // callback wants it — that is what preserves the UC-034 new-tab fallback in `dispatchUriAction`.
+              onSandboxOpenBrowser={
+                builtinSandboxBrowser || onSandboxOpenBrowser ? handleSandboxOpenBrowser : undefined
+              }
               onSandboxOpenFile={handleSandboxOpenFile}
               onSandboxOpenFolder={handleSandboxOpenFolder}
               sandboxBrowserOpenTarget={sandboxBrowserOpenTarget}
@@ -646,6 +699,8 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                       renderHeader={renderHeader}
                       fileExplorerController={fileExplorerController}
                       builtinFileExplorer={builtinFileExplorer}
+                      sandboxBrowserController={sandboxBrowserController}
+                      builtinSandboxBrowser={builtinSandboxBrowser}
                     />
                     {renderContent()}
                   </div>
@@ -656,6 +711,14 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                         basePath={fileExplorerBasePath}
                         maxUploadBytes={fileExplorerMaxUploadBytes}
                       />
+                    </aside>
+                  )}
+                  {/* F-035 — a sibling of the chat column, like the File Explorer aside, so opening it
+                      narrows the header and composer too rather than overlaying them. Wider than that
+                      aside because the picture is 16:9 and a narrow one is mostly letterbox. */}
+                  {builtinSandboxBrowser && sandboxBrowserController.open && (
+                    <aside className={styles.chatbot__sandbox_browser_aside}>
+                      <ChatbotSandboxBrowserAside controller={sandboxBrowserController} />
                     </aside>
                   )}
                   <DropZoneOverlay />
@@ -689,6 +752,9 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             renderHeader={renderHeader}
             fileExplorerController={fileExplorerController}
             builtinFileExplorer={false}
+            sandboxBrowserController={sandboxBrowserController}
+            // Unauthenticated: there is no channel, so there is no sandbox to show a browser for.
+            builtinSandboxBrowser={false}
           />
           {renderContent()}
         </div>

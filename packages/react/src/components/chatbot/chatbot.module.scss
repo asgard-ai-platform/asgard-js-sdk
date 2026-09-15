@@ -69,3 +69,16 @@
   flex-direction: column;
   overflow: hidden;
 }
+
+// F-035 — same placement, wider basis. The File Explorer's 20rem is plenty for a tree, but this aside holds
+// a 16:9 picture: at 20rem the stage is mostly letterbox and the remote page is unreadable. 30rem keeps the
+// chat column usable in the shell's default width while giving the picture something to work with, and
+// `max-width: 70%` stops it swallowing the conversation on a narrow mount.
+.chatbot__sandbox_browser_aside {
+  flex: 0 0 30rem;
+  max-width: 70%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

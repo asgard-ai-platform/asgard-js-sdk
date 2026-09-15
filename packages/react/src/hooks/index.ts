@@ -3,6 +3,7 @@ export * from './use-channel';
 export * from './use-derived-state';
 export * from './use-sandbox-launch';
 export * from './use-file-explorer-controller';
+export * from './use-sandbox-browser-controller';
 export * from './use-debounce';
 export * from './use-resize-observer';
 export * from './use-deep-compare-memo';

@@ -1,0 +1,113 @@
+// DemoWrapper's content area is a ROW flex, so the route needs one column child — otherwise the legend and
+// the panels sit side by side and each gets squeezed.
+.stack {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.legendTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.legend ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.locales {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+
+  button {
+    padding: 4px 10px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+  }
+
+  .active {
+    border-color: #4f46e5;
+    font-weight: 600;
+  }
+}
+
+.stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sizeLabel {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+// Wide: how every consumer actually mounts it.
+.wideBox {
+  width: 720px;
+  max-width: 100%;
+  height: 520px;
+  display: flex;
+  flex-direction: column;
+
+  // Without `min-height: 0` a flex child refuses to shrink below its content and pushes the control bar
+  // out of the box.
+  > * {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// Narrow: the SDK's own default widget width. The box is sized to the panel rather than smaller — a
+// wrapper shorter than its content does not clip it, the content paints straight over whatever follows.
+.narrowBox {
+  width: 375px;
+  height: 520px;
+  display: flex;
+  flex-direction: column;
+
+  > * {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.log {
+  flex-shrink: 0;
+  max-height: 160px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.logEmpty {
+  opacity: 0.6;
+}

@@ -72,20 +72,24 @@
 
 ## ▶ Next Task
 
-**`BUILD-081` `in-progress`（分支 `feat/109-sandbox-browser-panel`）、`BUILD-082` `ready`（排在 081 之後）**（[`asgard-sdk-pm#109`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109) F-035：sandbox 瀏覽器面板 — SDK 內渲染 WebRTC 與接管）。計畫已於 2026-09-15 經使用者確認。
+**目前無 ready 的 task — awaiting task selection。**
 
-把「瀏覽器接手」從**開新分頁載入 Neko 自己的前端**（UC-034）改成 **SDK 自己渲染**：Neko sidecar 當串流後端不動，client 拿 `{ wsUrl, token }` 自己接 WebRTC、自己畫、自己轉送鍵鼠。**後端五個 relay 全部已出貨**（asgard-core [#298](https://github.com/asgard-ai-platform/asgard-core/pull/298)、asgard-sdk-go `v1.7.10`），這張票只做前端。`browser/open-url` 與 UC-034 **保留不動**，作為宿主未接 handler 時的 fallback。
+**`BUILD-081` / `REVIEW-081` 與 `BUILD-082` / `REVIEW-082`（[`asgard-sdk-pm#109`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109) F-035：sandbox 瀏覽器面板 — SDK 內渲染 WebRTC 與接管）皆 `done`，分支 `feat/109-sandbox-browser-panel`，待開 draft PR 並產驗收文件。** §1 兩輪皆 0 違規、§3 共 35 條 R# 全 Pass（其中 3 條部分依賴人工觀察）。
 
-**拆成兩對，照 spec §8.1 的分層**（協定層框架無關、面板與 controller 在 react）：
+把「瀏覽器接手」從**開新分頁載入 Neko 前端**（UC-034）改成 **SDK 自己渲染**，後端五個 relay 早已出貨、前端純接。**UC-034 保留不動**（宿主沒接 handler 時的 fallback，另有專屬 spec 檔守著），`sandboxBrowser` 預設 `'off'`、`autoRevealOnOpenBrowserCard` 預設 `false`，既有消費端行為一個位元都沒變。
 
-- **BUILD-081（core）** — `client.createSandboxBrowserSession()`（第十二支 sandbox relay）、keysym 模組（`charToKeysym` 的 `codepoint | 0x01000000` 是中文不需遠端輸入法的原因、macOS `Meta_L → Control_L` 重映、`normalizeWheel` 反向＋`deltaMode`＋夾 ±10）、`createSandboxBrowserTransport()`（WS ＋ **server 是 offerer** 的 WebRTC 握手、`signal/candidate` 早於 `signal/provide` 的暫存、`control/host` 控制權狀態機、游標 data channel、heartbeat、control 閘門、teardown）。R1–R15。驗收載體是 Vitest（假 WS / RTCPeerConnection，逐案反向驗證）＋ 本機 neko 容器的最小連線 smoke。
-- **BUILD-082（react）** — vendored Guacamole 鍵盤、`useSandboxBrowserController()`、`<SandboxBrowserPanel>`、arrival bridge、`<Chatbot sandboxBrowser>` 與 header toggle、`/sandbox-browser`（mock）與 `/neko-lab`（真容器）兩條 demo 路由。R1–R20。驗收載體是 spec §10.2 的 **26 項輸入清單**（真容器，mock 驗不到）＋ §10.3 的連線整合。
+- **BUILD-081（core，89 新案）**：`createSandboxBrowserSession()`（第十二支 relay）、keysym 模組、`createSandboxBrowserTransport()`。
+- **BUILD-082（react，75 新案）**：vendored Guacamole 鍵盤、controller、`<SandboxBrowserPanel>`、arrival bridge、`<Chatbot sandboxBrowser>` 與 header toggle、`/sandbox-browser` 與 `/neko-lab` 兩條 demo 路由、27 key × 3 語系。
 
-**兩個計畫階段就決定的取捨**（詳見各 BUILD 檔的 Open Decisions）：(1) **控制權不進 controller** —— 它是連線狀態不是擺放狀態，離線就沒有控制權、重連由伺服器重新宣告（`control/host`）；放進 controller 會產生一份可能與伺服器不一致的影子狀態，而這個面板最怕的就是「UI 以為自己有控制權、實際上沒有」。(2) **Guacamole 鍵盤用 vendor 不用 npm** —— react 的 vite build 只把四個模組設為 external，`guacamole-common-js` 是 namespace 式整包 client，tree-shaking 不可靠，為了一個 `Keyboard` 會把整包吃進 `dist`；vendored 的 Apache-2.0 檔保留 `eslint-disable` 標頭，是第三方相依不是自家程式碼在破例。
+**三個計畫階段就下的決定**：(1) **控制權不進 controller** —— 它是連線狀態，伺服器是唯一權威；影子狀態會造成「UI 以為有控制權、實際沒有」，而伺服器拒絕 `control/request` 時**不回任何錯誤**。(2) **Guacamole 鍵盤用 vendor 不用 npm** —— react 的 vite build 只把四個模組設 external，`guacamole-common-js` 是整包 namespace client，為了一個 `Keyboard` 會把整包吃進 `dist`；vendored 檔在 **config 層**排除 lint/prettier（不是在檔案裡下 pragma），以保持與上游可 diff。(3) **stage 在亮色主題下仍是深色**，但用 8 個 `--asg-sandbox-browser-*` token 表達。
 
-**§7 的每一條都是接真 Neko 容器實測出來的，共 12 個「不會報錯、只會行為不對」的坑**（速查表在規格 §7.9）。最貴的五個：`signal/candidate` 早到必須暫存（漏掉**永遠連不上**）；補送 release 的座標**不能用 `(0,0)`**（遠端判讀成拖曳到左上角、整頁被選取）；中文要從 IME 產出取字**且組字過程必須看得見**（承接器隱形 ⇒ preedit 跟著隱形，使用者只能盲打）；按著 ⌘ 時可列印字元不能走文字路徑（瀏覽器把它當命令吃掉，⌘A / ⌘C / ⌘Z 憑空消失）；滾輪方向與瀏覽器相反且 delta 不能原封不動送（伺服器逐次發 XTest，Chrome 的 100 就是滾一百下）。
+**四個實作中才浮現的問題**：(1) **`toRemoteCoords` 會把 `NaN` 送出去** —— 對 `NaN` 的比較全為 false，所以它通過了「在畫面內」的範圍檢查，而遠端把 `null` 讀成原點、指標跳到左上角；已用 `Number.isFinite` 擋掉。(2) **有一條測試是為了錯的理由而綠的** —— 拿掉 `videoReady` gate 它照樣過，因為座標守衛本來就會丟掉事件；mutation 測出來後補了一條「畫面沒尺寸前不該出現控制列」才真的紅。(3) **React 的 `onPointerLeave` 是從 `pointerout` 合成的**，直接 dispatch `pointerleave` 打不到任何東西；同一類問題還有 jsdom 沒有 `PointerEvent`（`clientX` 被丟掉，正是上面 `NaN` 浮現的原因）。(4) **core 的 `ontrack` 是每個 track 觸發一次不是每條 stream 一次**（只有接真容器才看得到），重複回報會讓面板把 `srcObject` 重設成正在播的同一條 stream；已依 stream id 去重。
 
-🔴 **兩個驗收前置條件**（不擋實作，擋的是驗收）：(1) **本機 Docker daemon 當下沒在跑** —— §10.2 的 26 項需要 `ghcr.io/m1k1o/neko/chromium:3.1.4`；規格 §10.1 另列五個「症狀不像原因」的啟動雷（單一 mux port、`NAT1TO1` 用空白分隔、`NEKO_SERVER_CORS` 必設、host port 不要用 8080、image tag 要釘同一個）。(2) **真後端上要有 browser-enabled 的 sandbox** —— §10.3 要接 asgard-core dev；demo `.env` 目前五個 bot-provider endpoint 裡有沒有哪一個會叫 `open_sandbox_browser` 尚未確認，沒有的話 §10.3 就是被擋住，會明講而不是拿 mock 充數。
+🔵 **驗到哪裡**：core 的協定層接真 neko 容器跑通（1280×720 即時畫面、控制權授予、握手順序），react 這邊**§10.2 的 26 項裡有 12 項已用自動化對真容器確認**（首次點擊即命中、拖曳選字、**遠端**右鍵選單、滾輪雙向、英數輸入、Enter、Tab/Esc/方向鍵、F5、Ctrl+A、卡鍵面板全程為空且 down/up 完全配平）。
+
+🔴 **剩下 14 項需要人工**，無法自動化：兩項游標（其一要第二個 session 持有控制權）、四角與全螢幕後的座標、按住 Shift 切分頁、**兩項中文**（真 IME 驅動不了，而「組字過程看得見」正是中文能不能用的分水嶺）、六項剪貼簿（真的作業系統剪貼簿與權限提示）。另外**真的 asgard-core `browser/session` 端點一次都沒打過**（lab 用 neko 自己的 login、demo 用 mock），§10.3 的五項要等一個有 browser-enabled sandbox 的 dev 後端；也還沒 `npm pack` 進任何消費端。
+
+上一批：
 
 上一批：
 
@@ -317,5 +321,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-080` | Review: sandbox open-folder card and directory reveal    | —        | done   | [REVIEW-080-sandbox-open-folder-reveal.md](./REVIEW-080-sandbox-open-folder-reveal.md)                   |
 | `BUILD-081`  | Sandbox browser protocol layer in core                   | L        | done   | [BUILD-081-sandbox-browser-protocol-core.md](./BUILD-081-sandbox-browser-protocol-core.md)               |
 | `REVIEW-081` | Review: sandbox browser protocol layer in core           | —        | done   | [REVIEW-081-sandbox-browser-protocol-core.md](./REVIEW-081-sandbox-browser-protocol-core.md)             |
-| `BUILD-082`  | Sandbox browser panel and input forwarding in react      | L        | ready  | [BUILD-082-sandbox-browser-panel-react.md](./BUILD-082-sandbox-browser-panel-react.md)                   |
-| `REVIEW-082` | Review: sandbox browser panel and input forwarding       | —        | draft  | [REVIEW-082-sandbox-browser-panel-react.md](./REVIEW-082-sandbox-browser-panel-react.md)                 |
+| `BUILD-082`  | Sandbox browser panel and input forwarding in react      | L        | done   | [BUILD-082-sandbox-browser-panel-react.md](./BUILD-082-sandbox-browser-panel-react.md)                   |
+| `REVIEW-082` | Review: sandbox browser panel and input forwarding       | —        | done   | [REVIEW-082-sandbox-browser-panel-react.md](./REVIEW-082-sandbox-browser-panel-react.md)                 |
