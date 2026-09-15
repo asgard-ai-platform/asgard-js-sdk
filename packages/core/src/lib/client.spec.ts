@@ -218,6 +218,94 @@ describe('AsgardServiceClient.generateSandboxBrowserOpenUrl (F-020)', () => {
   });
 });
 
+// F-035 — createSandboxBrowserSession mints the streaming credentials the SDK-rendered panel connects with.
+// Contract: POST {botProviderEndpoint}/sandbox/{sandbox_name}/browser/session → { data: { wsUrl, token } }.
+// Sibling of generateSandboxBrowserOpenUrl above and deliberately *not* a replacement for it: that one hands
+// a one-time URL to a new tab (UC-034, kept as the fallback), this one hands a socket to our own renderer.
+describe('AsgardServiceClient.createSandboxBrowserSession (F-035)', () => {
+  it('POSTs to the browser session endpoint and returns data.wsUrl / data.token', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(fakeResponse(200, { data: { wsUrl: 'wss://neko.example.com/api/ws', token: 'tok-1' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const session = await makeClient().createSandboxBrowserSession('sbx-1');
+
+    expect(session).toEqual({ wsUrl: 'wss://neko.example.com/api/ws', token: 'tok-1' });
+
+    const [reqUrl, init] = fetchMock.mock.calls[0];
+    expect(reqUrl).toBe('https://api.example.com/ns/x/bot-provider/y/sandbox/sbx-1/browser/session');
+    expect(init.method).toBe('POST');
+    expect(init.headers['X-API-KEY']).toBe('test-key');
+  });
+
+  it('accepts a bare body without the { data } envelope', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(fakeResponse(200, { wsUrl: 'wss://neko.example.com/api/ws', token: 'tok-2' })),
+    );
+
+    expect(await makeClient().createSandboxBrowserSession('sbx-2')).toEqual({
+      wsUrl: 'wss://neko.example.com/api/ws',
+      token: 'tok-2',
+    });
+  });
+
+  it('url-encodes the sandbox name in the path', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(200, { data: { wsUrl: 'wss://n/api/ws', token: 't' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await makeClient().createSandboxBrowserSession('sbx a');
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.example.com/ns/x/bot-provider/y/sandbox/sbx%20a/browser/session',
+    );
+  });
+
+  it('throws when the response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(500, 'boom')));
+
+    await expect(makeClient().createSandboxBrowserSession('sbx-3')).rejects.toThrow();
+  });
+
+  // A half-credential is worse than none: the call resolves, and the failure surfaces one layer down as a
+  // WebSocket that will not open — an error that points at the network rather than at this response.
+  it.each([
+    ['token', { wsUrl: 'wss://neko.example.com/api/ws' }],
+    ['wsUrl', { token: 'tok-4' }],
+    ['both', {}],
+  ])('throws when the response is missing %s', async (_missing, data) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(200, { data })));
+
+    await expect(makeClient().createSandboxBrowserSession('sbx-4')).rejects.toThrow(
+      /did not contain both wsUrl and token/,
+    );
+  });
+
+  // The method keeps a `getBaseEndpoint()` null guard, same as generateSandboxBrowserOpenUrl — but it is
+  // unreachable through the public constructor, which is the real guarantee that no call can ever build a
+  // `null/sandbox/...` url. Asserting the constructor states what actually holds; asserting the guard would
+  // only describe a branch no caller can enter.
+  it('cannot be reached without an endpoint, because the constructor refuses one', () => {
+    expect(() => new AsgardServiceClient({} as ConstructorParameters<typeof AsgardServiceClient>[0])).toThrow(
+      /Either endpoint or botProviderEndpoint must be provided/,
+    );
+  });
+
+  it('derives the session url from the deprecated endpoint option too (§2.4 compatibility)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(200, { data: { wsUrl: 'wss://n/api/ws', token: 't' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new AsgardServiceClient({
+      endpoint: 'https://api.example.com/ns/x/bot-provider/y/message/sse',
+    }).createSandboxBrowserSession('sbx-5');
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.example.com/ns/x/bot-provider/y/sandbox/sbx-5/browser/session',
+    );
+  });
+});
+
 // F-021 / UC-037 — sandbox fs client methods (Cycle 1: list / read / write). Contract confirmed against
 // asgard-core edgeserver: GET fs/list (JSON), GET fs/file (raw octet-stream + X-Total-Bytes/X-Truncated),
 // PUT fs/file (multipart form-data → { data: { bytesWritten } }).

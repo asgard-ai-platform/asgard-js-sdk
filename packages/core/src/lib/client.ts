@@ -10,6 +10,7 @@ import {
   ChannelHomeDownloadResult,
   MessageFeedbackReply,
   MessageFeedbackRequest,
+  SandboxBrowserSessionCredentials,
   SandboxChannelScope,
   SandboxFsCopyMoveOptions,
   SandboxFsCopyResult,
@@ -614,6 +615,57 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
     }
 
     return openURL;
+  }
+
+  /**
+   * F-035 — 取得 sandbox 瀏覽器的串流連線憑證：`POST {base}/sandbox/{sandboxName}/browser/session`
+   * → `{ wsUrl, token }`（envelope 容錯，比照 `generateSandboxBrowserOpenUrl`）。
+   *
+   * 與 `generateSandboxBrowserOpenUrl` 的差別在**誰畫畫面**：那一支拿的是一次性網址、交給新分頁載入
+   * Neko 自己的前端（UC-034，保留不動當 fallback）；這一支拿的是 WebSocket endpoint 與 token，由 SDK
+   * 自己接 WebRTC、自己畫、自己轉送鍵鼠。
+   *
+   * 三件呼叫端必須知道的性質：
+   * - **token 是 Neko 的 session token，不是 Asgard 的。** 權限等同使用者透過舊的 open-url 流程本來就
+   *   能做的事，並隨 sandbox pod 一起消失。
+   * - **token 不在 `wsUrl` 裡**，連線時自己 append `?token=`（瀏覽器的 WebSocket API 不能設 header）。
+   * - **可以重複呼叫**，每次 mint 一個新 session。連線斷掉或 sandbox 重啟後就該重呼，不要留著舊 token
+   *   重試 —— token 沒有 TTL 但存在 Neko 的記憶體裡，pod 一重啟就失效。
+   */
+  async createSandboxBrowserSession(
+    sandboxName: string,
+    options?: SandboxChannelScope,
+  ): Promise<SandboxBrowserSessionCredentials> {
+    const baseEndpoint = this.getBaseEndpoint();
+
+    if (!baseEndpoint) {
+      throw new Error(
+        'Unable to derive sandbox browser session endpoint. Please provide botProviderEndpoint in config.',
+      );
+    }
+
+    const url = withChannelScope(
+      new URL(`${baseEndpoint}/sandbox/${encodeURIComponent(sandboxName)}/browser/session`),
+      options,
+    );
+
+    const response = await fetch(url.toString(), { method: 'POST', headers: this.apiHeaders() });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
+    }
+
+    const json: { data?: Partial<SandboxBrowserSessionCredentials> } & Partial<SandboxBrowserSessionCredentials> =
+      await response.json();
+    const wsUrl = json.data?.wsUrl ?? json.wsUrl;
+    const token = json.data?.token ?? json.token;
+
+    // 半套憑證比沒有還糟：少了任何一邊，連線會在 WebSocket 那層失敗，而那個錯誤指向的是網路不是這裡。
+    if (!wsUrl || !token) {
+      throw new Error('Sandbox browser session response did not contain both wsUrl and token.');
+    }
+
+    return { wsUrl, token };
   }
 
   /**

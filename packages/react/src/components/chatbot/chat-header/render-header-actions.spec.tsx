@@ -5,6 +5,7 @@ import { ReactNode } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useFileExplorerController } from '../../../hooks/use-file-explorer-controller';
+import { useSandboxBrowserController } from '../../../hooks/use-sandbox-browser-controller';
 import type { ChatbotProps } from '../chatbot';
 import { ChatHeaderHost } from './chat-header-host';
 import { ChatHeaderRendererArgs } from './chat-header';
@@ -46,12 +47,15 @@ describe('#432 Chatbot no longer branches around the header host', () => {
 
 function Host({ renderHeader }: { renderHeader?: (args: ChatHeaderRendererArgs) => ReactNode }): ReactNode {
   const controller = useFileExplorerController();
+  const browserController = useSandboxBrowserController();
 
   return (
     <ChatHeaderHost
       title="Demo Bot"
       fileExplorerController={controller}
       builtinFileExplorer
+      sandboxBrowserController={browserController}
+      builtinSandboxBrowser={false}
       renderHeader={renderHeader}
     />
   );
