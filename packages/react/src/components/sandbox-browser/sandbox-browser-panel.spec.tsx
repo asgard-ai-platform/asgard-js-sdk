@@ -350,6 +350,49 @@ describe('scroll (spec §7.6)', () => {
   });
 });
 
+describe('wheel ownership (spec §7.6)', () => {
+  /** A native, cancellable wheel event — React's own handler is registered passively at the root. */
+  function nativeWheel(): WheelEvent {
+    const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: 0, deltaY: 200 });
+    frame().dispatchEvent(event);
+
+    return event;
+  }
+
+  // Found by re-walking the live container: the first couple of notches reached the remote and then
+  // scrolling died. Without `preventDefault` the browser treats the wheel as unclaimed, latches the gesture
+  // to a scroll container and stops delivering to the element — and inside the built-in aside (which
+  // scrolls) it would scroll the aside instead of the remote.
+  it('claims the wheel while controlling, so the gesture cannot latch elsewhere', async () => {
+    render(<Harness />);
+    await goLiveAndControl();
+
+    expect(nativeWheel().defaultPrevented).toBe(true);
+  });
+
+  // While watching, the wheel is not ours — the page around the panel should scroll normally.
+  it('leaves the wheel alone while not controlling', async () => {
+    render(<Harness />);
+    await waitFor(() => expect(handlers).not.toBeNull());
+    act(() => {
+      handlers?.onStatus('live');
+      handlers?.onHostChange('agent');
+    });
+    act(() => makePictureReady());
+
+    expect(nativeWheel().defaultPrevented).toBe(false);
+  });
+
+  it('still forwards the scroll it claims', async () => {
+    render(<Harness />);
+    await goLiveAndControl();
+
+    nativeWheel();
+
+    expect(pointerEvents().filter(e => e.type === 'scroll')).toHaveLength(1);
+  });
+});
+
 describe('stuck keys (spec §7.5)', () => {
   // A buttonup at (0, 0) reads to the remote as a drag from where the button went down to the top-left
   // corner: the page ends up fully selected and the click stops counting as a click. Measured symptom —
@@ -518,6 +561,39 @@ describe('keyboard routing (spec §7.3 / §7.4)', () => {
     keyboard().onkeydown?.(0x61);
 
     expect(keyEvents()).toEqual([]);
+  });
+});
+
+describe('control bar focus (spec §7.4)', () => {
+  // Found by re-walking the live container, not by reading code: after clicking the paste button the
+  // browser moves focus to that button, and the keyboard is bound to the sink — so from then on typing
+  // reaches nothing until you click the picture again. Silent, and indistinguishable from "the remote
+  // stopped responding".
+  //
+  // jsdom does not move focus on mousedown, so no jsdom assertion about `activeElement` could have caught
+  // this. What *is* assertable here is the mechanism that prevents it: the bar cancels mousedown, which is
+  // the standard way a toolbar avoids stealing focus from the surface it acts on.
+  it.each([
+    ['paste', (): HTMLElement => screen.getByLabelText('Paste from your clipboard')],
+    ['fullscreen', (): HTMLElement => screen.getByLabelText('Fullscreen')],
+    ['stop-controlling', (): HTMLElement => screen.getByText('Stop controlling')],
+  ])('does not let the %s button take focus away from the keyboard sink', async (_name, find) => {
+    render(<Harness />);
+    await goLiveAndControl();
+
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    find().dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('still lets the buttons be clicked', async () => {
+    render(<Harness />);
+    await goLiveAndControl();
+
+    fireEvent.click(screen.getByText('Stop controlling'));
+
+    expect(sent.filter(s => s.kind === 'control')).toEqual([{ kind: 'control', payload: 'release' }]);
   });
 });
 

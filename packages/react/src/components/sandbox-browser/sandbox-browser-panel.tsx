@@ -51,6 +51,19 @@ export interface SandboxBrowserPanelProps {
   onLog?: (line: string) => void;
 }
 
+/** The pointer fields both a React synthetic event and a native one carry. */
+interface PointerLike {
+  clientX: number;
+  clientY: number;
+}
+
+/** Same, plus the wheel fields. Structural so the native listener and the React handler share one path. */
+interface WheelLike extends PointerLike {
+  deltaX: number;
+  deltaY: number;
+  deltaMode: number;
+}
+
 /** Is a printable character being typed as part of a command rather than as text? Shift does not count. */
 function isChord(modifiers: GuacamoleKeyboardInterface['modifiers']): boolean {
   return modifiers.ctrl || modifiers.alt || modifiers.meta || modifiers.hyper;
@@ -412,7 +425,7 @@ export function SandboxBrowserPanel({
 
   // --- pointer ---
   const pointer = useCallback(
-    (type: RemotePointerEvent['type'], event: React.PointerEvent | React.WheelEvent, button?: number): void => {
+    (type: RemotePointerEvent['type'], event: PointerLike | WheelLike, button?: number): void => {
       const session = sessionRef.current;
       const video = videoRef.current;
       if (!session || !video || !controlling) return;
@@ -429,7 +442,7 @@ export function SandboxBrowserPanel({
         if (now - lastWheelAt.current < WHEEL_THROTTLE_MS) return;
 
         lastWheelAt.current = now;
-        const delta = normalizeWheel(event as React.WheelEvent);
+        const delta = normalizeWheel(event as WheelLike);
         session.sendPointer({ type, x: at.x, y: at.y, deltaX: delta.x, deltaY: delta.y });
 
         return;
@@ -439,6 +452,32 @@ export function SandboxBrowserPanel({
     },
     [controlling],
   );
+
+  /**
+   * Claim the wheel while controlling — as a **native, non-passive listener**, not React's `onWheel`.
+   *
+   * React registers wheel at the root passively, so `preventDefault()` from a synthetic handler does
+   * nothing. And not claiming it has a worse consequence than an unwanted page scroll: the browser treats
+   * the gesture as unowned, latches it to the nearest scroll container and **stops delivering wheel events
+   * to this element**, so scrolling the remote dies after a notch or two. Measured against a real
+   * container — two notches through, then silence. Inside the built-in aside, which scrolls, the same
+   * gesture would move the aside rather than the remote.
+   *
+   * While watching, the wheel is deliberately left alone: the surrounding page should scroll as usual.
+   */
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || !controlling) return;
+
+    const onWheel = (event: WheelEvent): void => {
+      event.preventDefault();
+      pointer('scroll', event);
+    };
+
+    frame.addEventListener('wheel', onWheel, { passive: false });
+
+    return (): void => frame.removeEventListener('wheel', onWheel);
+  }, [controlling, pointer]);
 
   /**
    * Bind Guacamole to the sink. **A callback ref, never an effect.**
@@ -728,7 +767,8 @@ export function SandboxBrowserPanel({
           }}
           onPointerEnter={() => controlling && void syncClipboardRef.current()}
           onPointerLeave={() => controlling && releaseAll('pointerleave')}
-          onWheel={event => pointer('scroll', event)}
+          // No `onWheel` here: the wheel is handled by the non-passive listener above, which is the only
+          // way to claim the gesture. Two handlers would send every notch twice.
           onContextMenu={event => controlling && event.preventDefault()}
         >
           {/*
@@ -818,7 +858,16 @@ export function SandboxBrowserPanel({
         )}
 
         {live && (
-          <div className={styles.bar}>
+          <div
+            className={styles.bar}
+            // The bar must never take focus away from the keyboard sink. Clicking a button moves focus to
+            // it by default, and the sink is where Guacamole listens — so after using the paste button the
+            // keyboard reached nothing until the user clicked the picture again, with no sign anything was
+            // wrong. Cancelling mousedown is the usual way a toolbar acts on a surface without stealing
+            // focus from it, and it covers every button in here including ones added later. Clicks still
+            // fire; keyboard users can still tab to them.
+            onMouseDown={event => event.preventDefault()}
+          >
             {controlling ? (
               <>
                 <button type="button" className={styles.pill} onClick={dropControl}>

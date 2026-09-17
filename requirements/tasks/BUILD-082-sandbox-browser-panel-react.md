@@ -268,7 +268,20 @@ and `components/layout/layout.tsx` registration.
    reaches nothing — the stuck-key-on-leave case was silently testing nothing until the dispatcher was
    fixed. Same class of problem as jsdom having no `PointerEvent` at all, which drops `clientX` and made
    every coordinate `NaN` (which is how finding 1 surfaced).
-4. **`aspect-ratio` on the frame means a 375px-wide panel shows a very small picture.** Not a defect — a
+4. **The control bar stole keyboard focus.** Found by re-walking the live container after the cycle was
+   already marked done — not by any test. Clicking the paste button moved focus to the button, and the
+   keyboard is bound to the sink, so from then on typing reached nothing until the user clicked the picture
+   again. Silent, and indistinguishable from "the remote stopped responding". The bar now cancels
+   `mousedown`, the toolbar idiom, which covers every button in it including future ones.
+   **jsdom cannot catch this class at all** — it does not move focus on mousedown — so the test asserts the
+   mechanism (the event is cancelled) rather than `activeElement`.
+5. **Scrolling died after one or two notches.** Same walk. Without `preventDefault` the browser treats the
+   wheel as unclaimed, latches the gesture to a scroll container and stops delivering wheel events to the
+   element. Measured live: notches 1 and 2 reached the remote, 3 and 4 did not. Inside the built-in aside,
+   which scrolls, the same gesture would move the aside instead. Now handled by a **native non-passive**
+   listener, because React registers wheel passively at the root and `preventDefault()` from its synthetic
+   handler does nothing. Verified live: four notches in a row all reach the remote.
+6. **`aspect-ratio` on the frame means a 375px-wide panel shows a very small picture.** Not a defect — a
    1280×720 desktop in 375px is unreadable whatever the layout does, and spec §7.8 already records mobile as
    an unsolved design question. Recorded so it is not mistaken for a layout bug during acceptance.
 
@@ -284,10 +297,10 @@ npm run format:check      ✅
 npm run typecheck         ✅  (core, react, react-demo)
 npm run build:core        ✅
 npm run build:react       ✅
-npm run test:packages     ✅  core 415 · react 587
+npm run test:packages     ✅  core 421 · react 594
 ```
 
-React went from 512 to 587: **75 new cases** (30 panel, 20 coords, 11 controller, 10 arrival bridge, 4 fallback).
+React went from 512 to 594: **82 new cases** (30 panel, 20 coords, 11 controller, 10 arrival bridge, 4 fallback).
 
 **Reverse verification** — each hazard's spec was confirmed to catch it by mutating the panel and checking
 that exactly the right cases went red, then restoring:
@@ -387,4 +400,5 @@ Both are verification prerequisites, not implementation ones — implementation 
 - 2026-09-15: BUILD task created from https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109 (Status: `draft`).
 - 2026-09-15: Plan confirmed by the user (Status: `draft → ready`). Queued behind BUILD-081.
 - 2026-09-15: BUILD-081 / REVIEW-081 closed and committed (`a7e929b3`); implementation started (Status: `ready → in-progress`).
+- 2026-09-17: re-walked the live container end to end (the first full walk since the uppercase fix) and found two more silent defects — the control bar stealing keyboard focus, and wheel latching killing scroll after two notches. Both fixed red-first and re-verified live; the live regression is now 11/11.
 - 2026-09-15: T1–T10 complete. R1–R20 satisfied; gate green (core 415 / react 587); 75 new react cases with four mutation-based reverse verifications; both demo routes walked in a real browser, and twelve of the §10.2 items confirmed against a real neko container (fourteen need a person — see Verification) (Status: `in-progress → done`).
