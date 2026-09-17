@@ -32,3 +32,6 @@ yarn.lock
 # Config files that shouldn't be formatted
 *.min.js
 *.min.css
+
+# Vendored third-party source, kept byte-identical to upstream so it can be diffed against it.
+packages/react/src/vendor/guacamole-keyboard.js

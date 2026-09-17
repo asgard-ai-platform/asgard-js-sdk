@@ -4,8 +4,11 @@ import AsgardServiceClient from './client';
 import { SandboxChannelScope } from '../types';
 
 // #470 — every sandbox relay is channel-scoped (`SandboxChannelScope`); a relay in front of asgard-core
-// rejects the call without it. All eleven are driven from one table because the defect was an omission in
+// rejects the call without it. All twelve are driven from one table because the defect was an omission in
 // all of them at once: an assertion written next to each method would have been just as absent.
+//
+// F-035 added the twelfth (`createSandboxBrowserSession`) and, in doing so, showed the coverage guard had
+// a hole of its own — see the comment on the filter below.
 
 vi.mock('@microsoft/fetch-event-source', () => ({
   fetchEventSource: vi.fn(() => Promise.resolve()),
@@ -33,6 +36,8 @@ function anyOkResponse(): Response {
         mtimeUnix: 1,
         mode: 420,
         openURL: 'https://neko.example.com/t/abc',
+        wsUrl: 'wss://neko.example.com/api/ws',
+        token: 'neko-session-token',
       },
     }),
     blob: async () => new Blob(['x']),
@@ -61,6 +66,11 @@ const RELAYS: Relay[] = [
     transport: 'fetch',
     call: (c, s) => c.generateSandboxBrowserOpenUrl('sb', s),
   },
+  {
+    name: 'createSandboxBrowserSession',
+    transport: 'fetch',
+    call: (c, s) => c.createSandboxBrowserSession('sb', s),
+  },
   { name: 'sandboxFsList', transport: 'fetch', call: (c, s) => c.sandboxFsList('sb', '/work', s) },
   { name: 'sandboxFsRead', transport: 'fetch', call: (c, s) => c.sandboxFsRead('sb', '/work/a.txt', s) },
   { name: 'sandboxFsWrite', transport: 'fetch', call: (c, s) => c.sandboxFsWrite('sb', '/work/a.txt', 'hi', s) },
@@ -82,12 +92,11 @@ const RELAYS: Relay[] = [
 ];
 
 /**
- * Every `sandboxFs*` / sandbox-browser method on the prototype that this table does **not** drive. The
- * three private helpers are listed by name on purpose: a new public relay is not on this list, so it
- * turns this spec red instead of shipping without the ownership parameter the way all eleven did.
+ * Every sandbox method on the prototype that this table does **not** drive. The three private helpers are
+ * listed by name on purpose: a new public relay is not on this list, so it turns this spec red instead of
+ * shipping without the ownership parameter the way all eleven did.
  *
- * Blind to a relay that neither starts with those prefixes nor lives on the prototype (an instance
- * arrow-function field).
+ * Still blind to a relay that does not live on the prototype (an instance arrow-function field).
  */
 const PRIVATE_HELPERS = ['sandboxFsUrl', 'sandboxFsRequest', 'deriveSandboxFsEndpoint'];
 
@@ -123,10 +132,11 @@ describe('sandbox relay channel scope (#470)', () => {
   });
 
   it('covers every sandbox relay on the client, so a new one cannot ship uncovered', () => {
-    const onPrototype = Object.getOwnPropertyNames(AsgardServiceClient.prototype).filter(
-      name =>
-        name.startsWith('sandboxFs') || name.startsWith('generateSandboxBrowser') || name.startsWith('deriveSandboxFs'),
-    );
+    // Matched on "sandbox" anywhere in the name rather than on a list of prefixes. F-035's
+    // `createSandboxBrowserSession` matched none of the three original prefixes, so the guard that exists
+    // to catch the twelfth relay would have waved it straight through — a list of known shapes cannot
+    // recognize a shape nobody has written yet.
+    const onPrototype = Object.getOwnPropertyNames(AsgardServiceClient.prototype).filter(name => /sandbox/i.test(name));
     const covered = new Set([...RELAYS.map(relay => relay.name), ...PRIVATE_HELPERS]);
     const uncovered = onPrototype.filter(name => !covered.has(name));
 

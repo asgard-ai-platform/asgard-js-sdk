@@ -1,0 +1,486 @@
+// F-035 — sandbox browser panel.
+//
+// The layout is taken from video conferencing (Meet / Webex), because watching an agent drive a browser
+// feels like watching a colleague share their screen: dark stage, picture centred at its own aspect ratio,
+// controls floating along the bottom. The one addition is the take-over / hand-back pair.
+//
+// **The stage is dark in both themes, on purpose.** It is a video surface, and a video surface that inherits
+// a light page background reads as a broken player. It is still themeable rather than hardcoded: every value
+// below comes from an `--asg-sandbox-browser-*` custom property with a dark default, so a consumer can
+// restyle it through the same theme mechanism as everything else (FRONTEND_RULE_COMMON §4.2).
+
+.root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--asg-color-surface, #fff);
+  color: var(--asg-color-text-primary, inherit);
+  font-size: 0.8125rem;
+  border: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
+  border-radius: 0.5rem;
+}
+
+// flush: the aside split into the chat view — no box of its own, just a divider.
+.flush {
+  border: none;
+  border-left: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
+  border-radius: 0;
+}
+
+/* --- header: who is driving --- */
+
+.head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
+}
+
+.headIcon {
+  display: flex;
+  flex: none;
+  color: var(--asg-color-text-secondary, #6b7280);
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.headName {
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headSub {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.6875rem;
+  color: var(--asg-color-text-secondary, #6b7280);
+}
+
+.dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--asg-color-text-secondary, #6b7280);
+
+  &[data-host='agent'] {
+    background: var(--asg-color-primary, #4f46e5);
+  }
+
+  &[data-host='me'] {
+    background: var(--asg-color-success, #16a34a);
+  }
+}
+
+.headSpacer {
+  margin-left: auto;
+}
+
+.iconBtn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--asg-color-text-secondary, #6b7280);
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--asg-color-primary, #4f46e5) 10%, transparent);
+    color: var(--asg-color-text-primary, inherit);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--asg-color-primary, #4f46e5) 65%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+.select {
+  max-width: 9rem;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--asg-color-text-secondary, #6b7280);
+  font: inherit;
+  font-size: 0.7rem;
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--asg-color-primary, #4f46e5) 65%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+/* --- stage --- */
+
+// The bottom padding is a lane reserved for the control bar. Conferencing apps float their controls *below*
+// the picture rather than over it, and here that is not only taste: a remote page's submit button is very
+// often at the bottom, and a bar laid over it is a bar the person who took over cannot click past.
+.stage {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0.875rem 0.875rem 3.625rem;
+  background: var(--asg-sandbox-browser-stage-bg, #0d1012);
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  max-height: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.625rem;
+  background: var(--asg-sandbox-browser-picture-bg, #000);
+  outline: none;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  // `contain` is what creates the letterbox bars the coordinate conversion accounts for. Changing this to
+  // `cover` would crop the remote screen while every converted coordinate kept assuming it was all visible.
+  object-fit: contain;
+  background: var(--asg-sandbox-browser-picture-bg, #000);
+}
+
+// The state ring. Overlaid with ::after rather than a border so it cannot alter the video's box — the
+// coordinate conversion reads that box, so a border here would shift every click.
+.frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+// Somebody else is driving: a slow breathing glow, the same signal conferencing apps use for "this person
+// is talking". It has to be readable out of the corner of the eye, because the user is watching the picture,
+// not a status line.
+.frame[data-host='agent']::after {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+// Driving it yourself: the glow is removed entirely, leaving a plain hairline. Deliberately *not* a second
+// coloured ring — if both states glow, peripheral vision cannot separate them, and telling them apart is
+// the only thing this ring is for. Holding control is the normal case and needs no reminder; the control
+// bar's "stop" button and the green header dot carry it. (Conferencing apps do the same: your own tile does
+// not glow while you speak.)
+.frame[data-host='me']::after {
+  box-shadow: inset 0 0 0 1px var(--asg-sandbox-browser-ring-idle, rgba(255, 255, 255, 0.14));
+  animation: none;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 30%, transparent),
+      inset 0 0 12px 1px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 5%, transparent),
+      0 0 7px 0 color-mix(in srgb, var(--asg-color-primary, #4f46e5) 10%, transparent);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 100%, transparent),
+      inset 0 0 34px 8px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 32%, transparent),
+      0 0 44px 12px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 66%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame[data-host='agent']::after {
+    animation: none;
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 80%, transparent),
+      inset 0 0 26px 4px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 20%, transparent),
+      0 0 28px 6px color-mix(in srgb, var(--asg-color-primary, #4f46e5) 45%, transparent);
+  }
+}
+
+// The remote pointer, drawn only while watching (spec §7.8). Never `cursor: none` on the frame: the stream
+// carries no pointer of its own, so hiding the local one leaves none at all — the picture reacts to hover
+// with nothing visible causing it.
+.cursor {
+  position: absolute;
+  transform: translate(-2px, -2px);
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+  transition: left 0.06s linear, top 0.06s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor {
+    transition: none;
+  }
+}
+
+/* --- keyboard / IME sink --- */
+
+// It must be a genuinely editable element that is genuinely in the layout: `compositionend` and
+// `beforeinput` only fire on editable elements, and `display: none` / `visibility: hidden` cannot take
+// focus. Hence 1px and transparent rather than hidden.
+.ime {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  opacity: 0;
+  resize: none;
+  pointer-events: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+// While composing it becomes visible at the last click position. The pre-edit text — the underlined,
+// not-yet-committed characters — is painted by the browser *inside this element*, and the candidate window
+// anchors to its caret. Left invisible in a corner, the user types blind until Enter and the candidate list
+// appears somewhere unrelated; they report "Chinese is broken" without knowing why (spec §7.4.1).
+.imeComposing {
+  z-index: 3;
+  width: auto;
+  height: auto;
+  padding: 0.1875rem 0.4375rem;
+  overflow-x: hidden;
+  border: 1px solid var(--asg-color-primary, #4f46e5);
+  border-radius: 0.375rem;
+  opacity: 1;
+  background: var(--asg-sandbox-browser-preedit-bg, #fff);
+  color: var(--asg-sandbox-browser-preedit-text, #202124);
+  caret-color: var(--asg-sandbox-browser-preedit-text, #202124);
+  font-size: 0.9375rem;
+  white-space: pre;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  min-width: 2.125rem;
+}
+
+/* --- control bar --- */
+
+.bar {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--asg-sandbox-browser-bar-border, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: var(--asg-sandbox-browser-bar-bg, rgba(13, 16, 18, 0.78));
+  backdrop-filter: blur(8px);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.875rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--asg-sandbox-browser-control-bg, rgba(255, 255, 255, 0.1));
+  color: var(--asg-sandbox-browser-control-text, #fff);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--asg-sandbox-browser-control-bg-hover, rgba(255, 255, 255, 0.18));
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--asg-color-primary, #4f46e5) 80%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+.pillPrimary {
+  background: var(--asg-color-primary, #4f46e5);
+  color: var(--asg-color-primary-foreground, #fff);
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.08);
+    background: var(--asg-color-primary, #4f46e5);
+  }
+}
+
+.barBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--asg-sandbox-browser-control-bg, rgba(255, 255, 255, 0.1));
+  color: var(--asg-sandbox-browser-control-text, #fff);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--asg-sandbox-browser-control-bg-hover, rgba(255, 255, 255, 0.18));
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--asg-color-primary, #4f46e5) 80%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+/* --- overlays --- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 1.25rem;
+  background: var(--asg-sandbox-browser-overlay-bg, rgba(13, 16, 18, 0.72));
+  color: var(--asg-sandbox-browser-overlay-text, #e8edf0);
+  text-align: center;
+}
+
+.overlayTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.overlaySub {
+  max-width: 38ch;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--asg-sandbox-browser-overlay-subtext, #9fb0b8);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+/* --- manual paste fallback --- */
+
+// Sits above the control bar, not over the middle of the picture. Appears only when the browser will not
+// hand us the clipboard — which is the common case, not the exception (spec §7.7).
+.paste {
+  position: absolute;
+  bottom: 3.5rem;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(26rem, calc(100% - 1.75rem));
+  padding: 0.75rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--asg-sandbox-browser-bar-border, rgba(255, 255, 255, 0.14));
+  border-radius: 0.75rem;
+  background: var(--asg-sandbox-browser-sheet-bg, rgba(13, 16, 18, 0.92));
+  backdrop-filter: blur(8px);
+  color: var(--asg-sandbox-browser-overlay-text, #e8edf0);
+}
+
+.pasteTitle {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.pasteSub {
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--asg-sandbox-browser-overlay-subtext, #9fb0b8);
+}
+
+.pasteInput {
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--asg-sandbox-browser-bar-border, rgba(255, 255, 255, 0.18));
+  border-radius: 0.5rem;
+  background: var(--asg-sandbox-browser-control-bg, rgba(255, 255, 255, 0.06));
+  color: var(--asg-sandbox-browser-overlay-text, #e8edf0);
+  font-family: inherit;
+  font-size: 0.75rem;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: var(--asg-color-primary, #4f46e5);
+  }
+}
+
+.pasteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+/* --- empty state --- */
+
+.empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  color: var(--asg-color-text-secondary, #6b7280);
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--asg-color-text-primary, inherit);
+}
+
+.emptySub {
+  max-width: 34ch;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
