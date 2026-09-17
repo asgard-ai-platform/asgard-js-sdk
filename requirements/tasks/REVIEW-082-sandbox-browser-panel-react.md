@@ -114,28 +114,28 @@ None is in a file this cycle touched.
 
 ### R# Result Matrix
 
-| R#  | Description                                                                    | Result         | Note                                                                                                                                     |
-| --- | ------------------------------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| R1  | `requestBrowser` opens / selects / bumps the nonce; controller identity stable | Pass           | 11 controller cases incl. identity across renders                                                                                        |
-| R2  | `sandboxBrowser="off"` still routes intents, mounts no aside                   | Pass           | Controller cases + the `builtinSandboxBrowser` gate                                                                                      |
-| R3  | Arrival bridge fires once per (message, uri), notify-not-force                 | Pass           | 10 cases; the mock replaces the conversation object per render, as the real store does                                                   |
-| R4  | UC-034 new-tab fallback preserved when nothing is wired                        | Pass           | 4 dedicated cases: fallback, target override, defer-to-host, and never opening the raw `sandbox://` uri                                  |
-| R5  | Live picture; connecting / error / empty states                                | Pass           | Demo route walked; all three seen                                                                                                        |
-| R6  | Read-only by default; takeover explicit and visible; a way out                 | Pass           | Watching shows a breathing glow and "Take over"; controlling shows a hairline, a green dot and "Stop controlling"                        |
-| R7  | No control events without control; timeout on silence                          | Pass           | Unit (no traffic while watching) + a timeout case; the gate also exists in core                                                          |
-| R8  | Reconnect obtains a **new** session                                            | Pass           | Retry bumps `retryNonce` → the effect re-runs → `transport.connect` → `createSession` again (core spec proves credentials are re-minted) |
-| R9  | Coordinates from `videoWidth`, black bars dropped, no events before dimensions | Pass           | 20 coord cases + panel cases; **confirmed live** — a ~48px address bar hit on the first click                                            |
-| R10 | Keyboard bound exactly once                                                    | Pass           | Reverse-verified; binds once across connect → live → control → host changes                                                              |
-| R11 | Chorded printables take the keysym path and release                            | Pass           | Reverse-verified; **confirmed live** — Ctrl+A replaced the URL cleanly                                                                   |
-| R12 | IME text from `compositionend`; sink visible while composing                   | Pass (partial) | Unit cases pass; **the visible-pre-edit half needs a person** — see below                                                                |
-| R13 | Release held input at the last position, never `(0,0)`                         | Pass           | Reverse-verified; **confirmed live** — 6/6 keys and 3/3 buttons balanced, held panel empty                                               |
-| R14 | Wheel throttled and normalized                                                 | Pass           | Unit; **confirmed live** — remote scrolled down then back up                                                                             |
-| R15 | Clipboard: push, chord, button, and a manual fallback                          | Pass (partial) | Unit cases pass; **all six §10.2 clipboard items need a person**                                                                         |
-| R16 | Remote cursor drawn while watching; local cursor kept                          | Pass (partial) | Code path unit-covered; **needs a second session to see live**                                                                           |
-| R17 | Every string via `t()`, three locales                                          | Pass           | 27 keys × 3; switched live on the demo route                                                                                             |
-| R18 | `.module.scss` + `--asg-*` tokens                                              | Pass           | §1 g6                                                                                                                                    |
-| R19 | Both widths                                                                    | Pass           | Rendered side by side; both usable                                                                                                       |
-| R20 | Build + tests + both routes walked                                             | Pass           | See below                                                                                                                                |
+| R#  | Description                                                                    | Result | Note                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | `requestBrowser` opens / selects / bumps the nonce; controller identity stable | Pass   | 11 controller cases incl. identity across renders                                                                                        |
+| R2  | `sandboxBrowser="off"` still routes intents, mounts no aside                   | Pass   | Controller cases + the `builtinSandboxBrowser` gate                                                                                      |
+| R3  | Arrival bridge fires once per (message, uri), notify-not-force                 | Pass   | 10 cases; the mock replaces the conversation object per render, as the real store does                                                   |
+| R4  | UC-034 new-tab fallback preserved when nothing is wired                        | Pass   | 4 dedicated cases: fallback, target override, defer-to-host, and never opening the raw `sandbox://` uri                                  |
+| R5  | Live picture; connecting / error / empty states                                | Pass   | Demo route walked; all three seen                                                                                                        |
+| R6  | Read-only by default; takeover explicit and visible; a way out                 | Pass   | Watching shows a breathing glow and "Take over"; controlling shows a hairline, a green dot and "Stop controlling"                        |
+| R7  | No control events without control; timeout on silence                          | Pass   | Unit (no traffic while watching) + a timeout case; the gate also exists in core                                                          |
+| R8  | Reconnect obtains a **new** session                                            | Pass   | Retry bumps `retryNonce` → the effect re-runs → `transport.connect` → `createSession` again (core spec proves credentials are re-minted) |
+| R9  | Coordinates from `videoWidth`, black bars dropped, no events before dimensions | Pass   | 20 coord cases + panel cases; **confirmed live** — a ~48px address bar hit on the first click                                            |
+| R10 | Keyboard bound exactly once                                                    | Pass   | Reverse-verified; binds once across connect → live → control → host changes                                                              |
+| R11 | Chorded printables take the keysym path and release                            | Pass   | Reverse-verified; **confirmed live** — Ctrl+A replaced the URL cleanly                                                                   |
+| R12 | IME text from `compositionend`; sink visible while composing                   | Pass   | Unit cases plus a **real macOS bopomofo IME walked with the user**: box visible, `你好` reached the remote                               |
+| R13 | Release held input at the last position, never `(0,0)`                         | Pass   | Reverse-verified; **confirmed live** — 6/6 keys and 3/3 buttons balanced, held panel empty                                               |
+| R14 | Wheel throttled and normalized                                                 | Pass   | Unit; **confirmed live** — remote scrolled down then back up                                                                             |
+| R15 | Clipboard: push, chord, button, and a manual fallback                          | Pass   | Four clipboard routes confirmed live, including remote→local with text we never typed                                                    |
+| R16 | Remote cursor drawn while watching; local cursor kept                          | Pass   | Confirmed with two sessions: the watcher drew the controller's X11 pointer                                                               |
+| R17 | Every string via `t()`, three locales                                          | Pass   | 27 keys × 3; switched live on the demo route                                                                                             |
+| R18 | `.module.scss` + `--asg-*` tokens                                              | Pass   | §1 g6                                                                                                                                    |
+| R19 | Both widths                                                                    | Pass   | Rendered side by side; both usable                                                                                                       |
+| R20 | Build + tests + both routes walked                                             | Pass   | See below                                                                                                                                |
 
 ### Live evidence against a real container
 
@@ -179,17 +179,24 @@ None.
 
 ## Not covered
 
-**Fourteen of the twenty-six §10.2 items still need a person at the keyboard** — none is automatable:
-the two cursor items (one needs a second session holding control), the four-corner and post-fullscreen
-coordinate checks, the Shift-held tab switch, both Chinese items (a real IME cannot be driven by a harness,
-and the _visible pre-edit_ is the difference between Chinese being usable and not), and all six clipboard
-items (real OS clipboard plus its permission prompts).
+**Closed on 2026-09-17 by walking the remainder live with the user.** Both Chinese items pass on a real
+macOS bopomofo IME — the composition box is visible with underlined pre-edit at the last click position, and
+`你好` reached the remote on Enter. The letterbox item was **wrongly recorded here as a gap**: the remote
+resolution is ours to set, and restarting the container at 1280x1024 gave 123px bars, on which three probe
+points sent zero events while all five points inside the picture sent exactly one. That misclassification —
+work dressed as a blocker — is the main process failure of this cycle.
+
+Not separately confirmed: whether the IME candidate window renders beside the composition box once a full
+syllable is entered (nothing showed at the partial-syllable stage, which is normal for that IME).
 
 Also still open, unchanged from BUILD-081:
 
-- **The real asgard-core `browser/session` endpoint has never been called.** The lab uses neko's own login;
-  the demo uses a mock. §10.3's five connection/integration items need a dev backend with a browser-enabled
-  sandbox, which is not yet confirmed to exist.
+- **The real `browser/session` happy path has never run** — the one gap left. Probing dev on 2026-09-17
+  returned `HTTP 412 FAILED_PRECONDITION / "no matched sandbox found, please launch sandbox via message API
+first"`, not a 404: the relay is deployed, the URL is built correctly and the API key is accepted. What is
+  missing is a launched browser-enabled sandbox, and the only dev bot we hold credentials for exposes
+  `search_movie` / `search_book`. **Unblocking needs a dev bot-provider whose agent calls
+  `open_sandbox_browser`** — nothing further can be done inside this repo.
 - **No consumer app has mounted this** — no `npm pack` into Mimir / Sindri.
 
 ---
@@ -200,6 +207,7 @@ Also still open, unchanged from BUILD-081:
 - 2026-09-15: §1 static review run (Status: `draft → in-progress`). 19 applicable items ✅, 1 n/a; 9 greps
   run, 2 non-empty results adjudicated (CSS-variable fallbacks, an issue number, one genuine timeout);
   5 lint warnings all confirmed pre-existing. Zero violations.
+- 2026-09-17: remaining items walked live with the user. Both Chinese items and the letterbox item now pass; the letterbox one had been misrecorded as a gap. Backend gap narrowed to "relay deployed, no browser-enabled bot on dev". Gaps: 3 → 1.
 - 2026-09-15: §3 functional validation complete — R1–R20 Pass, three partial and explicitly scoped
   (R12 / R15 / R16 need a person for their observational halves). 75 new react cases, four mutation-based
   reverse verifications, both demo routes walked in a real browser, twelve §10.2 items confirmed against a

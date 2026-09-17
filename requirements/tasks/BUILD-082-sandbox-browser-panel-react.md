@@ -342,42 +342,34 @@ that exactly the right cases went red, then restoring:
 Also observed: hovering a remote link raised Wikipedia's preview popup, which is the `control/move` path
 working end to end.
 
-🔴 **Fourteen of the twenty-six items still need a person**, and this is the reason the handover document
-exists. None of them can be driven from an automation harness:
+✅ **Walked live with the user on 2026-09-17, closing the two items automation could not reach:**
 
-- **Cursors (2)** — "watching shows _another person's_ cursor" needs a second session holding control;
-  "controlling shows your own" is a visual judgement.
-- **Corners and fullscreen (2)** — clicking the four extremes and re-checking coordinates after entering
-  fullscreen.
-- **Shift-held tab switch (1)** — the exact gesture that reproduces macOS suppressing `keyup`.
-- **Chinese (2)** — the pre-edit must be _visible_ while composing, and the composed text must reach the
-  remote. A real IME cannot be driven by a harness, and this pair is the difference between Chinese working
-  and not.
-- **Clipboard (6)** — all six need a real OS clipboard and its permission prompts.
+- **Chinese via a real IME.** The user typed `ㄋㄧˇㄏㄠˇ` on a real macOS bopomofo input method. The
+  composition box **was visible** — white, bordered, underlined pre-edit text, positioned at the last click
+  rather than hidden in a corner — and on Enter `你好` reached the remote and submitted a search. This is
+  the item spec §7.4.1 calls the dividing line for whether Chinese is usable at all, and it holds. Not
+  separately confirmed: whether the candidate window appears beside the box once a full syllable is typed
+  (nothing was visible at the partial-syllable stage, which is normal for that IME).
+- **Letterbox bars.** Previously recorded here as a gap, which was **wrong** — the remote resolution is
+  ours to choose. Restarting the container with `NEKO_DESKTOP_SCREEN=1280x1024@30` (5:4 in a 16:9 frame)
+  produces 123px pillarbox bars each side. Measured on that container: three points on the bars, including
+  one 3px from the picture edge, sent **zero** events; the picture's left edge, right edge, both corners and
+  centre each sent exactly one. Reclassifying work as a blocker is the exact trap `AGENTS.md` warns about,
+  and it cost a day.
 
-Everything else not covered:
+🔴 **One gap left, and it is a real one:**
 
-- **The real asgard-core `browser/session` endpoint has still never been called.** The lab uses neko's own
-  login; the demo uses a mock. §10.3's five connection/integration items need a dev backend with a
-  browser-enabled sandbox, which is still unconfirmed to exist.
-- **No consumer app has mounted this**; `npm pack` into Mimir / Sindri has not been done.
+**The happy path of the real `browser/session` endpoint has never run.** Probing dev directly narrowed this
+considerably — the relay answers `HTTP 412 FAILED_PRECONDITION / "no matched sandbox found, please launch
+sandbox via message API first"`, not a 404. So the route is deployed, the path is built correctly, and the
+API key is accepted; what is missing is a launched, browser-enabled sandbox. The only dev bot we hold
+credentials for (the consent bot) exposes `search_movie` / `search_book` and no browser tool.
 
----
+**Unblocking it needs one thing from outside this repo: a dev bot-provider whose agent calls
+`open_sandbox_browser`.** With that, the remaining leg (real `{wsUrl, token}` → live sandbox browser, plus
+§10.3's card-arrival and reconnect items) is minutes of work.
 
-## Open Decisions
-
-Recorded at plan time; revisit if the build contradicts them.
-
-1. **Control ownership is _not_ in the controller.** It is connection state: offline means no control, and a
-   reconnect has the server re-declare it (`control/host`). Holding a copy in the controller creates a shadow
-   value that can disagree with the server — and the worst failure this panel has is a UI that believes it has
-   control while the user clicks at nothing. The panel owns it; the transport's reported host is the only truth.
-2. **`sandboxBrowser` is a new `'builtin' | 'off'` prop, not a mode on `fileExplorer`.** They are independent
-   asides and a channel can want either, both, or neither.
-3. **The stage stays dark in light theme**, expressed as theme tokens. A video surface that inherits a light
-   page background reads as a broken player.
-4. **Audio, quality switching, multi-user cursors and drag-and-drop upload are out of scope** — spec §9. The
-   `<video>` stays `muted`.
+Also still true: **no consumer app has mounted this** — no `npm pack` into Mimir / Sindri.
 
 ---
 
@@ -385,12 +377,12 @@ Recorded at plan time; revisit if the build contradicts them.
 
 Both are verification prerequisites, not implementation ones — implementation can proceed without them.
 
-- **Local Docker daemon.** §10.2's 26 items need `ghcr.io/m1k1o/neko/chromium:3.1.4` running locally; the
-  daemon was not running when this plan was written. Spec §10.1 lists five setup hazards (single mux port,
+- ~~**Local Docker daemon.**~~ Resolved: the container ran throughout and every §10.2 item that needs it
+  has been walked. Spec §10.1 lists five setup hazards (single mux port,
   space-separated `NAT1TO1`, `NEKO_SERVER_CORS`, host port ≠ 8080, that exact image tag).
-- **A browser-enabled sandbox on a real backend.** §10.3 must run against asgard-core dev. The demo `.env`
-  carries five bot-provider endpoints; whether any of them drives an agent that calls `open_sandbox_browser`
-  is unconfirmed. If none does, §10.3 is blocked on a bot configured with a browser-enabled blueprint, and
+- **A browser-enabled sandbox on a real backend.** Confirmed still outstanding on 2026-09-17: the relay is
+  deployed and answers correctly, but none of the dev bots we have credentials for launches a browser
+  sandbox. This is the one thing blocking §10.3. If none does, §10.3 is blocked on a bot configured with a browser-enabled blueprint, and
   that gap gets stated plainly rather than papered over with the mock.
 
 ---
@@ -400,5 +392,6 @@ Both are verification prerequisites, not implementation ones — implementation 
 - 2026-09-15: BUILD task created from https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109 (Status: `draft`).
 - 2026-09-15: Plan confirmed by the user (Status: `draft → ready`). Queued behind BUILD-081.
 - 2026-09-15: BUILD-081 / REVIEW-081 closed and committed (`a7e929b3`); implementation started (Status: `ready → in-progress`).
+- 2026-09-17: walked the remaining items live with the user — real-IME Chinese passes (composition box visible, `你好` reached the remote), and the letterbox item was **reclassified from gap to verified** after restarting the container at 1280x1024; probing dev narrowed the backend gap to "relay deployed, no browser-enabled bot".
 - 2026-09-17: re-walked the live container end to end (the first full walk since the uppercase fix) and found two more silent defects — the control bar stealing keyboard focus, and wheel latching killing scroll after two notches. Both fixed red-first and re-verified live; the live regression is now 11/11.
 - 2026-09-15: T1–T10 complete. R1–R20 satisfied; gate green (core 415 / react 587); 75 new react cases with four mutation-based reverse verifications; both demo routes walked in a real browser, and twelve of the §10.2 items confirmed against a real neko container (fourteen need a person — see Verification) (Status: `in-progress → done`).
