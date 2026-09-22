@@ -72,7 +72,7 @@ EARS form. Each criterion maps to Implementation Tasks (→ T#).
 
 **react**
 
-- `R6` When `enableFeedback` is true, the system shall render a 👍/👎 bar under every completed bot message (`type === 'bot'`, `isTyping === false`) — including when the host supplies `renderMessageContent` — and shall render nothing for user / error / thinking / canvas / tool-call messages; when `enableFeedback` is false or absent, nothing renders. → T6, T7
+- `R6` Unless `enableFeedback` is explicitly `false`, the system shall render a 👍/👎 bar under every completed bot message (`type === 'bot'`, `isTyping === false`) — including when the host supplies `renderMessageContent` — and shall render nothing for user / error / thinking / canvas / tool-call messages; an absent (`undefined`) `enableFeedback` renders the bar. **Revised 2026-09-22** — see the Decisions entry below; the original wording treated `false` and absent alike. → T6, T7
 - `R7` When a verdict button is clicked, the system shall open a modal (`role="dialog"`, `aria-modal`) titled per verdict, with an optional textarea (placeholder per verdict) that receives focus on open, a "send to AI as well" checkbox **checked by default** positioned between the textarea and the buttons, and Cancel / Submit; Escape, Cancel, or a backdrop click shall close it without sending. → T8
 - `R8` When Submit is pressed with the comment within 8 KiB, the system shall call `channel.sendMessageFeedback` (Submit disabled while pending); on success the modal closes and the rated button shows the active state (`aria-pressed="true"`, filled icon); when the comment exceeds 8 KiB (UTF-8), the system shall show an inline error and not call the endpoint. → T8, T9
 - `R9` When the feedback call rejects (404 / 400 / network), the system shall keep the modal open with the typed comment intact, show a localized error line, and leave the message's rated state unchanged. → T9
@@ -148,6 +148,10 @@ Files:
 ## Decisions
 
 - **開關是 `enableFeedback: boolean`，不是 prototype 的 `onSubmitFeedback` callback。** prototype 是純呈現的 chat-kit，副作用交宿主；在 js-sdk 裡 **SDK 自己就是宿主**——它知道 `botProviderEndpoint`（各產品 BFF 的 relay 路徑一律是同一個 base 接 `message/feedback`，與 `message/sse` 同源）也握有 `sendMessage`。用 boolean 開關與 `enableUpload` / `enableExport` 同一套語法，消費端接起來就是一行。F-033 AC 寫「未提供送出評價的 callback，整列不渲染」是 chat-kit 層的說法，這裡對應的就是 `enableFeedback` 未開。
+
+  **2026-09-22 更正：最後那句對應關係是錯的，預設已改為開啟。** boolean 這個載體本身留著（見下一條），錯的是把「未給 callback」對應成「未傳 prop」。兩者的資訊量不同：在 chat-kit 裡給 callback 要寫 POST、要接錯誤處理，是有成本的動作，所以沉默代表宿主刻意不做；在 SDK 裡打開的成本是零，沉默只代表沒人打那一行，分不出「不想要」和「不知道」。Sindri 升到 0.3.85、後端 relay 也就緒，卻因為兩個掛載點都沒傳這個 prop 而完全看不到這個功能——F-033 Description 把評價定位成「transcript 的一等公民」,而一個宣稱「前端不用做事」的功能要求每個前端做一件事才會出現，自相矛盾。
+
+- **開關保留，但只有明確的 `false` 關得掉。** F-033 AC 的前半句「產品沒有開啟評價功能時」承認那是真實狀態（read-only 畫面、不得收集評價的產品——評價會進 audit log → lakehouse）,所以載體要留。預設值在 `AsgardTemplateContextProvider` 的解構預設決定，只有一處；解構預設只在 `undefined` 時生效，所以 `enableFeedback={false}` 會被保留。**不**改成讀 `annotations.embedConfig`：那是新增能力、規格沒要求，`embedConfig` 型別裡也還沒有這個欄位，要做另開一張。
 - **評價列掛在 `ConversationMessageRenderer` 的 bot 分支之後，不掛在 `TemplateBoxContent`。** `MessageActions` 掛在 `TemplateBoxContent`，但那只在自訂 renderer 用了 `MessageContainer` / `renderDefaultContent()` 時才會出現；Mimir 的 TABLE / CHART 兩條都不呼叫它，評價列會消失（asgard-sdk-pm#96 留言第 1 點）。bot 訊息自 chat-kit 對齊後已是 content-first、無 avatar 欄，所以掛在 renderer 輸出之後、同一欄位，左緣對齊沒有問題。代價：自訂 renderer 若對某則 bot 訊息回傳 `null`，那則仍會長出評價列——這是 `renderMessageContent` 回傳值不可觀察的既有限制，先接受，README 註明。
 - **已評狀態在 POST 成功後由 SDK 直接寫進 conversation。** prototype 設計文件 §3 說「同一 client 剛送出的那筆也會從 live plane 回來、以伺服器回音為準」，前提是 client 有一條常開的 SSE。**SDK 沒有**：`fetchSse` 在 `run.done` 就結束，idle 時沒有任何連線，echo 到不了。所以 200 之後直接以「送出的 verdict / comment」寫入（伺服器已確認，不是樂觀更新；UC-059 Alt B「不做樂觀更新」仍成立），重整後由 rejoin 重播接手（UC-058）。不做輪詢、不為此開連線。
 - **送出失敗時 modal 不關。** UC-055 Alt A 明寫「modal 保留使用者已輸入的文字讓他重試」，prototype 卻是按下就關、fire-and-forget。原型與決議衝突以決議為準。錯誤文案是 SDK 內的一行（`feedback.submitFailed`），不另開 toast 系統；**不**轉給 `onSseError`——那條線的語意是 SSE 連線出錯，而這裡的錯誤已經有可見的出口（modal 內），再丟一份只會讓消費端收到兩次同一件事。
@@ -162,4 +166,5 @@ Files:
 
 - 2026-09-02: BUILD task created from https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/96 (Status: `draft`).
 - 2026-09-02: Plan confirmed; implementation started on `feat/96-message-feedback` (Status: `draft → ready → in-progress`).
+- 2026-09-22: R6 修正為「預設開啟，只有明確 `false` 關閉」（PM 在 Slack 指出評價是 SDK & core 的 first-class 功能、升版就該有，經確認後修改）。改動一處實作（`AsgardTemplateContextProvider` 的解構預設）＋ 測試 harness 移除明確的 `enableFeedback`,讓整個既有 suite 成為這個預設的迴歸網；新增兩案釘住 `undefined` 顯示 / `false` 不顯示。反向驗證：把預設改回 `false` 有 18 案轉紅。`test:react` 595 案全綠。
 - 2026-09-02: T1–T12 完成（Status: `in-progress → done`）。閘門全綠 —— `lint:packages` 0 error（5 個既有 warning）、`format:check` 乾淨、`typecheck` 三專案綠、`build:core` / `build:react` 乾淨、`test:packages` core 295 + react 464 全數通過（新增 20 + 22）。瀏覽器實走見 Coverage。兩個實作中才浮現的點：(1) react 的 Vitest 把 `@asgard-js/core` 解析到 `packages/core/dist`，core 改完沒先 `build:core` 時 `feedbackCommentByteLength is not a function`——照 index 記的順序 lint → format → typecheck → build → test 就對了；(2) demo mock 原本沒把送出的評價記住，重整後只會看到 seed 的兩筆，於是加了記憶體內的 `acceptedFeedback` 讓 rejoin 也重播使用者剛評的（真後端本來就會，mock 得補上才能示範 UC-058）。

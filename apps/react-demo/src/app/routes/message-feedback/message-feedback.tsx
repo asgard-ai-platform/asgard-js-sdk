@@ -79,6 +79,10 @@ export function MessageFeedbackRoute(): ReactNode {
             <span className={styles.localeHint}>
               按鈕 aria-label、tooltip、modal 全部文案跟著切；重播的訊息內容是後端資料，不翻譯。
             </span>
+            <span className={styles.localeHint}>
+              下面兩個 shell 都<strong>沒有</strong>傳 <code>enableFeedback</code>
+              ：評價列是預設就有的，消費端不必開。要關掉的產品傳 <code>enableFeedback={'{false}'}</code>。
+            </span>
           </div>
         </div>
 
@@ -93,7 +97,6 @@ export function MessageFeedbackRoute(): ReactNode {
                 inputPlaceholder="輸入你的問題"
                 locale={locale}
                 theme={WIDE_THEME}
-                enableFeedback
               />
             </div>
           </div>
@@ -107,7 +110,6 @@ export function MessageFeedbackRoute(): ReactNode {
                 customChannelId="message-feedback-demo-narrow"
                 inputPlaceholder="輸入你的問題"
                 locale={locale}
-                enableFeedback
               />
             </div>
           </div>
