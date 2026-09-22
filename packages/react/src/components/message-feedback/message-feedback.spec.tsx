@@ -54,7 +54,9 @@ function Harness({
 
   return (
     <AsgardServiceContext.Provider value={{ ...base, ...service }}>
-      <AsgardTemplateContextProvider locale={locale} enableFeedback {...template}>
+      {/* No `enableFeedback` here on purpose: the provider's own default has to carry the suite, so a
+          regression back to off-by-default turns the whole file red rather than one case. */}
+      <AsgardTemplateContextProvider locale={locale} {...template}>
         <ConversationMessageRenderer message={message} />
       </AsgardTemplateContextProvider>
     </AsgardServiceContext.Provider>
@@ -113,7 +115,13 @@ describe('F-033 R6 — where the bar renders', () => {
     expect(screen.queryByRole('button', { name: 'Good response' })).toBeNull();
   });
 
-  it('not when enableFeedback is off', () => {
+  it('by default, with no enableFeedback passed at all', () => {
+    mount(botMessage(), {}, { enableFeedback: undefined });
+
+    expect(screen.queryByRole('button', { name: 'Good response' })).not.toBeNull();
+  });
+
+  it('not when enableFeedback is explicitly false', () => {
     mount(botMessage(), {}, { enableFeedback: false });
 
     expect(screen.queryByRole('button', { name: 'Good response' })).toBeNull();

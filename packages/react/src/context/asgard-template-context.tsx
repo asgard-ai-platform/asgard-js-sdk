@@ -68,7 +68,11 @@ export interface AsgardTemplateContextValue {
   /** UI language for synthesized text (tool-call labels, …). Defaults to `en-US` (F-005). */
   locale?: Locale;
   /**
-   * Show the 👍 / 👎 feedback bar under every completed assistant reply (F-033). Off by default. The bar
+   * Show the 👍 / 👎 feedback bar under every completed assistant reply (F-033). **On by default** — the
+   * feature is first-class in core and the SDK, so a consumer has nothing to implement and nothing to
+   * opt into; pass `false` to suppress it (a read-only surface, or a product that must not collect
+   * ratings — they reach an audit log). Only an explicit `false` turns it off: `undefined` means
+   * "unspecified", which is not the same answer as "no". The bar
    * is message-level chrome rendered after the message content — on the default renderer **and** on a
    * `renderMessageContent` override — so a host that never calls `renderDefaultContent()` still gets
    * it. Ratings post to `{botProviderEndpoint}/message/feedback`; "send to AI as well" follows up with an
@@ -108,7 +112,7 @@ export interface AsgardTemplateContextValue {
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   locale: 'en-US',
-  enableFeedback: undefined,
+  enableFeedback: true,
   onErrorClick: undefined,
   errorMessageRenderer: undefined,
   onTemplateBtnClick: undefined,
@@ -150,7 +154,9 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
   const {
     children,
     locale = 'en-US',
-    enableFeedback,
+    // The one place the default lives. A destructuring default fires only on `undefined`, so an
+    // explicit `enableFeedback={false}` survives — that distinction is the whole point (F-033).
+    enableFeedback = true,
     onErrorClick,
     errorMessageRenderer,
     onTemplateBtnClick,
