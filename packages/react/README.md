@@ -333,6 +333,13 @@ config: {
 - **channelTitleHidden?**: `boolean` - Hide the channel-title row entirely (shortcut for `renderTitle` returning `null`).
 - **inputPlaceholder**: `string` - Custom placeholder text for the message input field
 - **defaultLinkTarget?**: `'_blank' | '_self' | '_parent' | '_top'` - Default target for opening URIs when not specified by the API. Defaults to `'_blank'` (opens in new tab).
+- **fileExplorer?**: `'builtin' | 'off'` - Whether the SDK mounts its own File Explorer aside. `'builtin'` (default) shows it and lets an arriving `open-file` / `open-folder` card drive it; `'off'` opts out so the consumer can place the exported panel itself, in which case the two `onSandboxOpen*` callbacks below are the only way those cards reach anything. See [Sandbox handoff cards](#sandbox-handoff-cards).
+- **autoRevealOnOpenFileCard?**: `boolean` - Whether an arriving `open-file` / `open-folder` card auto-opens the built-in File Explorer aside. Defaults to `true`. Ignored while the explorer has unsaved edits.
+- **sandboxBrowser?**: `'builtin' | 'off'` - Whether the SDK mounts its own sandbox browser aside, which renders the sandbox's live browser over WebRTC and lets the user take over the pointer and keyboard (F-035). `'off'` (default) opts out so the consumer can place the exported `<SandboxBrowserPanel>` itself. **Unlike `fileExplorer`, this defaults to `'off'`**: the panel opens a live media stream, so turning it on is a decision a consumer makes rather than inherits. See [Sandbox handoff cards](#sandbox-handoff-cards).
+- **autoRevealOnOpenBrowserCard?**: `boolean` - Whether an arriving `open-browser` card auto-opens the built-in browser aside. Defaults to `false` — the counterpart of `autoRevealOnOpenFileCard`, with the opposite default for the same reason the panel itself is opt-in: a card scrolling past should not prise the chat column in half and start a stream.
+- **onSandboxOpenBrowser?**: `(sandboxName: string) => void` - Host handler for the `sandbox://<name>/open-browser` card. When set, the SDK defers entirely to it. When neither this nor `sandboxBrowser="builtin"` is set, the card keeps its original behavior of fetching a one-time URL and opening a new tab.
+- **onSandboxOpenFile?**: `(sandboxName: string, absolutePath: string) => void` - Host handler for the `sandbox://<name>/open-file` card — the File Explorer **preview** destination. Fires in addition to the built-in explorer, not instead of it.
+- **onSandboxOpenFolder?**: `(sandboxName: string, absolutePath: string) => void` - Host handler for the `sandbox://<name>/open-folder` card — the File Explorer **tree** destination: expand that directory and stop there. Deliberately separate from `onSandboxOpenFile` rather than a flag on it, because the two destinations cannot be swapped: the backend refuses both `fs/file` and `fs/watch` for a directory, so routing a folder into the viewer cannot succeed.
 - **className?**: `string` - Custom CSS class name applied to the chatbot container element.
 - **style?**: `CSSProperties` - Custom inline styles applied to the chatbot container element.
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
@@ -1788,6 +1795,34 @@ next message continues the same conversation. See the
 
 <a id="sourceset-file-explorer"></a>
 <br/>
+
+## Sandbox handoff cards
+
+An agent can push three cards whose action carries a `sandbox://` URI rather than a browsable URL. They are
+client-side commands, so the SDK intercepts them before the ordinary link whitelist and routes each to a
+typed destination. **Which destination is a consumer decision**, and a consumer that wires nothing still gets
+a defined — but not always visible — result:
+
+| Card                                           | Built-in destination                                | Host override          | With neither wired                               |
+| ---------------------------------------------- | --------------------------------------------------- | ---------------------- | ------------------------------------------------ |
+| `sandbox://<name>/open-browser`                | `sandboxBrowser="builtin"` — WebRTC panel           | `onSandboxOpenBrowser` | Fetches a one-time URL and opens it in a new tab |
+| `sandbox://<name>/open-file?absolute_path=…`   | `fileExplorer="builtin"` (default) — preview        | `onSandboxOpenFile`    | **Nothing happens**                              |
+| `sandbox://<name>/open-folder?absolute_path=…` | `fileExplorer="builtin"` (default) — expand on tree | `onSandboxOpenFolder`  | **Nothing happens**                              |
+
+Two consequences worth stating outright, because both look like a broken card rather than a configuration:
+
+- **`open-browser` never becomes a dead card.** Its new-tab behavior predates the panel and is kept as the
+  fallback, so a consumer that has never heard of `sandboxBrowser` keeps working. The flip side is that
+  upgrading the SDK does **not** move an existing consumer onto the panel — it stays on new-tab until
+  `sandboxBrowser="builtin"` or `onSandboxOpenBrowser` is passed.
+- **`open-file` / `open-folder` do go dead if you turn the explorer off.** Setting `fileExplorer="off"`
+  without wiring the matching callback leaves the click with nowhere to go, and it fails silently: no throw,
+  no console warning, no visual change. If you place the explorer yourself, wire **both** callbacks — adding
+  only `onSandboxOpenFile` leaves folder cards inert.
+
+A host callback fires **in addition to** the built-in destination for the file and folder cards, so the two
+can be combined (e.g. mirror the path into your own breadcrumb while the built-in aside opens). For
+`open-browser` the host callback **replaces** the SDK's handling entirely.
 
 ## Sandbox File Explorer and the channel scope
 
