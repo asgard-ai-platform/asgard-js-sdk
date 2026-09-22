@@ -138,7 +138,7 @@ When `enableLoadConfigFromService` is enabled, you can also control the upload f
 2. `annotations.embedConfig.enableUpload` from bot provider metadata
 3. Default: `false`
 
-**Features**: Multiple file selection, image preview with modal view, and responsive design. Supports JPEG, PNG, GIF, WebP up to 20MB per file, maximum 10 files at once.
+**Features**: Multiple file selection, image preview with modal view, and responsive design. Supports JPEG, PNG, GIF, WebP up to 20MB per file. There is no cap on how many files can be attached at once.
 
 #### Restricting Allowed MIME Types
 
@@ -247,6 +247,9 @@ const EmbedApp = () => {
 };
 ```
 
+<a id="migration-from-endpoint-to-botproviderendpoint"></a>
+<br/>
+
 ## Migration from endpoint to botProviderEndpoint
 
 **Important**: The `endpoint` configuration option is deprecated. Use `botProviderEndpoint` instead for simplified configuration.
@@ -279,11 +282,6 @@ config: {
 
 **Backward Compatibility:** Existing code using `endpoint` will continue to work but may show deprecation warnings when `debugMode` is enabled.
 
-<a id="migration-from-endpoint-to-botproviderendpoint"></a>
-<br/>
-
-## Migration from endpoint to botProviderEndpoint
-
 <a id="api-reference"></a>
 <br/>
 
@@ -311,7 +309,7 @@ config: {
   - `onRunError?`: `ErrorEventHandler` - Error handler for execution errors
 - **customActions?**: `ReactNode[]` - Custom actions to display on the chatbot header
 - **enableLoadConfigFromService?**: `boolean` - Enable loading configuration from service
-- **enableUpload?**: `boolean` - Enable file upload functionality. When set, it takes priority over the `embedConfig.enableUpload` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Supports image files (JPEG, PNG, GIF, WebP) up to 20MB per file, maximum 10 files at once.
+- **enableUpload?**: `boolean` - Enable file upload functionality. When set, it takes priority over the `embedConfig.enableUpload` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Supports image files (JPEG, PNG, GIF, WebP) up to 20MB per file. There is no cap on how many files can be attached at once.
 - **enableExport?**: `boolean` - Enable conversation export functionality. When set, it takes priority over the `embedConfig.enableExport` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Adds a download button to the chatbot footer that exports the conversation history as a Markdown file with timestamps and trace IDs.
 - **enableFeedback?**: `boolean` - Show a 👍 / 👎 feedback bar under every completed assistant reply (F-033). Off by default. Clicking a verdict opens a dialog with an optional comment, a "Send to AI as well" checkbox (checked by default) and Cancel / Submit. The rating is posted to `{botProviderEndpoint}/message/feedback` and, once accepted, lights the button; when the checkbox is on the SDK then sends an ordinary message composed by `composeFeedbackMessage()` (`[Response Feedback: Good|Bad]` + blank line + comment) so the agent can react. The rated state is restored from the server on rejoin (`asgard.message.feedback` frames), never from local storage; re-rating replaces the previous verdict (there is no un-rate). The bar is message-level chrome rendered **after** the message content — also under a `renderMessageContent` override that never calls `renderDefaultContent()` — and is disabled while a run is in flight. A host that returns `null` from `renderMessageContent` for a bot message still gets its bar.
 - **enableDocumentUpload?**: `boolean` - Enable document file upload functionality. When enabled, users can attach document files to messages. The container-level drag-and-drop overlay is also activated. Defaults to `false`.
@@ -464,10 +462,12 @@ export interface AsgardThemeContextValue {
       title?: {
         style: CSSProperties;
       };
+      /** @deprecated Not read by `references.tsx` — setting it has no effect. Use `references.style`. */
       item?: {
         style: CSSProperties;
       };
     }>;
+    /** @deprecated Ignored — no message timestamp is rendered any more. */
     time?: Partial<{
       style: CSSProperties;
     }>;
@@ -562,10 +562,12 @@ const defaultTheme = {
       title: {
         style: {},
       },
+      // deprecated: not read by `references.tsx`
       item: {
         style: {},
       },
     },
+    // deprecated: no message timestamp is rendered any more
     time: {
       style: {},
     },
@@ -1158,19 +1160,23 @@ interface MessageContentRendererProps {
   message: ConversationMessage;
   /** Function to render the default message content */
   renderDefaultContent: () => ReactNode;
-  /** Container component that wraps custom content with Avatar for bot messages */
+  /** Container component that wraps custom content in the SDK's row shell for this message type */
   MessageContainer: React.FC<{ children: ReactNode }>;
 }
 ```
 
 #### Why MessageContainer?
 
-When you use `renderMessageContent` to customize rendering, it completely replaces the default Template. This means **Avatar will not display automatically**, because Avatar is part of the default Template.
+When you use `renderMessageContent` to customize rendering, it completely replaces the default template — including the row shell that positions the message and the per-message action buttons that hang off it.
 
-Use `MessageContainer` to wrap your custom content and automatically get:
+Use `MessageContainer` to wrap your custom content and get that shell back:
 
-- **Bot messages**: Avatar + timestamp
-- **User messages**: Proper right-aligned styling
+- **Bot messages**: the bot row layout, plus the `messageActions` buttons for that message
+- **User messages**: the right-aligned user row
+- **Other message types**: children are returned unchanged
+
+> No avatar is rendered in the message flow. The `avatar` prop feeds the chat header only, so neither the
+> default template nor `MessageContainer` puts one beside a message — there is nothing to restore.
 
 #### Understanding payload
 
@@ -1217,7 +1223,7 @@ import { Chatbot, MessageContentRendererProps } from '@asgard-js/react';
       const payload = message.message.payload as { customType?: string };
 
       if (payload?.customType === 'order_card') {
-        // Use MessageContainer to wrap custom content with Avatar
+        // Use MessageContainer to wrap custom content in the SDK's bot row shell
         return (
           <MessageContainer>
             <OrderCard order={payload} />
@@ -1236,7 +1242,7 @@ import { Chatbot, MessageContentRendererProps } from '@asgard-js/react';
 
 The `MessageContainer` component is essential for maintaining consistent styling with the default messages:
 
-- **For bot messages**: Wraps your content with the bot's Avatar and proper message styling (including timestamp and quick replies)
+- **For bot messages**: Wraps your content in the bot row layout and appends that message's `messageActions` buttons
 - **For user messages**: Applies proper right-aligned styling
 - **For other message types**: Returns children directly
 
@@ -1265,7 +1271,7 @@ renderMessageContent={(props) => {
   const { message } = props;
 
   if (message.type === 'bot' && isSpecialMessage(message)) {
-    // Render completely custom layout without Avatar
+    // Render a completely custom layout, without the SDK's row shell
     return <FullWidthBanner data={message.message.payload} />;
   }
 
@@ -1977,12 +1983,23 @@ You can use the following commands to work with the React package:
 # Lint the React package
 npm run lint:react
 
+# Type check — see the note below; this is the command that fails on a type error
+npm run typecheck
+
+# Unit tests
+npm run test:react
+
 # Build the package
 npm run build:react
 
 # Watch mode for development
 npm run watch:react
 ```
+
+> **`build:react` does not fail on a type error.** It is a vite build, and `vite-plugin-dts` reports type
+> errors on stdout while still exiting `0`. `npm run typecheck` (`tsc --build` over core, react and the
+> demo app) is the command that actually fails, and a husky `pre-push` hook runs it. A green build is not
+> a green type check.
 
 Setup your npm registry token for npm publishing:
 
