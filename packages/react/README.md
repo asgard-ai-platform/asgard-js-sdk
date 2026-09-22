@@ -138,7 +138,7 @@ When `enableLoadConfigFromService` is enabled, you can also control the upload f
 2. `annotations.embedConfig.enableUpload` from bot provider metadata
 3. Default: `false`
 
-**Features**: Multiple file selection, image preview with modal view, and responsive design. Supports JPEG, PNG, GIF, WebP up to 20MB per file, maximum 10 files at once.
+**Features**: Multiple file selection, image preview with modal view, and responsive design. Supports JPEG, PNG, GIF, WebP up to 20MB per file. There is no cap on how many files can be attached at once.
 
 #### Restricting Allowed MIME Types
 
@@ -247,6 +247,9 @@ const EmbedApp = () => {
 };
 ```
 
+<a id="migration-from-endpoint-to-botproviderendpoint"></a>
+<br/>
+
 ## Migration from endpoint to botProviderEndpoint
 
 **Important**: The `endpoint` configuration option is deprecated. Use `botProviderEndpoint` instead for simplified configuration.
@@ -279,11 +282,6 @@ config: {
 
 **Backward Compatibility:** Existing code using `endpoint` will continue to work but may show deprecation warnings when `debugMode` is enabled.
 
-<a id="migration-from-endpoint-to-botproviderendpoint"></a>
-<br/>
-
-## Migration from endpoint to botProviderEndpoint
-
 <a id="api-reference"></a>
 <br/>
 
@@ -310,8 +308,9 @@ config: {
   - `onRunDone?`: `DoneEventHandler` - Handler for run completion events
   - `onRunError?`: `ErrorEventHandler` - Error handler for execution errors
 - **customActions?**: `ReactNode[]` - Custom actions to display on the chatbot header
+- **headerActions?**: `ChatHeaderAction[]` - First-class header actions, rendered on the unified `ChatHeader` after the built-in File Explorer toggle and `customActions`, and before reset / close. Each entry supports `active` (toggle highlight), `busy` (spinner), `disabled`, and `render()` for a fully custom cell. Prefer this over `customActions` when the action has state.
 - **enableLoadConfigFromService?**: `boolean` - Enable loading configuration from service
-- **enableUpload?**: `boolean` - Enable file upload functionality. When set, it takes priority over the `embedConfig.enableUpload` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Supports image files (JPEG, PNG, GIF, WebP) up to 20MB per file, maximum 10 files at once.
+- **enableUpload?**: `boolean` - Enable file upload functionality. When set, it takes priority over the `embedConfig.enableUpload` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Supports image files (JPEG, PNG, GIF, WebP) up to 20MB per file. There is no cap on how many files can be attached at once.
 - **enableExport?**: `boolean` - Enable conversation export functionality. When set, it takes priority over the `embedConfig.enableExport` setting from the bot provider metadata. Defaults to `false` if not specified in either location. Adds a download button to the chatbot footer that exports the conversation history as a Markdown file with timestamps and trace IDs.
 - **enableFeedback?**: `boolean` - Show a 👍 / 👎 feedback bar under every completed assistant reply (F-033). Off by default. Clicking a verdict opens a dialog with an optional comment, a "Send to AI as well" checkbox (checked by default) and Cancel / Submit. The rating is posted to `{botProviderEndpoint}/message/feedback` and, once accepted, lights the button; when the checkbox is on the SDK then sends an ordinary message composed by `composeFeedbackMessage()` (`[Response Feedback: Good|Bad]` + blank line + comment) so the agent can react. The rated state is restored from the server on rejoin (`asgard.message.feedback` frames), never from local storage; re-rating replaces the previous verdict (there is no un-rate). The bar is message-level chrome rendered **after** the message content — also under a `renderMessageContent` override that never calls `renderDefaultContent()` — and is disabled while a run is in flight. A host that returns `null` from `renderMessageContent` for a bot message still gets its bar.
 - **enableDocumentUpload?**: `boolean` - Enable document file upload functionality. When enabled, users can attach document files to messages. The container-level drag-and-drop overlay is also activated. Defaults to `false`.
@@ -333,6 +332,16 @@ config: {
 - **channelTitleHidden?**: `boolean` - Hide the channel-title row entirely (shortcut for `renderTitle` returning `null`).
 - **inputPlaceholder**: `string` - Custom placeholder text for the message input field
 - **defaultLinkTarget?**: `'_blank' | '_self' | '_parent' | '_top'` - Default target for opening URIs when not specified by the API. Defaults to `'_blank'` (opens in new tab).
+- **fileExplorer?**: `'builtin' | 'off'` - Whether the SDK mounts its own File Explorer aside. `'builtin'` (default) shows it and lets an arriving `open-file` / `open-folder` card drive it; `'off'` opts out so the consumer can place the exported panel itself, in which case the two `onSandboxOpen*` callbacks below are the only way those cards reach anything. See [Sandbox handoff cards](#sandbox-handoff-cards).
+- **autoRevealOnOpenFileCard?**: `boolean` - Whether an arriving `open-file` / `open-folder` card auto-opens the built-in File Explorer aside. Defaults to `true`. Ignored while the explorer has unsaved edits. One flag covers both card kinds — the name predates the folder card and is kept for compatibility.
+- **fileExplorerBasePath?**: `string` - Override the File Explorer tree root with an absolute path instead of the sandbox's `workingDirectory`.
+- **fileExplorerMaxUploadBytes?**: `number` - Per-file upload cap for the built-in aside, in bytes. Defaults to the sandbox edge server's own limit; supply your own when that policy changes rather than waiting on an SDK release.
+- **sandboxBrowser?**: `'builtin' | 'off'` - Whether the SDK mounts its own sandbox browser aside, which renders the sandbox's live browser over WebRTC and lets the user take over the pointer and keyboard (F-035). `'off'` (default) opts out so the consumer can place the exported `<SandboxBrowserPanel>` itself. **Unlike `fileExplorer`, this defaults to `'off'`**: the panel opens a live media stream, so turning it on is a decision a consumer makes rather than inherits. See [Sandbox handoff cards](#sandbox-handoff-cards).
+- **autoRevealOnOpenBrowserCard?**: `boolean` - Whether an arriving `open-browser` card auto-opens the built-in browser aside. Defaults to `false` — the counterpart of `autoRevealOnOpenFileCard`, with the opposite default for the same reason the panel itself is opt-in: a card scrolling past should not prise the chat column in half and start a stream.
+- **sandboxBrowserOpenTarget?**: `'_blank' | '_self' | '_parent' | '_top'` - Where the default `open-browser` handler opens the one-time URL when no panel and no host callback are wired. Defaults to `'_blank'`.
+- **onSandboxOpenBrowser?**: `(sandboxName: string) => void` - Host handler for the `sandbox://<name>/open-browser` card. When set, the SDK defers entirely to it. When neither this nor `sandboxBrowser="builtin"` is set, the card keeps its original behavior of fetching a one-time URL and opening a new tab.
+- **onSandboxOpenFile?**: `(sandboxName: string, absolutePath: string) => void` - Host handler for the `sandbox://<name>/open-file` card — the File Explorer **preview** destination. Fires in addition to the built-in explorer, not instead of it.
+- **onSandboxOpenFolder?**: `(sandboxName: string, absolutePath: string) => void` - Host handler for the `sandbox://<name>/open-folder` card — the File Explorer **tree** destination: expand that directory and stop there. Deliberately separate from `onSandboxOpenFile` rather than a flag on it, because the two destinations cannot be swapped: the backend refuses both `fs/file` and `fs/watch` for a directory, so routing a folder into the viewer cannot succeed.
 - **className?**: `string` - Custom CSS class name applied to the chatbot container element.
 - **style?**: `CSSProperties` - Custom inline styles applied to the chatbot container element.
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
@@ -354,6 +363,9 @@ config: {
 - **renderHeader?**: `() => ReactNode` - Custom header renderer. When provided, completely replaces the default header. Use `useAsgardContext()` inside the render function to access `resetChannel`, `isResetting`, and other internal state.
 - **renderMenu?**: `() => ReactNode` - Custom menu renderer. When provided, renders content between the chat body and footer. Useful for quick menus, suggested questions, or navigation panels. See [Custom Menu](#custom-menu) section for details.
 - **footerEndActions?**: `ReactNode[]` - Extra action nodes rendered at the end of the footer input row, after the send/mic button. Pure additive slot — built-in textarea / attachment buttons / send / mic remain unchanged. See [Footer End Actions](#footer-end-actions) section for details.
+- **renderComposerAbove?**: `() => ReactNode` - Slot rendered in the footer between the run indicator and the composer pill — **above** the input box, outside its border. Intended for per-message control rows (model pickers, mention chips, mode switches) that belong with the input but should not sit inside it. Purely additive; the built-in composer keeps working unchanged.
+- **renderComposerInline?**: `() => ReactNode` - Slot rendered **inside** the composer pill, below the textarea row — the placement modern chat UIs use for model / tool selectors. Same contract as `renderComposerAbove`. Both are dropped when `renderFooter` takes over.
+- **hideRunChrome?**: `boolean` - When `true`, the built-in docked SubagentList / TaskList are not rendered, letting the consumer draw the run chrome itself — anywhere, styled its own way — from the same conversation via `deriveTasks` / `deriveSubagents`. Defaults to `false`, which docks them in a fixed strip between the thread and the composer.
 - **renderFooter?**: `() => ReactNode` - Custom footer renderer. When provided, completely replaces the default footer — built-in textarea, send/mic, upload, export, IME guard, and `footerEndActions` are not rendered. Use `useAsgardContext()` to access `sendMessage`, `isConnecting`, `pendingInputValue` / `setPendingInputValue`, etc. See [Custom Footer](#custom-footer) section for details.
 - **renderMessageContent?**: `(props: MessageContentRendererProps) => ReactNode` - Custom renderer for message content. Allows customizing how messages are rendered based on message properties. See [Custom Message Renderer](#custom-message-renderer) section for details.
 - **renderToolCallGroup?**: `(props: ToolCallGroupRendererProps) => ReactNode` - Custom renderer for tool call group. Return `null` to hide, return JSX to fully customize, or call `renderDefaultContent()` to use the default UI with optional overrides (e.g., `renderDefaultContent({ title: 'AI is thinking...' })`). See [Tool Call Group Renderer](#tool-call-group-renderer) section for details.
@@ -457,10 +469,12 @@ export interface AsgardThemeContextValue {
       title?: {
         style: CSSProperties;
       };
+      /** @deprecated Not read by `references.tsx` — setting it has no effect. Use `references.style`. */
       item?: {
         style: CSSProperties;
       };
     }>;
+    /** @deprecated Ignored — no message timestamp is rendered any more. */
     time?: Partial<{
       style: CSSProperties;
     }>;
@@ -555,10 +569,12 @@ const defaultTheme = {
       title: {
         style: {},
       },
+      // deprecated: not read by `references.tsx`
       item: {
         style: {},
       },
     },
+    // deprecated: no message timestamp is rendered any more
     time: {
       style: {},
     },
@@ -665,35 +681,38 @@ function MyCustomFooter() {
 
 **State**
 
-| Property                   | Type                                       | Description                                                                                                                                                                   |
-| -------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `avatar`                   | `string \| undefined`                      | Avatar URL passed to the Chatbot, or loaded from the bot provider metadata.                                                                                                   |
-| `title`                    | `string \| undefined`                      | Chatbot title passed to the Chatbot, or loaded from the bot provider metadata.                                                                                                |
-| `client`                   | `AsgardServiceClient \| null`              | The underlying core client instance, or `null` before the channel is initialized.                                                                                             |
-| `customChannelId`          | `string \| undefined`                      | The active channel identifier.                                                                                                                                                |
-| `isOpen`                   | `boolean`                                  | Whether the chatbot is currently open/visible.                                                                                                                                |
-| `isResetting`              | `boolean`                                  | Whether a channel reset is in progress. Use to disable reset buttons during reset.                                                                                            |
-| `isConnecting`             | `boolean`                                  | Whether the SSE channel is currently processing a message. Use to disable the send button. Note this is true for four unrelated things — see `runStatus`.                     |
-| `runStatus`                | `RunStatus`                                | Which run holds the connection and where it is in the stop lifecycle. See [Stopping generation](#stopping-generation).                                                        |
-| `isRunning`                | `boolean`                                  | Whether something is actually being generated. Narrower than `isConnecting`, which is also true while a finished conversation is merely replayed on rejoin.                   |
-| `canStop`                  | `boolean`                                  | Whether a stop control belongs on screen — true only for the user's own turn, never the welcome run, a rejoin, or a nudge.                                                    |
-| `isStopping`               | `boolean`                                  | Whether a stop was requested and the terminal event has not arrived yet. **Gate every send entrance on this** as well as `isConnecting`.                                      |
-| `canForceStop`             | `boolean`                                  | Whether the stop has waited past the timeout and the control should escalate to force-stop. Implies `isStopping`.                                                             |
-| `messages`                 | `Map<string, ConversationMessage> \| null` | All messages in the current conversation. `null` before the channel is initialized.                                                                                           |
-| `conversation`             | `Conversation \| null`                     | The current `Conversation` instance (the derivation source for the Task / Subagent panels). `null` before the channel is initialized.                                         |
-| `channelTitle`             | `string \| null`                           | The current channel title, seeded from metadata and updated live by `title.update`. `null` = unnamed.                                                                         |
-| `botTypingPlaceholder`     | `string \| undefined`                      | **Deprecated (since 0.3.x)** — no longer renders anything (see the `botTypingPlaceholder` prop). Kept only for backward compatibility.                                        |
-| `inputPlaceholder`         | `string \| undefined`                      | Textarea placeholder text (from props or bot provider metadata).                                                                                                              |
-| `enableUpload`             | `boolean \| undefined`                     | Whether image upload is enabled (resolved from props / bot provider metadata).                                                                                                |
-| `enableExport`             | `boolean \| undefined`                     | Whether conversation export is enabled.                                                                                                                                       |
-| `enableDocumentUpload`     | `boolean \| undefined`                     | Whether document upload is enabled.                                                                                                                                           |
-| `allowedImageMimeTypes`    | `string[] \| undefined`                    | Resolved image MIME allow-list (from the `allowedImageMimeTypes` prop). `undefined` means all defaults are accepted.                                                          |
-| `allowedDocumentMimeTypes` | `string[] \| undefined`                    | Resolved document MIME allow-list (from the `allowedDocumentMimeTypes` prop). `undefined` means the default list with extension fallback is used.                             |
-| `pendingConsent`           | `ToolCallConsentEventData \| null`         | The pending tool-call consent prompt awaiting a user decision, or `null`. Read this to build a custom consent UI.                                                             |
-| `messageBoxBottomRef`      | `RefObject<HTMLDivElement \| null>`        | Ref to the sentinel element at the bottom of the message list.                                                                                                                |
-| `scrollContainerRef`       | `RefObject<HTMLDivElement \| null>`        | Ref to the scrollable message container.                                                                                                                                      |
-| `isFollowingLatest`        | `boolean`                                  | Whether auto-scroll to the latest message is active. Becomes `false` when the user scrolls up.                                                                                |
-| `pendingInputValue`        | `string \| null`                           | Text waiting to be filled into the textarea. Set by `ChatbotRef.setInputValue()` or by `renderMenu`. Read and clear this in `renderFooter` to receive externally pushed text. |
+| Property                   | Type                                       | Description                                                                                                                                                                                   |
+| -------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `avatar`                   | `string \| undefined`                      | Avatar URL passed to the Chatbot, or loaded from the bot provider metadata.                                                                                                                   |
+| `title`                    | `string \| undefined`                      | Chatbot title passed to the Chatbot, or loaded from the bot provider metadata.                                                                                                                |
+| `client`                   | `AsgardServiceClient \| null`              | The underlying core client instance, or `null` before the channel is initialized.                                                                                                             |
+| `customChannelId`          | `string \| undefined`                      | The active channel identifier.                                                                                                                                                                |
+| `isOpen`                   | `boolean`                                  | Whether the chatbot is currently open/visible.                                                                                                                                                |
+| `isResetting`              | `boolean`                                  | Whether a channel reset is in progress. Use to disable reset buttons during reset.                                                                                                            |
+| `isConnecting`             | `boolean`                                  | Whether the SSE channel is currently processing a message. Use to disable the send button. Note this is true for four unrelated things — see `runStatus`.                                     |
+| `runStatus`                | `RunStatus`                                | Which run holds the connection and where it is in the stop lifecycle. See [Stopping generation](#stopping-generation).                                                                        |
+| `isRunning`                | `boolean`                                  | Whether something is actually being generated. Narrower than `isConnecting`, which is also true while a finished conversation is merely replayed on rejoin.                                   |
+| `canStop`                  | `boolean`                                  | Whether a stop control belongs on screen — true only for the user's own turn, never the welcome run, a rejoin, or a nudge.                                                                    |
+| `isStopping`               | `boolean`                                  | Whether a stop was requested and the terminal event has not arrived yet. **Gate every send entrance on this** as well as `isConnecting`.                                                      |
+| `canForceStop`             | `boolean`                                  | Whether the stop has waited past the timeout and the control should escalate to force-stop. Implies `isStopping`.                                                                             |
+| `messages`                 | `Map<string, ConversationMessage> \| null` | All messages in the current conversation. `null` before the channel is initialized.                                                                                                           |
+| `conversation`             | `Conversation \| null`                     | The current `Conversation` instance (the derivation source for the Task / Subagent panels). `null` before the channel is initialized.                                                         |
+| `channelTitle`             | `string \| null`                           | The current channel title, seeded from metadata and updated live by `title.update`. `null` = unnamed.                                                                                         |
+| `botTypingPlaceholder`     | `string \| undefined`                      | **Deprecated (since 0.3.x)** — no longer renders anything (see the `botTypingPlaceholder` prop). Kept only for backward compatibility.                                                        |
+| `inputPlaceholder`         | `string \| undefined`                      | Textarea placeholder text (from props or bot provider metadata).                                                                                                                              |
+| `enableUpload`             | `boolean \| undefined`                     | Whether image upload is enabled (resolved from props / bot provider metadata).                                                                                                                |
+| `enableExport`             | `boolean \| undefined`                     | Whether conversation export is enabled.                                                                                                                                                       |
+| `enableDocumentUpload`     | `boolean \| undefined`                     | Whether document upload is enabled.                                                                                                                                                           |
+| `allowedImageMimeTypes`    | `string[] \| undefined`                    | Resolved image MIME allow-list (from the `allowedImageMimeTypes` prop). `undefined` means all defaults are accepted.                                                                          |
+| `allowedDocumentMimeTypes` | `string[] \| undefined`                    | Resolved document MIME allow-list (from the `allowedDocumentMimeTypes` prop). `undefined` means the default list with extension fallback is used.                                             |
+| `pendingConsent`           | `ToolCallConsentEventData \| null`         | The pending tool-call consent prompt awaiting a user decision, or `null`. Read this to build a custom consent UI.                                                                             |
+| `messageBoxBottomRef`      | `RefObject<HTMLDivElement \| null>`        | Ref to the sentinel element at the bottom of the message list.                                                                                                                                |
+| `scrollContainerRef`       | `RefObject<HTMLDivElement \| null>`        | Ref to the scrollable message container.                                                                                                                                                      |
+| `isFollowingLatest`        | `boolean`                                  | Whether auto-scroll to the latest message is active. Becomes `false` when the user scrolls up.                                                                                                |
+| `pendingInputValue`        | `string \| null`                           | Text waiting to be filled into the textarea. Set by `ChatbotRef.setInputValue()` or by `renderMenu`. Read and clear this in `renderFooter` to receive externally pushed text.                 |
+| `channel`                  | `Channel \| null`                          | The live `Channel` object, for hooks that need it (e.g. `useLaunchedSandboxes`). `null` before the channel is initialized.                                                                    |
+| `promptSuggestion`         | `string \| null`                           | The current next-turn suggestion, offered as the composer placeholder and adopted with Tab. `null` = none, which is the normal case: most turns get none, and it is never replayed on rejoin. |
+| `sandboxPhase`             | `SandboxPhase`                             | The current sandbox cold-start phase, which drives the Launch HUD. `'idle'` when no sandbox is in flight.                                                                                     |
 
 **Actions**
 
@@ -704,6 +723,7 @@ function MyCustomFooter() {
 | `deleteChannel`              | `(() => Promise<void>) \| undefined`                                    | Delete the channel and nothing else — no opening turn, and the on-screen conversation is left as it is. This is what makes "clear, then send with an attachment" possible: `deleteChannel()` → `client.uploadFile()` → `sendMessage({ blobIds })`. Resolves once the backend confirms the teardown (up to about a minute if a Sandbox has to terminate); rejects if it fails.                                               |
 | `closeChannel`               | `(() => void) \| undefined`                                             | Close the SSE connection without resetting.                                                                                                                                                                                                                                                                                                                                                                                 |
 | `stopGeneration`             | `((options?: { force?: boolean }) => Promise<void>) \| undefined`       | Ask the backend to stop the in-flight run. Resolving means _accepted_, not _stopped_; rejects if the request failed. Gate on `canStop`.                                                                                                                                                                                                                                                                                     |
+| `clearPromptSuggestion`      | `() => void`                                                            | Drop the current `promptSuggestion`. The built-in composer calls this once the user adopts it; a custom footer must call it itself.                                                                                                                                                                                                                                                                                         |
 | `replyToolCallConsents`      | `((answers, payload?) => Promise<void>) \| undefined`                   | Reply to the pending tool-call consent prompt (see `pendingConsent`). Used to build a custom consent UI. `undefined` before the channel is ready.                                                                                                                                                                                                                                                                           |
 | `sendMessageFeedback`        | `((messageId, feedback) => Promise<MessageFeedbackReply>) \| undefined` | Rate one assistant reply Good or Bad (F-033) — what the built-in feedback bar calls. Posts to `/message/feedback`; on success the reply's `feedback` is updated in the conversation, on failure nothing changes and the promise rejects. `undefined` in preview mode.                                                                                                                                                       |
 | `nudge`                      | `((payload?) => Promise<void>) \| undefined`                            | Wake an idle / recycled sandbox with an invisible `action=NUDGE` turn — nothing is rendered in the thread; watch `sandboxPhase` and `useLaunchedSandboxes()` for the result. Runs through `onBeforeSendMessage`, so a session-level payload attaches on its own; the argument is an extra the callback receives as `params.payload`. Takes a parameter, so bind it as `onClick={() => nudge?.()}`, never `onClick={nudge}`. |
@@ -1151,19 +1171,23 @@ interface MessageContentRendererProps {
   message: ConversationMessage;
   /** Function to render the default message content */
   renderDefaultContent: () => ReactNode;
-  /** Container component that wraps custom content with Avatar for bot messages */
+  /** Container component that wraps custom content in the SDK's row shell for this message type */
   MessageContainer: React.FC<{ children: ReactNode }>;
 }
 ```
 
 #### Why MessageContainer?
 
-When you use `renderMessageContent` to customize rendering, it completely replaces the default Template. This means **Avatar will not display automatically**, because Avatar is part of the default Template.
+When you use `renderMessageContent` to customize rendering, it completely replaces the default template — including the row shell that positions the message and the per-message action buttons that hang off it.
 
-Use `MessageContainer` to wrap your custom content and automatically get:
+Use `MessageContainer` to wrap your custom content and get that shell back:
 
-- **Bot messages**: Avatar + timestamp
-- **User messages**: Proper right-aligned styling
+- **Bot messages**: the bot row layout, plus the `messageActions` buttons for that message
+- **User messages**: the right-aligned user row
+- **Other message types**: children are returned unchanged
+
+> No avatar is rendered in the message flow. The `avatar` prop feeds the chat header only, so neither the
+> default template nor `MessageContainer` puts one beside a message — there is nothing to restore.
 
 #### Understanding payload
 
@@ -1210,7 +1234,7 @@ import { Chatbot, MessageContentRendererProps } from '@asgard-js/react';
       const payload = message.message.payload as { customType?: string };
 
       if (payload?.customType === 'order_card') {
-        // Use MessageContainer to wrap custom content with Avatar
+        // Use MessageContainer to wrap custom content in the SDK's bot row shell
         return (
           <MessageContainer>
             <OrderCard order={payload} />
@@ -1229,7 +1253,7 @@ import { Chatbot, MessageContentRendererProps } from '@asgard-js/react';
 
 The `MessageContainer` component is essential for maintaining consistent styling with the default messages:
 
-- **For bot messages**: Wraps your content with the bot's Avatar and proper message styling (including timestamp and quick replies)
+- **For bot messages**: Wraps your content in the bot row layout and appends that message's `messageActions` buttons
 - **For user messages**: Applies proper right-aligned styling
 - **For other message types**: Returns children directly
 
@@ -1258,7 +1282,7 @@ renderMessageContent={(props) => {
   const { message } = props;
 
   if (message.type === 'bot' && isSpecialMessage(message)) {
-    // Render completely custom layout without Avatar
+    // Render a completely custom layout, without the SDK's row shell
     return <FullWidthBanner data={message.message.payload} />;
   }
 
@@ -1789,6 +1813,34 @@ next message continues the same conversation. See the
 <a id="sourceset-file-explorer"></a>
 <br/>
 
+## Sandbox handoff cards
+
+An agent can push three cards whose action carries a `sandbox://` URI rather than a browsable URL. They are
+client-side commands, so the SDK intercepts them before the ordinary link whitelist and routes each to a
+typed destination. **Which destination is a consumer decision**, and a consumer that wires nothing still gets
+a defined — but not always visible — result:
+
+| Card                                           | Built-in destination                                | Host override          | With neither wired                               |
+| ---------------------------------------------- | --------------------------------------------------- | ---------------------- | ------------------------------------------------ |
+| `sandbox://<name>/open-browser`                | `sandboxBrowser="builtin"` — WebRTC panel           | `onSandboxOpenBrowser` | Fetches a one-time URL and opens it in a new tab |
+| `sandbox://<name>/open-file?absolute_path=…`   | `fileExplorer="builtin"` (default) — preview        | `onSandboxOpenFile`    | **Nothing happens**                              |
+| `sandbox://<name>/open-folder?absolute_path=…` | `fileExplorer="builtin"` (default) — expand on tree | `onSandboxOpenFolder`  | **Nothing happens**                              |
+
+Two consequences worth stating outright, because both look like a broken card rather than a configuration:
+
+- **`open-browser` never becomes a dead card.** Its new-tab behavior predates the panel and is kept as the
+  fallback, so a consumer that has never heard of `sandboxBrowser` keeps working. The flip side is that
+  upgrading the SDK does **not** move an existing consumer onto the panel — it stays on new-tab until
+  `sandboxBrowser="builtin"` or `onSandboxOpenBrowser` is passed.
+- **`open-file` / `open-folder` do go dead if you turn the explorer off.** Setting `fileExplorer="off"`
+  without wiring the matching callback leaves the click with nowhere to go, and it fails silently: no throw,
+  no console warning, no visual change. If you place the explorer yourself, wire **both** callbacks — adding
+  only `onSandboxOpenFile` leaves folder cards inert.
+
+A host callback fires **in addition to** the built-in destination for the file and folder cards, so the two
+can be combined (e.g. mirror the path into your own breadcrumb while the built-in aside opens). For
+`open-browser` the host callback **replaces** the SDK's handling entirely.
+
 ## Sandbox File Explorer and the channel scope
 
 Every sandbox call is scoped to the channel that owns the sandbox (`custom_channel_id`). An asgard-core
@@ -1942,12 +1994,23 @@ You can use the following commands to work with the React package:
 # Lint the React package
 npm run lint:react
 
+# Type check — see the note below; this is the command that fails on a type error
+npm run typecheck
+
+# Unit tests
+npm run test:react
+
 # Build the package
 npm run build:react
 
 # Watch mode for development
 npm run watch:react
 ```
+
+> **`build:react` does not fail on a type error.** It is a vite build, and `vite-plugin-dts` reports type
+> errors on stdout while still exiting `0`. `npm run typecheck` (`tsc --build` over core, react and the
+> demo app) is the command that actually fails, and a husky `pre-push` hook runs it. A green build is not
+> a green type check.
 
 Setup your npm registry token for npm publishing:
 
