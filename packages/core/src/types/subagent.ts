@@ -22,6 +22,13 @@ export interface SubagentToolCall {
   parameter: Record<string, unknown>;
   reason?: string;
   status: SubagentToolStatus;
+  /**
+   * The call's `toolCallResult`, handed over as the frame carried it — never truncated or masked (redaction
+   * is the presenter's job). Absent while the call is `running`; `{}` when it completed with an empty result.
+   */
+  result?: Record<string, unknown>;
+  /** The call's structured `toolUseResultSidecar`, when the frame carries one (see `ConversationToolCallMessage.sidecar`). */
+  sidecar?: Record<string, unknown>;
 }
 
 /**

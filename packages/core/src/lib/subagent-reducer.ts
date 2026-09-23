@@ -39,7 +39,14 @@ export type SubagentEvent =
       parameter?: Record<string, unknown>;
       reason?: string;
     }
-  | { kind: 'toolComplete'; parentToolUseId: string; toolUseId: string; isError?: boolean }
+  | {
+      kind: 'toolComplete';
+      parentToolUseId: string;
+      toolUseId: string;
+      isError?: boolean;
+      result?: Record<string, unknown>;
+      sidecar?: Record<string, unknown>;
+    }
   | { kind: 'subagentComplete'; parentToolUseId: string; status: SubagentStatus; summary?: string };
 
 interface Meta {
@@ -121,7 +128,14 @@ export function reduceSubagents(events: SubagentEvent[]): Subagent[] {
       case 'toolComplete': {
         const tool = tools.get(event.parentToolUseId)?.get(event.toolUseId);
 
-        if (tool) tool.status = event.isError ? 'error' : 'completed';
+        if (!tool) break;
+
+        tool.status = event.isError ? 'error' : 'completed';
+
+        // Hand over the frame's own objects: a consumer may compare them by reference (subagentsEqual does).
+        if (event.result !== undefined) tool.result = event.result;
+
+        if (event.sidecar !== undefined) tool.sidecar = event.sidecar;
 
         break;
       }
