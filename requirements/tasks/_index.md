@@ -325,4 +325,4 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `BUILD-082`  | Sandbox browser panel and input forwarding in react      | L        | done   | [BUILD-082-sandbox-browser-panel-react.md](./BUILD-082-sandbox-browser-panel-react.md)                   |
 | `REVIEW-082` | Review: sandbox browser panel and input forwarding       | —        | done   | [REVIEW-082-sandbox-browser-panel-react.md](./REVIEW-082-sandbox-browser-panel-react.md)                 |
 | `BUILD-083`  | Keep each subagent child tool-call's result              | S        | done   | [BUILD-083-subagent-tool-result.md](./BUILD-083-subagent-tool-result.md)                                 |
-| `REVIEW-083` | Review: keep each subagent child tool-call's result      | —        | ready  | [REVIEW-083-subagent-tool-result.md](./REVIEW-083-subagent-tool-result.md)                               |
+| `REVIEW-083` | Review: keep each subagent child tool-call's result      | —        | done   | [REVIEW-083-subagent-tool-result.md](./REVIEW-083-subagent-tool-result.md)                               |
