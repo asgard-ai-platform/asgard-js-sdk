@@ -194,3 +194,55 @@ describe('reduceSubagents — a resumed subagent reads as running again (issue #
     expect(subs[0].summary).toBeUndefined();
   });
 });
+
+// asgard-freyr-pm#815 — a child tool-call's result reaches `SubagentToolCall` untouched, so a consumer can
+// show what each step returned, not only that it succeeded.
+describe('reduceSubagents — child tool-call results (asgard-freyr-pm#815)', () => {
+  const start: SubagentEvent[] = [
+    { kind: 'agentStart', toolUseId: 'X' },
+    { kind: 'toolStart', parentToolUseId: 'X', toolUseId: 't1', toolsetName: '', toolName: 'Bash' },
+  ];
+
+  it('carries the result and sidecar onto the tool, as the very same objects', () => {
+    const result = { stdout: 'ok', exitCode: 0 };
+    const sidecar = { kind: 'bash', lines: 1 };
+    const subs = reduceSubagents([
+      ...start,
+      { kind: 'toolComplete', parentToolUseId: 'X', toolUseId: 't1', result, sidecar },
+    ]);
+
+    expect(subs[0].tools[0].result).toBe(result);
+    expect(subs[0].tools[0].sidecar).toBe(sidecar);
+  });
+
+  it('leaves the sidecar absent when the frame carries none', () => {
+    const subs = reduceSubagents([
+      ...start,
+      { kind: 'toolComplete', parentToolUseId: 'X', toolUseId: 't1', result: {} },
+    ]);
+
+    expect(subs[0].tools[0]).not.toHaveProperty('sidecar');
+  });
+
+  it('tells "not yet" (running, no result) apart from "present but empty" ({})', () => {
+    const running = reduceSubagents(start);
+    const empty = reduceSubagents([
+      ...start,
+      { kind: 'toolComplete', parentToolUseId: 'X', toolUseId: 't1', result: {} },
+    ]);
+
+    expect(running[0].tools[0]).toMatchObject({ status: 'running' });
+    expect(running[0].tools[0].result).toBeUndefined();
+    expect(empty[0].tools[0]).toMatchObject({ status: 'completed', result: {} });
+  });
+
+  it('keeps the result of a failed call too', () => {
+    const result = { error: 'permission denied' };
+    const subs = reduceSubagents([
+      ...start,
+      { kind: 'toolComplete', parentToolUseId: 'X', toolUseId: 't1', isError: true, result },
+    ]);
+
+    expect(subs[0].tools[0]).toMatchObject({ status: 'error', result });
+  });
+});

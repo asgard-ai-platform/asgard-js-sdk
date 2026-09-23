@@ -3,7 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 import Conversation from './conversation';
 import { createDerivedStores, deriveSubagents, deriveTasks, subagentsEqual, tasksEqual } from './derived-stores';
 import { EventType } from '../constants/enum';
-import type { ConversationMessage, Subagent, SubagentTerminalStatus, Task } from '../types';
+import type { ConversationMessage, SseResponse, Subagent, SubagentTerminalStatus, Task } from '../types';
 
 // F-013 — derived-state stores. `deriveTasks` / `deriveSubagents` are pure folds over the conversation;
 // `createDerivedStores` exposes per-slice `BehaviorSubject`s that emit only when the slice structurally
@@ -263,5 +263,103 @@ describe('createDerivedStores (F-013)', () => {
 
     conversation$.next(conv([taskCreate(1, '1', 'a')]));
     expect(stores.getTasks()).toEqual([]); // no longer updating after teardown
+  });
+});
+
+// asgard-freyr-pm#815 — the child tool-call result survives the fold, end to end over real frames. A GET
+// rejoin replays only the terminal `tool_call.complete` (no `start`), so both paths must derive the same.
+function childFrame(
+  eventType: EventType.TOOL_CALL_START | EventType.TOOL_CALL_COMPLETE,
+  callSeq: number,
+  extra: Record<string, unknown> = {},
+): SseResponse<EventType> {
+  const data = {
+    processId: 'p',
+    callSeq,
+    toolUseId: `t${callSeq}`,
+    parentToolUseId: 'X',
+    toolCall: { toolsetName: '', toolName: 'Bash', parameter: { command: 'ls' } },
+    ...extra,
+  };
+
+  return {
+    eventType,
+    requestId: 'req-1',
+    traceId: 'trace-1',
+    namespace: 'ns',
+    botProviderName: 'bp',
+    customChannelId: 'ch',
+    fact: eventType === EventType.TOOL_CALL_START ? { toolCallStart: data } : { toolCallComplete: data },
+  } as unknown as SseResponse<EventType>;
+}
+
+describe('deriveSubagents — child tool-call results (asgard-freyr-pm#815)', () => {
+  const result = { stdout: 'a.ts\nb.ts' };
+  const sidecar = { lines: 2 };
+  const complete = childFrame(EventType.TOOL_CALL_COMPLETE, 1, {
+    toolCallResult: result,
+    toolUseResultSidecar: sidecar,
+  });
+  const empty = (): Conversation => conv([agentTool(0, 'X', 'query')]);
+
+  it('a live run exposes the result and sidecar the conversation stored, as the same objects', () => {
+    const live = empty().onMessage(childFrame(EventType.TOOL_CALL_START, 1)).onMessage(complete);
+    const tool = deriveSubagents(live)[0].tools[0];
+    const message = live.messages?.get('p-1') as Extract<ConversationMessage, { type: 'tool-call' }>;
+
+    expect(tool).toMatchObject({ toolName: 'Bash', status: 'completed', result, sidecar });
+    expect(tool.result).toBe(message.result);
+    expect(tool.sidecar).toBe(message.sidecar);
+  });
+
+  it('a still-running child carries no result yet', () => {
+    const running = empty().onMessage(childFrame(EventType.TOOL_CALL_START, 1));
+
+    const tool = deriveSubagents(running)[0].tools[0];
+
+    expect(tool.status).toBe('running');
+    expect(tool.result).toBeUndefined();
+  });
+
+  it('a GET rejoin (complete without start) derives the same tool as the live run', () => {
+    const live = empty().onMessage(childFrame(EventType.TOOL_CALL_START, 1)).onMessage(complete);
+    const rejoin = empty().onMessage(complete);
+
+    expect(deriveSubagents(rejoin)).toEqual(deriveSubagents(live));
+  });
+
+  it('subagentsEqual treats the same result objects as equal, and a changed result or sidecar as a change', () => {
+    const tool = { toolsetName: '', toolName: 'Bash', parameter: {}, status: 'completed' as const };
+    const withResult = (r: Record<string, unknown>): Subagent[] => [
+      { parentToolUseId: 'X', status: 'running', tools: [{ ...tool, result: r, sidecar }] },
+    ];
+
+    expect(subagentsEqual(withResult(result), withResult(result))).toBe(true);
+    expect(subagentsEqual(withResult(result), withResult({ stdout: 'other' }))).toBe(false);
+    expect(
+      subagentsEqual(withResult(result), [{ parentToolUseId: 'X', status: 'running', tools: [{ ...tool, result }] }]),
+    ).toBe(false);
+  });
+
+  it('subagents$ emits when the result lands, then stays quiet on unrelated deltas', () => {
+    const started = empty().onMessage(childFrame(EventType.TOOL_CALL_START, 1));
+    const conversation$ = new BehaviorSubject<Conversation>(started);
+    const stores = createDerivedStores(conversation$);
+
+    const emissions: Subagent[][] = [];
+    const sub = stores.subagents$.subscribe(s => emissions.push(s));
+
+    const completed = started.onMessage(complete);
+    conversation$.next(completed);
+    expect(emissions).toHaveLength(2);
+    expect(emissions[1][0].tools[0].result).toBe(result);
+
+    conversation$.next(
+      new Conversation({ messages: new Map([...(completed.messages ?? []), ['b1', botMessage('b1', 'hi')]]) }),
+    );
+    expect(emissions).toHaveLength(2);
+
+    sub.unsubscribe();
+    stores.teardown();
   });
 });

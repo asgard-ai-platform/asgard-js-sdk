@@ -59,6 +59,8 @@ export function conversationToSubagentEvents(messages: ConversationMessage[]): S
           parentToolUseId: message.parentToolUseId as string,
           toolUseId,
           isError: message.isError,
+          result: message.result,
+          sidecar: message.sidecar,
         });
       }
 
@@ -133,7 +135,11 @@ function toolsEqual(a: SubagentToolCall[], b: SubagentToolCall[]): boolean {
       tool.toolName === other.toolName &&
       tool.toolsetName === other.toolsetName &&
       tool.status === other.status &&
-      tool.reason === other.reason
+      tool.reason === other.reason &&
+      // By reference: `Conversation` keeps an untouched message's objects across updates, so an unrelated
+      // delta re-derives the very same result and does not count as a change.
+      tool.result === other.result &&
+      tool.sidecar === other.sidecar
     );
   });
 }
