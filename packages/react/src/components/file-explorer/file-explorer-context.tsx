@@ -35,7 +35,13 @@ import { useFileExplorerDialog } from './file-explorer-dialog';
 import { ancestorDirs, baseName, isUnderRoot, joinPath, parentDir, uniqueName } from './paths';
 import { FsEntry, FsProviders, FsSource } from './types';
 
-export type Clipboard = { op: 'copy' | 'cut'; entry: FsEntry } | null;
+/**
+ * `sourceId` is the source the entry was taken from. Paste only works back in that source, because every
+ * provider call carries one `sourceId` and the entry's path means nothing in another (issue #476). It is
+ * optional so a host calling `setClipboard({ op, entry })` keeps compiling: the context fills in the
+ * active source.
+ */
+export type Clipboard = { op: 'copy' | 'cut'; entry: FsEntry; sourceId?: string } | null;
 export type MenuTarget = { kind: 'file' | 'dir'; entry: FsEntry } | { kind: 'background' };
 export type OpenMenu = { x: number; y: number; target: MenuTarget } | null;
 /** Anchor for the "files or folder?" upload menu; `dir` is where that batch will land. */
@@ -81,6 +87,14 @@ export interface FileExplorerContextValue {
   refreshKey: number;
   openFile: FsEntry | null;
   clipboard: Clipboard;
+  /**
+   * Whether copy / cut / paste can run in the active source. An omitted `copy` or `move` provider is how a
+   * read-only source is expressed, so the entry points gate on these rather than on the selection alone.
+   */
+  canCopy: boolean;
+  canCut: boolean;
+  /** The clipboard came from the active source, and that source has the provider its operation needs. */
+  canPaste: boolean;
   menu: OpenMenu;
   /** The "files or folder?" menu the upload button opens; `null` when closed. */
   uploadMenu: OpenUploadMenu;
@@ -250,7 +264,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   );
 
   const [refreshKey, setRefreshKey] = useState(0);
-  const [clipboard, setClipboard] = useState<Clipboard>(null);
+  const [clipboard, setClipboardState] = useState<Clipboard>(null);
   const [menu, setMenu] = useState<OpenMenu>(null);
   const [uploadMenu, setUploadMenu] = useState<OpenUploadMenu>(null);
   const [dropping, setDropping] = useState(false);
@@ -432,15 +446,23 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     },
     [activeSourceId, remove, run, requestConfirm, locale],
   );
+  const setClipboard = useCallback(
+    (next: Clipboard): void =>
+      setClipboardState(next && { ...next, sourceId: next.sourceId ?? activeSourceId ?? undefined }),
+    [activeSourceId],
+  );
+  const canCopy = !!copy;
+  const canCut = !!move;
+  const canPaste = !!clipboard && clipboard.sourceId === activeSourceId && (clipboard.op === 'copy' ? canCopy : canCut);
   const actPaste = useCallback(
     async (dstDir: string): Promise<void> => {
-      if (!activeSourceId || !clipboard) return;
+      if (!activeSourceId || !clipboard || !canPaste) return;
 
       const { op, entry } = clipboard;
       // Cutting and pasting into the same folder is a no-op, not a collision — deduplicating it would
       // silently rename the item the user only meant to leave where it was.
       if (op === 'cut' && parentDir(entry.path) === dstDir) {
-        setClipboard(null);
+        setClipboardState(null);
 
         return;
       }
@@ -461,10 +483,10 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
         if (copy) void run(copy(activeSourceId, entry.path, dst), dstDir);
       } else if (move) {
         void run(move(activeSourceId, entry.path, dst), dstDir);
-        setClipboard(null);
+        setClipboardState(null);
       }
     },
-    [activeSourceId, clipboard, copy, move, listDir, run],
+    [activeSourceId, clipboard, canPaste, copy, move, listDir, run],
   );
   // --- batch upload (F-031) ---
   //
@@ -698,9 +720,10 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     [updateView],
   );
 
-  const pasteLabel = clipboard
-    ? t(locale, 'fileExplorer.pasteNamed', { name: clipboard.entry.name })
-    : t(locale, 'fileExplorer.paste');
+  const pasteLabel =
+    canPaste && clipboard
+      ? t(locale, 'fileExplorer.pasteNamed', { name: clipboard.entry.name })
+      : t(locale, 'fileExplorer.paste');
 
   /**
    * The chat explorer's copy for the shared upload UI, drawn from `fileExplorer.*`. The components
@@ -801,6 +824,9 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       refreshKey,
       openFile,
       clipboard,
+      canCopy,
+      canCut,
+      canPaste,
       menu,
       uploadMenu,
       dropping,
@@ -854,7 +880,11 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       refreshKey,
       openFile,
       setOpenFile,
+      setClipboard,
       clipboard,
+      canCopy,
+      canCut,
+      canPaste,
       menu,
       uploadMenu,
       dropping,

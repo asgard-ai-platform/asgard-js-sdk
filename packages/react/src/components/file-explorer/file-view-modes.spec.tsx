@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SandboxFsDirEntry } from '@asgard-js/core';
 import { useFileExplorerController } from '../../hooks/use-file-explorer-controller';
 import { t } from '../../i18n';
 import { FileExplorerProvider } from './file-explorer-context';
 import { FileExplorerBody, FileExplorerRoot, FileExplorerView } from './file-explorer-parts';
 import { FileExplorerTree } from './file-explorer-tree';
-import { FsListResult, FsSource } from './types';
+import { FsListResult, FsSaveFile, FsSource } from './types';
 
 /**
  * UC-006（開檔檢視與編輯）的替代流程。三種副檔名走三條不同的呈現路徑，而「返回」必須把樹留在原狀
@@ -17,6 +17,7 @@ import { FsListResult, FsSource } from './types';
 
 const SOURCE: FsSource = { id: 'src-1', label: 'Source', rootPath: '/work' };
 const IMAGE_DATA_URL = 'data:image/png;base64,iVBORw0KGgo=';
+const SAVE: FsSaveFile = vi.fn();
 
 const CONTENT: Record<string, string> = {
   '/work/notes.md': '# heading',
@@ -33,8 +34,11 @@ function entry(name: string, isDir = false): SandboxFsDirEntry {
   return { name, isDir, sizeBytes: 1, mtimeUnix: 0, mode: isDir ? 493 : 420 };
 }
 
-function Harness({ failRead = false }: { failRead?: boolean }): ReactNode {
+function Harness({ failRead = false, canSave = true }: { failRead?: boolean; canSave?: boolean }): ReactNode {
   const controller = useFileExplorerController();
+  // A button rather than a re-render with new props: the host swapping providers mid-view is the case under test.
+  const [writable, setWritable] = useState(canSave);
+  const saveFile: FsSaveFile | undefined = writable ? SAVE : undefined;
 
   const listDir = async (_sourceId: string, path: string): Promise<FsListResult> => ({
     entries:
@@ -51,7 +55,10 @@ function Harness({ failRead = false }: { failRead?: boolean }): ReactNode {
   };
 
   return (
-    <FileExplorerProvider sources={[SOURCE]} controller={controller} providers={{ listDir, readFile }}>
+    <FileExplorerProvider sources={[SOURCE]} controller={controller} providers={{ listDir, readFile, saveFile }}>
+      <button type="button" onClick={() => setWritable(false)}>
+        drop-save
+      </button>
       <FileExplorerRoot>
         <FileExplorerBody>
           <FileExplorerTree />
@@ -110,6 +117,47 @@ describe('UC-006 — how a file is presented', () => {
     await open('notes.md');
 
     expect(await screen.findByText(t('en-US', 'fileExplorer.loadError', { error: 'boom' }))).toBeTruthy();
+  });
+});
+
+/** The CodeMirror content node's editability, once the lazily loaded editor has mounted. */
+async function editable(container: HTMLElement): Promise<string | null> {
+  await waitFor(() => expect(container.querySelector('.cm-content')).toBeTruthy());
+
+  return container.querySelector('.cm-content')?.getAttribute('contenteditable') ?? null;
+}
+
+describe('#476 R6 — no save provider, no editing', () => {
+  it('offers no toggle and keeps text read-only when the host cannot save', async () => {
+    const { container } = render(<Harness canSave={false} />);
+
+    await open('script.ts');
+
+    expect(await editable(container)).toBe('false');
+    expect(screen.queryByLabelText(toEdit)).toBeNull();
+    expect(screen.queryByLabelText(toPreview)).toBeNull();
+  });
+
+  it('shows markdown rendered, with no way into its source', async () => {
+    const { container } = render(<Harness canSave={false} />);
+
+    await open('notes.md');
+
+    await waitFor(() => expect(container.querySelector('h1')?.textContent).toBe('heading'));
+    expect(screen.queryByLabelText(toEdit)).toBeNull();
+  });
+
+  it('falls back to read-only when the save provider goes away mid-edit', async () => {
+    const { container } = render(<Harness />);
+
+    await open('script.ts');
+    fireEvent.click(await screen.findByLabelText(toEdit));
+    expect(await editable(container)).toBe('true');
+
+    fireEvent.click(screen.getByText('drop-save'));
+
+    await waitFor(() => expect(container.querySelector('.cm-content')?.getAttribute('contenteditable')).toBe('false'));
+    expect(screen.queryByLabelText(toPreview)).toBeNull();
   });
 });
 
