@@ -18,7 +18,7 @@ export interface FileViewProps {
   file: FsEntry;
   /** Read content (≈ `GET fs/file`; images resolve to a data/object URL). Absent → treated as empty. */
   readFile?: FsReadFile;
-  /** Save content (≈ `PUT fs/file`); debounced by this component. */
+  /** Save content (≈ `PUT fs/file`); debounced by this component. Absent → preview only, no edit toggle. */
   onSaveFile?: FsSaveFile;
   /** Watch this file (≈ `fs/watch` SSE) so an agent-side write reloads the view (AC3). */
   watchFile?: FsWatchFile;
@@ -62,9 +62,13 @@ export function FileView(props: FileViewProps): ReactNode {
     props;
   const ext = extOf(file.name);
   const kind = kindOf(ext);
-  const canToggle = kind !== 'image';
+  // Editing needs somewhere to save to. Without `onSaveFile` the debounced save below would clear the dirty
+  // mark having saved nothing, so the view would present lost edits as saved (issue #476).
+  const canToggle = kind !== 'image' && !!onSaveFile;
 
-  const [mode, setMode] = useState<'preview' | 'edit'>('preview');
+  const [chosenMode, setMode] = useState<'preview' | 'edit'>('preview');
+  // A host can take `onSaveFile` away while the file is already open in source mode.
+  const mode = canToggle ? chosenMode : 'preview';
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);

@@ -227,7 +227,9 @@ export function FileExplorerToolbar(): ReactNode {
     providers,
     openFile,
     selectedEntry,
-    clipboard,
+    canCopy,
+    canCut,
+    canPaste,
     targetDir,
     pasteLabel,
     locale,
@@ -297,7 +299,7 @@ export function FileExplorerToolbar(): ReactNode {
         type="button"
         className={styles.toolBtn}
         onClick={() => selectedEntry && setClipboard({ op: 'copy', entry: selectedEntry })}
-        disabled={!selectedEntry}
+        disabled={!canCopy || !selectedEntry}
         aria-label={t(locale, 'fileExplorer.copy')}
         title={t(locale, 'fileExplorer.copy')}
       >
@@ -307,7 +309,7 @@ export function FileExplorerToolbar(): ReactNode {
         type="button"
         className={styles.toolBtn}
         onClick={() => selectedEntry && setClipboard({ op: 'cut', entry: selectedEntry })}
-        disabled={!selectedEntry}
+        disabled={!canCut || !selectedEntry}
         aria-label={t(locale, 'fileExplorer.cut')}
         title={t(locale, 'fileExplorer.cut')}
       >
@@ -317,7 +319,7 @@ export function FileExplorerToolbar(): ReactNode {
         type="button"
         className={styles.toolBtn}
         onClick={() => void actPaste(targetDir)}
-        disabled={!clipboard}
+        disabled={!canPaste}
         aria-label={t(locale, 'fileExplorer.paste')}
         title={pasteLabel}
       >
@@ -443,7 +445,9 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
   const {
     providers,
     expanded,
-    clipboard,
+    canCopy,
+    canCut,
+    canPaste,
     rootPath,
     pasteLabel,
     locale,
@@ -505,12 +509,14 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
           label: t(locale, 'fileExplorer.copy'),
           icon: <CopyIcon size={15} />,
           onSelect: () => setClipboard({ op: 'copy', entry: e }),
+          disabled: !canCopy,
         },
         {
           key: 'cut',
           label: t(locale, 'fileExplorer.cut'),
           icon: <ScissorsIcon size={15} />,
           onSelect: () => setClipboard({ op: 'cut', entry: e }),
+          disabled: !canCut,
         },
       ],
       [
@@ -574,7 +580,7 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
           label: pasteLabel,
           icon: <ClipboardPasteIcon size={15} />,
           onSelect: () => void actPaste(e.path),
-          disabled: !clipboard,
+          disabled: !canPaste,
         },
       ],
       [
@@ -590,12 +596,14 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
           label: t(locale, 'fileExplorer.copy'),
           icon: <CopyIcon size={15} />,
           onSelect: () => setClipboard({ op: 'copy', entry: e }),
+          disabled: !canCopy,
         },
         {
           key: 'cut',
           label: t(locale, 'fileExplorer.cut'),
           icon: <ScissorsIcon size={15} />,
           onSelect: () => setClipboard({ op: 'cut', entry: e }),
+          disabled: !canCut,
         },
       ],
       [
@@ -633,7 +641,7 @@ function buildSections(ctx: FileExplorerContextValue, target: MenuTarget): Conte
         label: pasteLabel,
         icon: <ClipboardPasteIcon size={15} />,
         onSelect: () => void actPaste(root),
-        disabled: !clipboard,
+        disabled: !canPaste,
       },
     ],
     refreshSec,
