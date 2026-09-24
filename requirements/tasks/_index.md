@@ -70,7 +70,7 @@
 - `F-034` sandbox open-folder 卡片與檔案總管目錄 reveal (UC-060, UC-061) → BUILD-080 / REVIEW-080 (done，本地驗收通過，PR [#474](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/474) 待轉 ready)。Issue [`asgard-sdk-pm#102`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/102)，UI 權威為 prototype @ `38cf0f5`。**動 core + react + demo**。詳見〈▶ Next Task〉。
 - `F-035` sandbox 瀏覽器面板 — SDK 內渲染 WebRTC 與接管 (UC-034 fallback 保留, UC-036) → BUILD-081 / REVIEW-081（core 協定層）+ BUILD-082 / REVIEW-082（react 面板）(draft)。Issue [`asgard-sdk-pm#109`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109)，規格為 `docs/spec/asgard-js-sdk/sandbox-browser.md`（§3–§7 平台中立），UI／行為權威為 prototype @ `d1d05b1`。**動 core + react + demo**。詳見〈▶ Next Task〉。
 - asgard-freyr-pm#815 子代理 child tool-call 結果保留（Freyr F-029 / pm#740 驗收條件 ①）→ BUILD-083 / REVIEW-083。Issue [`asgard-freyr-pm#815`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/815)，issue body 即規格。**core only、additive**：`SubagentToolCall` 加 `result?` / `sidecar?`（名稱對齊 `ConversationToolCallMessage`），`conversationToSubagentEvents` → `reduceSubagents` 原樣帶過、不截斷不遮蔽；`toolsEqual` 以參照比對兩欄。react 不動。**未發版**。
-- asgard-js-sdk#476 FileExplorer 唯讀來源：複製／剪下／貼上與原始碼編輯改看 provider、剪貼簿綁來源（C 方案）→ BUILD-084 (done) / REVIEW-084 (ready)。Issue [`asgard-js-sdk#476`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/476)，issue body 即規格。**react only、不新增 host 設定**。
+- asgard-js-sdk#476 FileExplorer 唯讀來源：複製／剪下／貼上與原始碼編輯改看 provider、剪貼簿綁來源（C 方案）→ BUILD-084 / REVIEW-084 (done)。Issue [`asgard-js-sdk#476`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/476)，issue body 即規格。**react only、不新增 host 設定**。
 
 ## ▶ Next Task
 
@@ -328,4 +328,4 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `BUILD-083`  | Keep each subagent child tool-call's result                 | S        | done   | [BUILD-083-subagent-tool-result.md](./BUILD-083-subagent-tool-result.md)                                 |
 | `REVIEW-083` | Review: keep each subagent child tool-call's result         | —        | done   | [REVIEW-083-subagent-tool-result.md](./REVIEW-083-subagent-tool-result.md)                               |
 | `BUILD-084`  | Gate clipboard and source editing on the source's providers | S        | done   | [BUILD-084-read-only-source-actions.md](./BUILD-084-read-only-source-actions.md)                         |
-| `REVIEW-084` | Review: gate clipboard and source editing on providers      | —        | ready  | [REVIEW-084-read-only-source-actions.md](./REVIEW-084-read-only-source-actions.md)                       |
+| `REVIEW-084` | Review: gate clipboard and source editing on providers      | —        | done   | [REVIEW-084-read-only-source-actions.md](./REVIEW-084-read-only-source-actions.md)                       |
