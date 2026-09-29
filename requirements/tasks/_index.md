@@ -70,6 +70,7 @@
 - `F-034` sandbox open-folder 卡片與檔案總管目錄 reveal (UC-060, UC-061) → BUILD-080 / REVIEW-080 (done，本地驗收通過，PR [#474](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/474) 待轉 ready)。Issue [`asgard-sdk-pm#102`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/102)，UI 權威為 prototype @ `38cf0f5`。**動 core + react + demo**。詳見〈▶ Next Task〉。
 - `F-035` sandbox 瀏覽器面板 — SDK 內渲染 WebRTC 與接管 (UC-034 fallback 保留, UC-036) → BUILD-081 / REVIEW-081（core 協定層）+ BUILD-082 / REVIEW-082（react 面板）(draft)。Issue [`asgard-sdk-pm#109`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109)，規格為 `docs/spec/asgard-js-sdk/sandbox-browser.md`（§3–§7 平台中立），UI／行為權威為 prototype @ `d1d05b1`。**動 core + react + demo**。詳見〈▶ Next Task〉。
 - asgard-freyr-pm#815 子代理 child tool-call 結果保留（Freyr F-029 / pm#740 驗收條件 ①）→ BUILD-083 / REVIEW-083。Issue [`asgard-freyr-pm#815`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/815)，issue body 即規格。**core only、additive**：`SubagentToolCall` 加 `result?` / `sidecar?`（名稱對齊 `ConversationToolCallMessage`），`conversationToSubagentEvents` → `reduceSubagents` 原樣帶過、不截斷不遮蔽；`toolsEqual` 以參照比對兩欄。react 不動。**未發版**。
+- asgard-freyr-pm#901 授權卡片的允許／拒絕讓 host 接得到，並寫明 `toolCallId` 與 `toolUseId` 的對應（pm#885 的上游前置）→ BUILD-085 (done) / REVIEW-085 (ready)。Issue [`asgard-freyr-pm#901`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901)，issue body 即規格。**react + 文件，core 只補 JSDoc**：`onToolCallConsentReply(answers)` 在後端接受回覆後觸發；後端自動放行的呼叫不會出現在 consent frame，寫成限制。
 
 ## ▶ Next Task
 
@@ -326,3 +327,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-082` | Review: sandbox browser panel and input forwarding       | —        | done   | [REVIEW-082-sandbox-browser-panel-react.md](./REVIEW-082-sandbox-browser-panel-react.md)                 |
 | `BUILD-083`  | Keep each subagent child tool-call's result              | S        | done   | [BUILD-083-subagent-tool-result.md](./BUILD-083-subagent-tool-result.md)                                 |
 | `REVIEW-083` | Review: keep each subagent child tool-call's result      | —        | done   | [REVIEW-083-subagent-tool-result.md](./REVIEW-083-subagent-tool-result.md)                               |
+| `BUILD-085`  | Notify the host when a consent reply is accepted         | M        | done   | [BUILD-085-consent-reply-notification.md](./BUILD-085-consent-reply-notification.md)                     |
+| `REVIEW-085` | Review: notify the host on consent reply                 | —        | ready  | [REVIEW-085-consent-reply-notification.md](./REVIEW-085-consent-reply-notification.md)                   |
