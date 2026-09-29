@@ -227,6 +227,8 @@ export interface AsgardServiceContextProviderProps {
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
   /** Callback fired when SSE connection encounters an error */
   onSseError?: (error: unknown) => void;
+  /** Fired once per consent reply the backend has accepted — see `UseChannelProps.onToolCallConsentReply`. */
+  onToolCallConsentReply?: UseChannelProps['onToolCallConsentReply'];
   /**
    * Callback to modify outbound params before they hit the wire. It fires on
    * **four** paths, not just user sends:
@@ -282,6 +284,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onSseMessage,
     onAuthError,
     onSseError,
+    onToolCallConsentReply,
     onBeforeSendMessage,
     onMessageSent,
     autoResetChannel,
@@ -360,6 +363,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onSseMessage,
     onAuthError,
     onSseError,
+    onToolCallConsentReply,
     onBeforeSendMessage,
     onChannelReady,
   });

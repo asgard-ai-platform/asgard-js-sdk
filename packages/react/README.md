@@ -355,6 +355,7 @@ config: {
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
 - **onAuthError?**: `(error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void` - **Deprecated — use `onSseError`.** This never fires for the first-party `AsgardServiceClient`: core has never constructed that error shape, so a real 401 / 403 arrives as a plain `HTTP 403: Forbidden` and reaches `onSseError` only. It still fires for a custom `IAsgardServiceClient` that throws the shape itself, which is why it is kept rather than removed; scheduled for removal in the next major.
 - **onSseError?**: `(error: unknown) => void` - Callback fired when the SSE connection encounters an error.
+- **onToolCallConsentReply?**: `(answers: ToolCallConsentAnswer[]) => void` - Fired once per tool-call consent reply the backend has accepted, with the answers that were sent. See [Tool Call Consent → Observing the answers](#tool-call-consent).
 - **onErrorClick?**: `(message: ConversationErrorMessage) => void` - Callback fired when the user clicks on an error message bubble. Useful for retry or diagnostic flows.
 - **errorMessageRenderer?**: `(message: ConversationErrorMessage) => ReactNode` - Custom renderer for error message bubbles. When provided, completely replaces the default error UI.
 - **onTemplateBtnClick?**: `(payload: Record<string, unknown>, eventName: string, raw: string) => void` - Callback for EMIT button actions. See [EMIT Action](#emit-action) section for details.
@@ -922,8 +923,31 @@ When the backend emits an `asgard.tool_call.consent` event, a modal appears for 
 
 Two auto-skip rules reduce interruptions:
 
-- **`alreadyAllowed`**: If the backend marks a call as already allowed (e.g. from a prior "Allow for This Chat" in a previous turn), the SDK silently approves it without showing a modal.
+- **`alreadyAllowed`**: If the backend marks a call as already allowed, the SDK silently approves it without showing a modal. (A tool allowed for this chat in an earlier turn does not come through here: the backend approves those calls itself and leaves them out of the consent event.)
 - **Same-session Allow for This Chat**: If the user approved a tool via "Allow for This Chat" earlier in the same consent batch, subsequent calls to that tool in the same batch are auto-approved.
+
+#### Observing the answers
+
+The modal answers on its own, so a host that needs to act on the decision — for example, to hold back a UI action until the user allows it — listens with `onToolCallConsentReply`:
+
+```tsx
+<Chatbot
+  config={config}
+  customChannelId="your-channel-id"
+  onToolCallConsentReply={answers => {
+    for (const { toolCallId, result } of answers) {
+      // `toolCallId` is the `toolUseId` of that call's `asgard.tool_call.start`.
+      if (result === 'DENY_ONCE') dropHeldAction(toolCallId);
+      else runHeldAction(toolCallId);
+    }
+  }}
+/>
+```
+
+- **When**: once the backend has accepted the reply — right before the first frame of the resumed run reaches `onSseMessage`, or when that run ends if it sends none. A refused reply never fires it; the modal comes back, and the answer given there fires once it is accepted.
+- **What**: `ToolCallConsentAnswer[]` (`{ toolCallId, result, denyReason }`), the whole batch in one call — including the answers the modal gave without asking (`alreadyAllowed`, and a tool allowed for this chat earlier in the same batch). A host that calls `replyToolCallConsents` itself is reported the same way.
+- **Matching tool calls**: `toolCallId` equals the `toolUseId` on the call's `asgard.tool_call.start`. Do not count on a `tool_call.complete` under that id afterwards: a single approved call has come back that way, but a batch of several has come back as new calls with new ids.
+- **Not covered**: calls the backend approves on its own (bypass, allow list, a tool allowed for this chat in an earlier turn) are never listed in a consent event, so they raise no modal and no callback.
 
 #### Zero-config usage
 
