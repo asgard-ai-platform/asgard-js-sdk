@@ -69,6 +69,19 @@ export interface UseChannelProps {
    */
   onAuthError?: (error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void;
   onSseError?: (error: unknown) => void;
+  /**
+   * Fired once per consent reply the backend has accepted, with the answers that were sent — from the
+   * built-in consent card and from a direct `replyToolCallConsents` call alike (asgard-freyr-pm#901).
+   *
+   * "Accepted" is the first frame of the resumed run, and the callback runs before that frame reaches
+   * `onSseMessage`; a run that ends without any frame fires it on completion. A refused or failed reply
+   * never fires it — the card comes back, and the answer to it fires once it is accepted.
+   *
+   * The batch includes the answers the card gives without showing a prompt (`alreadyAllowed`, and a tool
+   * already allowed for this chat earlier in the same batch). Calls the backend approves on its own never
+   * appear in a consent frame at all, so they are not in any batch.
+   */
+  onToolCallConsentReply?: (answers: ToolCallConsentAnswer[]) => void;
   onBeforeSendMessage?: (params: {
     text: string;
     payload?: Record<string, unknown> | (() => Record<string, unknown>);
@@ -185,6 +198,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     onSseMessage,
     onAuthError,
     onSseError,
+    onToolCallConsentReply,
     onBeforeSendMessage,
     onChannelReady,
   } = props;
@@ -651,15 +665,27 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         );
       }
 
+      // asgard-freyr-pm#901 — the resumed run's first frame is the earliest sign the backend took the
+      // answers; a refusal arrives as `onSseError` with no frame before it (#410 puts the card back).
+      let accepted = false;
+      const accept = (): void => {
+        if (accepted) return;
+
+        accepted = true;
+        notify(() => onToolCallConsentReply?.(answers));
+      };
+
       await channel?.replyToolCallConsents(
         answers,
         {
           delayTime,
           onSseMessage(response: SseResponse<EventType>) {
+            accept();
             onSseMessage?.(response, {
               conversation,
             });
           },
+          onSseCompleted: accept,
           // asgard-freyr-pm#331 — this was the one entrance with no error exit. Without it core's
           // `options?.onSseError?.(err)` is an optional call on a missing key: a rejected reply (the
           // backend refusing the run with a 403 / 400) produced no callback, no log, and no way for a
@@ -676,7 +702,18 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
         payload,
       );
     },
-    [channel, delayTime, client, onSseMessage, onAuthError, onSseError, conversation, notify, refuseWhileResetting],
+    [
+      channel,
+      delayTime,
+      client,
+      onSseMessage,
+      onAuthError,
+      onSseError,
+      onToolCallConsentReply,
+      conversation,
+      notify,
+      refuseWhileResetting,
+    ],
   );
 
   const sendMessageFeedback = useCallback(

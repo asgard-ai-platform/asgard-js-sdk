@@ -261,7 +261,10 @@ export interface ErrorEventData {
 export interface ToolCallBaseEventData {
   processId: string;
   callSeq: number;
-  /** Correlation id of this tool-call. For an `Agent` spawn it becomes the subagent's `parentToolUseId` (F-012). */
+  /**
+   * Correlation id of this tool-call. For an `Agent` spawn it becomes the subagent's `parentToolUseId` (F-012);
+   * for a call that needs consent it is the `toolCallId` of its `ToolCallConsentPendingCall`.
+   */
   toolUseId?: string;
   /** Non-empty when this tool-call belongs to a subagent — points at the spawning `Agent`'s `toolUseId` (F-012). */
   parentToolUseId?: string;
@@ -292,10 +295,19 @@ export interface ToolCallCompleteEventData extends ToolCallBaseEventData {
 }
 
 export interface ToolCallConsentPendingCall {
+  /**
+   * The same value as the `toolUseId` on this call's `asgard.tool_call.start` — the backend fills both from
+   * the CLI's own tool_use id (asgard-freyr-pm#901).
+   */
   toolCallId: string;
   toolsetName: string;
   toolName: string;
   parameter: Record<string, unknown>;
+  /**
+   * Answer this call without asking (the consent card sends `ALLOW_ONCE` for it). Calls the backend approves
+   * on its own — bypass, allow list, a tool already allowed for this chat — are not listed in a consent
+   * frame at all: no prompt is raised and no reply is sent for them.
+   */
   alreadyAllowed: boolean;
   reason?: string;
 }

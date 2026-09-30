@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useMemo, useState } from 'react';
 import { Chatbot } from '@asgard-js/react';
-import { EventType, SseResponse } from '@asgard-js/core';
+import { EventType, SseResponse, ToolCallConsentAnswer } from '@asgard-js/core';
 import '@asgard-js/react/style';
 import clsx from 'clsx';
 import { DemoWrapper } from '../../components/demo-wrapper';
@@ -33,6 +33,21 @@ export function ToolCallConsentDemo(): ReactNode {
 
   const handleSseMessage = useCallback(
     (response: SseResponse<EventType>) => {
+      // asgard-freyr-pm#901 — logged with its `toolUseId` so it can be matched against the consent
+      // frame's `toolCallId` and the reply below.
+      if (response.eventType === EventType.TOOL_CALL_START || response.eventType === EventType.TOOL_CALL_COMPLETE) {
+        const toolCall =
+          response.eventType === EventType.TOOL_CALL_START
+            ? (response as SseResponse<EventType.TOOL_CALL_START>).fact.toolCallStart
+            : (response as SseResponse<EventType.TOOL_CALL_COMPLETE>).fact.toolCallComplete;
+        const phase = response.eventType === EventType.TOOL_CALL_START ? 'start' : 'complete';
+
+        pushLog(
+          'info',
+          `tool_call.${phase} · toolUseId=${toolCall.toolUseId} · ${toolCall.toolCall.toolsetName}/${toolCall.toolCall.toolName}`,
+        );
+      }
+
       if (response.eventType === EventType.TOOL_CALL_CONSENT) {
         const consent = response.fact.toolCallConsent;
         if (!consent) return;
@@ -44,12 +59,23 @@ export function ToolCallConsentDemo(): ReactNode {
         consent.pendingCalls.forEach((c, idx) => {
           pushLog(
             'consent',
-            `  [${idx}] ${c.toolsetName}/${c.toolName}  alreadyAllowed=${c.alreadyAllowed}  parameter=${JSON.stringify(
-              c.parameter,
-            )}`,
+            `  [${idx}] toolCallId=${c.toolCallId} · ${c.toolsetName}/${c.toolName}  alreadyAllowed=${
+              c.alreadyAllowed
+            }  parameter=${JSON.stringify(c.parameter)}`,
           );
         });
       }
+    },
+    [pushLog],
+  );
+
+  // asgard-freyr-pm#901 — what the user answered, once the backend has accepted it.
+  const handleConsentReply = useCallback(
+    (answers: ToolCallConsentAnswer[]) => {
+      pushLog('reply', `onToolCallConsentReply · ${answers.length} answers`);
+      answers.forEach(a => {
+        pushLog('reply', `  toolCallId=${a.toolCallId} · ${a.result}${a.denyReason ? ` · "${a.denyReason}"` : ''}`);
+      });
     },
     [pushLog],
   );
@@ -106,6 +132,7 @@ export function ToolCallConsentDemo(): ReactNode {
             config={config}
             customChannelId="tool-call-consent-demo"
             onSseMessage={handleSseMessage}
+            onToolCallConsentReply={handleConsentReply}
             onSseError={handleSseError}
             onAuthError={handleAuthError}
           />
@@ -124,6 +151,10 @@ export function ToolCallConsentDemo(): ReactNode {
             </li>
             <li>
               Send another message to see how <code>alreadyAllowed=true</code> calls are auto-consented.
+            </li>
+            <li>
+              Once the reply is accepted, <code>onToolCallConsentReply</code> logs each answer. Its{' '}
+              <code>toolCallId</code> is the <code>toolUseId</code> of that call&apos;s <code>tool_call.start</code>.
             </li>
           </ol>
           <div className={styles.hint}>

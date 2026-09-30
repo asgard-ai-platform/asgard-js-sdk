@@ -477,7 +477,7 @@ await channel.replyToolCallConsents([
 **Related types:**
 
 - **`ToolCallConsentResult`** (enum): `ALLOW_ONCE` | `ALLOW_ALWAYS` | `DENY_ONCE`
-- **`ToolCallConsentPendingCall`**: `{ toolCallId, toolsetName, toolName, parameter, alreadyAllowed, reason? }`
+- **`ToolCallConsentPendingCall`**: `{ toolCallId, toolsetName, toolName, parameter, alreadyAllowed, reason? }` — `toolCallId` is the same value as the `toolUseId` on that call's `asgard.tool_call.start`. Calls the backend approves on its own (bypass, allow list, a tool already allowed for this chat) are never listed here
 - **`ToolCallConsentEventData`**: `{ processId, pendingCalls: ToolCallConsentPendingCall[] }`
 - **`ToolCallConsentAnswer`**: `{ toolCallId, result, denyReason }`
 
