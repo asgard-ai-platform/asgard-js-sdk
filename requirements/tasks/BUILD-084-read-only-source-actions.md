@@ -109,7 +109,7 @@ Files:
 | `apps/react-demo/src/app/routes/file-explorer/file-explorer.tsx`                | 新增唯讀來源寬窄並排一節（T7）                                                                                 |
 
 **公開 API 影響（§1.7）**：全部 additive。`Clipboard` 多一個選填欄位；`FileExplorerContextValue` 多三個唯讀布林。
-行為變更只落在「沒給對應 provider」的 host：`createSandboxFsProviders` 的 provider 全部必填，走工廠的 host 不受影響。
+行為變更有兩種：按鈕能不能按（複製、剪下、原始碼編輯）只在「沒給對應 provider」的 host 改變——`createSandboxFsProviders` 的 provider 全部必填，走工廠的 host 按鈕不變；剪貼簿綁來源則對所有多來源 host 生效（例如內建檔案總管有兩台以上 sandbox 時，跨 sandbox 貼上會停用；改前那樣貼會以目標來源的 id 搬原來源的路徑）。
 
 ---
 
@@ -118,3 +118,4 @@ Files:
 - 2026-09-24: BUILD task created from [asgard-js-sdk#476](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/476) (Status: `draft`).
 - 2026-09-24: Plan confirmed; implementation started (Status: `draft → ready → in-progress`).
 - 2026-09-24: Build complete — lint / format / typecheck / build / test（core 430、react 606）全綠；demo 寬窄各走一輪，R1–R6 皆符合 (Status: `in-progress → done`).
+- 2026-10-01: 合併前獨立複查（程式審查＋描述查核）後補強：`read-only-source-actions.spec.tsx` 兩案加斷言——「gates each on its own provider」多驗兩種右鍵選單（改前把選單的 copy／cut 守門對調仍全綠），「剪下但只有 copy」改以目的地沒被 `listDir` 證明守門擋下（改前把守門改成只比來源仍全綠）；兩種改壞方式現在各轉紅 1 案。README〈Read-only sources〉與 `Clipboard` 型別註解改為「以 id 比對」。上方〈公開 API 影響〉的行為範圍一併更正。其餘邊角記於 [asgard-js-sdk#482](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482)。

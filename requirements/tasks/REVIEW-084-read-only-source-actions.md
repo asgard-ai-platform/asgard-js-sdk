@@ -41,7 +41,7 @@ Scope is `BUILD-084 ## Coverage` (four react source files, two specs, the react 
 ¹ `setTimeout` 兩處命中：`file-view.tsx` 既有的 400ms 存檔 debounce（unmount 時 `clearTimeout`，未改動）、新 spec 的
 `settle()` 等待（與 `paste-dedupe.spec.tsx` 既有寫法相同，用來斷言「沒有呼叫」）。皆非模擬延遲。
 ² `Clipboard.sourceId` 選填；`FileExplorerContextValue` 多 `canCopy`／`canCut`／`canPaste` 三個欄位，只有自行實作整個
-context value 的呼叫端會受影響（與 BUG-009 加 `clearSelection` 同一類 additive）。行為變更只落在「沒給對應 provider」的 host。
+context value 的呼叫端會受影響（與 BUG-009 加 `clearSelection` 同一類 additive）。按鈕可用性的變更只落在「沒給對應 provider」的 host；剪貼簿綁來源則對所有多來源 host 生效（2026-10-01 更正，見 Execution Log）。
 ³ 兩個型別都經既有的 `FileExplorerContextValue` 導出，新欄位隨之露出。
 ⁴ 變更中唯一的 `#xxx` 命中是註解與測試名稱裡的票號 `#476`；demo 沿用既有 inline style 慣例，未新增色值。
 ⁵ 未 bump 版本（兩者仍為 `0.3.87`）。
@@ -98,8 +98,9 @@ None.
 
 ### Minor (nice to have)
 
-- `file-view.tsx`：`onSaveFile` 被拿掉後又回來時，檢視會回到先前選的 edit 模式（`chosenMode` 保留著）。本票現場是切換來源，
-  各來源的開檔狀態本來就分開，走不到這條；只有 host 在同一個來源上來回切換 provider 才會發生。不擋。
+- `file-view.tsx`：`onSaveFile` 被拿掉後又回來時，檢視會回到先前選的 edit 模式（`chosenMode` 保留著）。**2026-10-01 更正**：
+  原本寫「切換來源走不到這條」不對——`FileExplorerView` 的 `<FileView>` 沒有 `key`，兩個來源都開著檔時切換會沿用同一個元件
+  實例：可寫來源切到編輯 → 切到唯讀來源（強制預覽）→ 切回 → 回到編輯。結果等於還原使用者原本的模式，無害。不擋。
 
 ---
 
@@ -108,3 +109,4 @@ None.
 - 2026-09-24: REVIEW task created, paired with BUILD-084 (Status: `draft`).
 - 2026-09-24: BUILD-084 done (Status: `draft → ready`).
 - 2026-09-24: §1 — 18 項 ✅、0 違規；§3 — R1–R7 全 Pass；1 Minor (Status: `ready → in-progress → done`).
+- 2026-10-01: 合併前獨立複查（兩個 subagent：挑錯式程式審查、PR 描述逐條查核），無 Blocker／Important。採納：補強 R1、R3 兩案的斷言（反向驗證確認）；README 與 `Clipboard` 註解改為以 id 比對；更正上方 ² 與 Minor 的推論。PR 描述兩處說錯（行為範圍、「Mimir／embed／chatbot-extension 沒用到檔案總管」——三者其實掛著預設的 builtin）已改。其餘邊角（來源 id 重複使用、`setClipboard` 不再穩定、同一 handler 切來源、剪下淡化不看 `move`）記於 [asgard-js-sdk#482](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482)。
