@@ -1,0 +1,175 @@
+// DemoWrapper's content area is a ROW flex, so the route needs one column child — otherwise the legend
+// and the chatbots sit side by side and the chatbots get squeezed to zero width.
+.stack {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1.6;
+
+  ol {
+    margin: 0;
+    padding-left: 18px;
+  }
+}
+
+// Above the chatbots on purpose: at 375×640 the shell is taller than most wrappers, and anything placed
+// below it gets covered by the overflow instead of pushed down.
+.log {
+  flex-shrink: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.logHead {
+  display: flex;
+  justify-content: space-between;
+  font-family: inherit;
+  font-weight: 600;
+  margin-bottom: 4px;
+
+  button {
+    font-size: 11px;
+    background: transparent;
+    color: inherit;
+    border: 1px solid #888;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+}
+
+.logReply {
+  color: #16a34a;
+}
+
+.logError {
+  color: #dc2626;
+}
+
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  padding-bottom: 24px;
+}
+
+.sizeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+// Full-bleed, the way every consumer mounts it (theme override supplies width/height: 100%).
+.chatbotWide {
+  flex: 1;
+  min-width: 0;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+// `min-height: 0` matters: without it the shell refuses to shrink below its content and pushes the
+// composer below the fold.
+.wideBox {
+  flex: 1;
+  min-height: 0;
+}
+
+.chatbotNarrow {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// The SDK's own default: a fixed 375×640 shell. The wrapper must be at least that tall.
+.narrowBox {
+  width: 375px;
+  height: 640px;
+  flex-shrink: 0;
+}
+
+// The host's own consent card — what a consumer renders from `useToolCallConsentQueue()`. Styled from
+// the chatbot's tokens so it sits in the panel like the composer it is attached to.
+.card {
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--asg-color-border);
+  border-radius: 10px;
+  background: var(--asg-color-bg);
+  color: var(--asg-color-text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cardMeta {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+
+  button {
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--asg-color-border);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+  }
+}
+
+// The #901 reproduction: a builtin-mode shell whose modal is hidden the way a host would try it.
+.bypass {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 24px;
+}
+
+.bypassBox {
+  height: 520px;
+
+  div:has(> [role='dialog']) {
+    display: none;
+  }
+}
+
+.lockOn,
+.lockOff {
+  align-self: flex-start;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.lockOn {
+  background: #dc2626;
+}
+
+.lockOff {
+  background: #16a34a;
+}

@@ -10,3 +10,4 @@ export * from './use-deep-compare-memo';
 export * from './use-is-at-bottom';
 export * from './use-visual-viewport';
 export * from './use-synced-spin';
+export * from './use-tool-call-consent-queue';

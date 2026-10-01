@@ -179,6 +179,14 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   onToolCallConsentReply?: AsgardServiceContextProviderProps['onToolCallConsentReply'];
 
   /**
+   * Built-in tool-call consent modal. `'builtin'` (default) mounts it. `'off'` mounts nothing, so the
+   * consumer can render its own consent UI anywhere inside the chatbot (for example in
+   * `renderComposerAbove`) from `useToolCallConsentQueue()`, which keeps the same queue the built-in modal
+   * runs on. With `'off'` that hook has to be mounted: nothing else answers a consent batch.
+   */
+  toolCallConsent?: 'builtin' | 'off';
+
+  /**
    * Callback to modify outbound params before they hit the wire. Fires for
    * both regular `sendMessage` and tool-call consent reply (Allow / Deny on
    * the consent modal). For consent reply, `params.text` is always `''` and
@@ -368,6 +376,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
     fileExplorer = 'builtin',
+    toolCallConsent = 'builtin',
     autoRevealOnOpenFileCard = true,
     fileExplorerBasePath,
     fileExplorerMaxUploadBytes,
@@ -595,7 +604,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                 renderComposerInline={renderComposerInline}
               />
             )}
-            <ToolCallConsentGate />
+            {toolCallConsent === 'builtin' && <ToolCallConsentGate />}
             {/* F-018 — sandbox cold-start HUD. position:absolute anchors it to ChatbotContainer
                 (position:relative), independent of and able to coexist with RunningIndicator. */}
             <SandboxLaunchHud />
