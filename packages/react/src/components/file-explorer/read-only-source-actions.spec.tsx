@@ -137,6 +137,16 @@ describe('#476 R1 — copy and cut follow the providers they need', () => {
 
     expect(toolButton('fileExplorer.copy').disabled).toBe(false);
     expect(toolButton('fileExplorer.cut').disabled).toBe(true);
+
+    // The menus gate on their own; with only one of the two providers, swapping them must show.
+    fireEvent.contextMenu(await row('a.txt'));
+    expect(menuItem('fileExplorer.copy').disabled).toBe(false);
+    expect(menuItem('fileExplorer.cut').disabled).toBe(true);
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+
+    fireEvent.contextMenu(await row('docs'));
+    expect(menuItem('fileExplorer.copy').disabled).toBe(false);
+    expect(menuItem('fileExplorer.cut').disabled).toBe(true);
   });
 });
 
@@ -179,7 +189,10 @@ describe('#476 R2/R3 — paste needs a same-source clipboard and the provider fo
 
   it('disables a cut paste when the source has copy but no move', async () => {
     const s = spies();
-    render(<Harness writable={{ listDir, copy: s.copy }} readOnly={{ listDir }} />);
+    // A cut never reaches `copy`, so that spy alone cannot tell the guard apart from the missing `move`.
+    // Past the guard, `actPaste` first lists the destination to pick a free name — that is the tell.
+    const ls = vi.fn(listDir);
+    render(<Harness writable={{ listDir: ls, copy: s.copy }} readOnly={{ listDir }} />);
     await row('a.txt');
 
     fireEvent.click(screen.getByText('host-cut'));
@@ -188,6 +201,7 @@ describe('#476 R2/R3 — paste needs a same-source clipboard and the provider fo
     fireEvent.click(screen.getByText('host-paste'));
     await settle();
     expect(s.copy).not.toHaveBeenCalled();
+    expect(ls).not.toHaveBeenCalledWith(WRITABLE.id, '/work/docs');
   });
 });
 
