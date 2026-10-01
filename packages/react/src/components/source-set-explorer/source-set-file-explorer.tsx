@@ -30,10 +30,13 @@ import { SourceSetFileView } from './file-view';
 import { SourceSetTree } from './tree';
 import { useSourceSetDialog } from './dialog';
 import {
+  ChevronDownIcon,
+  ChevronRightIcon,
   ClipboardPasteIcon,
   CircleAlertIcon,
   CopyIcon,
   DownloadIcon,
+  EyeIcon,
   FilePlusIcon,
   FolderPlusIcon,
   FolderUpIcon,
@@ -158,6 +161,17 @@ export interface SourceSetFileExplorerProps {
    * status marker is information rather than an operation.
    */
   entryBadge?: (entry: FsEntry) => ReactNode;
+  /**
+   * Keep entries off the tree: return `true` and that entry, with everything under it, is not drawn — at
+   * every level. Sindri and Mimir pass `entry => entry.isDir && entry.name.startsWith('.')` to hide `.git`
+   * and its kind while `.`-prefixed files stay (asgard-sdk-pm#116).
+   *
+   * Only the drawing changes. A hidden entry is still on the volume, so name deduplication still counts it
+   * and a paste into its directory never writes over it. A directory whose every entry is hidden reads as
+   * empty. Nothing reaches a hidden entry either: `initialPath`, `autoExpandPaths` and `highlightPaths`
+   * pointing at or under one have no row to act on.
+   */
+  hideEntry?: (entry: FsEntry) => boolean;
   onError?: (error: unknown) => void;
 }
 
@@ -226,6 +240,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     extraEntryActions,
     onSelectEntry,
     entryBadge,
+    hideEntry,
     onError,
   } = props;
 
@@ -520,8 +535,8 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
 
   const closeMenu = useCallback((): void => setMenu(null), []);
 
-  // Grouping only — the menu carries exactly the built-in actions the toolbar does, plus whatever
-  // section the host contributes.
+  // The menu carries exactly the built-in actions the toolbar does, plus two sections the toolbar has no
+  // place for: moving about the tree (open / expand / collapse) and whatever the host contributes.
   const menuSections = useMemo((): ContextMenuItem[][] => {
     const group = (keys: string[]): ContextMenuItem[] =>
       actions
@@ -543,17 +558,48 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     // read-only case is the one that needs them — see the prop's doc comment.
     const extra = extraEntryActions ? extraEntryActions(selected) : [];
 
+    // Moving about the tree from the menu — open a file, expand or collapse a folder — the first section, as
+    // in the prototype (asgard-sdk-pm#116). Context-menu only: these act on the row under the pointer, which
+    // the toolbar has no notion of, and they change nothing on the volume, so `readOnly` keeps them.
+    const navigate: ContextMenuItem[] = !selected
+      ? []
+      : selected.isDir
+      ? [
+          explorer.expanded.has(selected.path)
+            ? {
+                key: 'collapse',
+                label: t(locale, 'sourceSetExplorer.collapse'),
+                icon: <ChevronDownIcon size={15} />,
+                onSelect: () => explorer.toggleExpand(selected),
+              }
+            : {
+                key: 'expand',
+                label: t(locale, 'sourceSetExplorer.expand'),
+                icon: <ChevronRightIcon size={15} />,
+                onSelect: () => explorer.toggleExpand(selected),
+              },
+        ]
+      : [
+          {
+            key: 'open',
+            label: t(locale, 'sourceSetExplorer.open'),
+            icon: <EyeIcon size={15} />,
+            onSelect: () => explorer.open(selected),
+          },
+        ];
+
     // Upload is the one action the toolbar renders as a menu rather than a command, so here it expands
     // into its two rows instead of nesting a second menu inside this one. Same two `uploadEntries` the
     // toolbar menu shows, so the pair cannot drift.
     return [
+      navigate,
       [...group(['newFile', 'newFolder']), ...uploadEntries],
       group(['download', 'copy', 'cut', 'paste']),
       group(['rename', 'delete']),
       extra,
       group(['refresh']),
     ].filter(section => section.length > 0);
-  }, [actions, labelOf, extraEntryActions, selected, uploadEntries]);
+  }, [actions, labelOf, extraEntryActions, selected, uploadEntries, explorer, locale]);
 
   /**
    * This explorer's copy for the shared upload UI, drawn from `sourceSetExplorer.*`.
@@ -758,6 +804,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
             onContextMenu={openMenu}
             onClearSelection={clearSelection}
             entryBadge={entryBadge}
+            hideEntry={hideEntry}
             highlightTargets={highlight.targets}
             highlightAncestors={highlight.ancestors}
           />

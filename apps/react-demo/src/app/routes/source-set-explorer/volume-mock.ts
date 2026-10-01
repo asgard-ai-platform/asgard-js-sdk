@@ -103,6 +103,15 @@ function seed(): Map<string, Node> {
 
   fs.set('empty', null);
 
+  // Dot entries (asgard-sdk-pm#116): a `.git` to hide, a `.`-prefixed file that has to stay, and a dot directory
+  // one level down, so hiding is visibly not a root-only rule.
+  fs.set('.git', null);
+  fs.set('.git/HEAD', 'ref: refs/heads/main\n');
+  fs.set('.git/config', '[core]\n\trepositoryformatversion = 0\n');
+  fs.set('.env.example', 'API_URL=https://example.invalid\n');
+  fs.set('skills/.cache', null);
+  fs.set('skills/.cache/index.json', '{}\n');
+
   // 1,200 entries: more than one page at the server maximum of 1000, so expanding this walks two pages
   // and still ends up complete. This is the case that should NOT produce a shortfall notice.
   fs.set('paged', null);
