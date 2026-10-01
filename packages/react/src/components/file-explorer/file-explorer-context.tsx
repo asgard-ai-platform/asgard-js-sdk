@@ -36,8 +36,9 @@ import { ancestorDirs, baseName, isUnderRoot, joinPath, parentDir, uniqueName } 
 import { FsEntry, FsProviders, FsSource } from './types';
 
 /**
- * `sourceId` is the source the entry was taken from. Paste only works back in that source, because every
- * provider call carries one `sourceId` and the entry's path means nothing in another (issue #476). It is
+ * `sourceId` is the source the entry was taken from. Paste is only offered while a source with that id is
+ * active, because every provider call carries one `sourceId` and the entry's path means nothing in another
+ * (issue #476). The match is by id alone, so a source that reuses an id counts as the same one. It is
  * optional so a host calling `setClipboard({ op, entry })` keeps compiling: the context fills in the
  * active source.
  */

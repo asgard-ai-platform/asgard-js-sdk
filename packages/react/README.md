@@ -1895,7 +1895,10 @@ const { listDir, readFile, watchFile, download } = createSandboxFsProviders(clie
 const readOnlyProviders = { listDir, readFile, watchFile, download };
 ```
 
-The clipboard remembers the source an entry was copied or cut in, and paste only works back in that source.
+The clipboard remembers the source id an entry was copied or cut in, and paste is only offered while a
+source with that id is active. The match is by id alone: a source removed and later added back under the
+same id — such as a sandbox name reused by the next channel — counts as the same source, so clear the
+clipboard (`setClipboard(null)`) when the sources behind the ids change.
 
 ## SourceSet File Explorer
 
