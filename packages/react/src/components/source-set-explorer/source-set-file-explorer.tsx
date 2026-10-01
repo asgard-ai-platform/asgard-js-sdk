@@ -168,8 +168,9 @@ export interface SourceSetFileExplorerProps {
    *
    * Only the drawing changes. A hidden entry is still on the volume, so name deduplication still counts it
    * and a paste into its directory never writes over it. A directory whose every entry is hidden reads as
-   * empty. Nothing reaches a hidden entry either: `initialPath`, `autoExpandPaths` and `highlightPaths`
-   * pointing at or under one have no row to act on.
+   * empty. The path props are not checked against it: an `initialPath` at or under a hidden entry still
+   * selects it — with no row to show for it, while the toolbar acts on it — and `autoExpandPaths` /
+   * `highlightPaths` there have no row to open or paint. Keep the paths you name clear of what you hide.
    */
   hideEntry?: (entry: FsEntry) => boolean;
   onError?: (error: unknown) => void;
