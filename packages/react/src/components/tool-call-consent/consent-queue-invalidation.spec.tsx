@@ -61,9 +61,12 @@ describe('consent queue across a reset (#455)', () => {
     expect(replyToolCallConsents).not.toHaveBeenCalled();
   });
 
-  it('R5: pendingConsent going null on the SAME channel leaves the queue alone', () => {
-    // The normal mid-batch case: the gate clears its own queue when it submits, and a transient null
-    // from a streaming update must not yank the modal out from under the user.
+  it('R5: pendingConsent going null on the SAME channel drops the queue without replying', () => {
+    // This used to pin the opposite, on the belief that a streaming update could null `pendingConsent`
+    // for a moment. Core has exactly one place that clears it — `replyToolCallConsents` — so a null on
+    // the same channel means the batch was answered. When it was answered from outside the queue
+    // (asgard-freyr-pm#901: a host replying itself), keeping the batch left the modal, and its body
+    // scroll lock, over a prompt that no longer exists.
     const replyToolCallConsents = vi.fn().mockResolvedValue(undefined);
     const { rerender } = render(
       <Harness override={{ channel: channelA, pendingConsent: PENDING, replyToolCallConsents }} />,
@@ -73,6 +76,7 @@ describe('consent queue across a reset (#455)', () => {
 
     rerender(<Harness override={{ channel: channelA, pendingConsent: null, replyToolCallConsents }} />);
 
-    expect(screen.queryByText('Write')).toBeTruthy();
+    expect(screen.queryByText('Write')).toBeNull();
+    expect(replyToolCallConsents).not.toHaveBeenCalled();
   });
 });

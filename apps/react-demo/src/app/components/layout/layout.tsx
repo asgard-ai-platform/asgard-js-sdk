@@ -34,6 +34,7 @@ const navItems = [
   { to: '/http-error-on-send', label: 'HTTP Error on Send' },
   { to: '/tool-call', label: 'Tool Call' },
   { to: '/tool-call-consent', label: 'Tool Call Consent' },
+  { to: '/tool-call-consent-custom', label: 'Tool Call Consent (custom UI)' },
   { to: '/user-identity-hint', label: 'User Identity Hint' },
   { to: '/on-channel-ready', label: 'On Channel Ready' },
   { to: '/upload-mime-constraint', label: 'Upload MIME Constraint' },
