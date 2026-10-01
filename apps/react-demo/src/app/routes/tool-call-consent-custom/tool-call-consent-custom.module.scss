@@ -138,3 +138,38 @@
     font-size: 12px;
   }
 }
+
+// The #901 reproduction: a builtin-mode shell whose modal is hidden the way a host would try it.
+.bypass {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 24px;
+}
+
+.bypassBox {
+  height: 520px;
+
+  div:has(> [role='dialog']) {
+    display: none;
+  }
+}
+
+.lockOn,
+.lockOff {
+  align-self: flex-start;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.lockOn {
+  background: #dc2626;
+}
+
+.lockOff {
+  background: #16a34a;
+}

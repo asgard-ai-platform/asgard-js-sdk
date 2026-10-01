@@ -1,6 +1,6 @@
-import { ReactNode, useCallback, useMemo, useState } from 'react';
-import { Chatbot, useToolCallConsentQueue } from '@asgard-js/react';
-import { ToolCallConsentAnswer } from '@asgard-js/core';
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { Chatbot, useAsgardContext, useToolCallConsentQueue } from '@asgard-js/react';
+import { ToolCallConsentAnswer, ToolCallConsentResult } from '@asgard-js/core';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
 import styles from './tool-call-consent-custom.module.scss';
@@ -23,19 +23,19 @@ function HostConsentCard(): ReactNode {
   if (!pendingCall) return null;
 
   return (
-    <div className={styles.card} role="group" aria-label="Tool call approval">
+    <div className={styles.card} role="group" aria-label="工具使用授權">
       <div>
-        Allow <strong>{pendingCall.reason || pendingCall.toolName}</strong>?
+        允許使用「<strong>{pendingCall.reason || pendingCall.toolName}</strong>」？
       </div>
       <div className={styles.cardMeta}>
         {pendingCall.toolsetName}/{pendingCall.toolName} · {currentIndex}/{totalCount} · {pendingCall.toolCallId}
       </div>
       <div className={styles.cardActions}>
         <button type="button" onClick={(): void => decide({ result: 'ALLOW_ONCE' })}>
-          Allow once
+          僅此次允許
         </button>
         <button type="button" onClick={(): void => decide({ result: 'DENY_ONCE', denyReason: '' })}>
-          Deny
+          拒絕
         </button>
       </div>
     </div>
@@ -43,6 +43,56 @@ function HostConsentCard(): ReactNode {
 }
 
 const renderHostConsentCard = (): ReactNode => <HostConsentCard />;
+
+/**
+ * The failure #901 reported: a host hides the built-in modal with CSS and answers through
+ * `replyToolCallConsents` itself. The hidden modal used to stay mounted with the body scroll lock on.
+ */
+function BypassReplyButton(): ReactNode {
+  const { pendingConsent, replyToolCallConsents } = useAsgardContext();
+
+  return (
+    <div className={styles.card}>
+      <button
+        type="button"
+        disabled={!pendingConsent || !replyToolCallConsents}
+        onClick={(): void => {
+          if (!pendingConsent) return;
+
+          void replyToolCallConsents?.(
+            pendingConsent.pendingCalls.map(c => ({
+              toolCallId: c.toolCallId,
+              result: ToolCallConsentResult.ALLOW_ONCE,
+              denyReason: '',
+            })),
+          );
+        }}
+      >
+        繞過佇列直接回覆（{pendingConsent?.pendingCalls.length ?? 0} 筆全部僅此次允許）
+      </button>
+    </div>
+  );
+}
+
+const renderBypassReplyButton = (): ReactNode => <BypassReplyButton />;
+
+/** Live readout of `document.body.style.overflow` — what the consent modal locks. */
+function BodyLockIndicator(): ReactNode {
+  const [overflow, setOverflow] = useState(document.body.style.overflow);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => setOverflow(document.body.style.overflow));
+    observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+
+    return (): void => observer.disconnect();
+  }, []);
+
+  return (
+    <div className={overflow === 'hidden' ? styles.lockOn : styles.lockOff}>
+      body overflow：{overflow === '' ? '（空）可捲動' : `${overflow} —— 被鎖住`}
+    </div>
+  );
+}
 
 export function ToolCallConsentCustomDemo(): ReactNode {
   const endpoint = import.meta.env.VITE_CONSENT_BOT_PROVIDER_ENDPOINT;
@@ -66,6 +116,7 @@ export function ToolCallConsentCustomDemo(): ReactNode {
   );
   const onWideReply = useMemo(() => replyLogger('wide'), [replyLogger]);
   const onNarrowReply = useMemo(() => replyLogger('narrow'), [replyLogger]);
+  const onBypassReply = useMemo(() => replyLogger('bypass'), [replyLogger]);
 
   const handleSseError = useCallback(
     (error: unknown) => pushLog('error', `onSseError · ${error instanceof Error ? error.message : String(error)}`),
@@ -93,11 +144,10 @@ export function ToolCallConsentCustomDemo(): ReactNode {
       <div className={styles.stack}>
         <div className={styles.legend}>
           <ol>
-            <li>Send a message that triggers tool calls (e.g. “Find movies about universe and animals”).</li>
-            <li>The approval card appears above the composer — no full-screen dialog, the page keeps scrolling.</li>
+            <li>開場那輪會一次要 4 個工具（或送出「找宇宙和動物的電影」之類的訊息）。</li>
+            <li>授權卡片出現在輸入框正上方 —— 沒有全螢幕對話框，頁面照常可以捲動。</li>
             <li>
-              Answer with <strong>Allow once</strong> or <strong>Deny</strong>; the run resumes and the reply is logged
-              below.
+              按 <strong>僅此次允許</strong> 或 <strong>拒絕</strong>；run 會續跑，回覆記在下面的 log。
             </li>
           </ol>
         </div>
@@ -131,6 +181,7 @@ export function ToolCallConsentCustomDemo(): ReactNode {
                 config={config}
                 customChannelId="tool-call-consent-custom-demo"
                 theme={WIDE_THEME}
+                locale="zh-TW"
                 toolCallConsent="off"
                 renderComposerAbove={renderHostConsentCard}
                 onToolCallConsentReply={onWideReply}
@@ -146,12 +197,32 @@ export function ToolCallConsentCustomDemo(): ReactNode {
                 title="Consent Bot"
                 config={config}
                 customChannelId="tool-call-consent-custom-demo-narrow"
+                locale="zh-TW"
                 toolCallConsent="off"
                 renderComposerAbove={renderHostConsentCard}
                 onToolCallConsentReply={onNarrowReply}
                 onSseError={handleSseError}
               />
             </div>
+          </div>
+        </div>
+
+        <div className={styles.bypass}>
+          <div className={styles.sizeLabel}>
+            重現 #901：預設 <code>&apos;builtin&apos;</code>、內建 modal 以 CSS 藏起來，由 host 直接回覆
+          </div>
+          <BodyLockIndicator />
+          <div className={styles.bypassBox}>
+            <Chatbot
+              title="Consent Bot"
+              config={config}
+              customChannelId="tool-call-consent-custom-demo-bypass"
+              locale="zh-TW"
+              theme={WIDE_THEME}
+              renderComposerAbove={renderBypassReplyButton}
+              onToolCallConsentReply={onBypassReply}
+              onSseError={handleSseError}
+            />
           </div>
         </div>
       </div>
