@@ -72,6 +72,7 @@
 - asgard-freyr-pm#815 子代理 child tool-call 結果保留（Freyr F-029 / pm#740 驗收條件 ①）→ BUILD-083 / REVIEW-083。Issue [`asgard-freyr-pm#815`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/815)，issue body 即規格。**core only、additive**：`SubagentToolCall` 加 `result?` / `sidecar?`（名稱對齊 `ConversationToolCallMessage`），`conversationToSubagentEvents` → `reduceSubagents` 原樣帶過、不截斷不遮蔽；`toolsEqual` 以參照比對兩欄。react 不動。**未發版**。
 - asgard-js-sdk#476 FileExplorer 唯讀來源：複製／剪下／貼上與原始碼編輯改看 provider、剪貼簿綁來源（C 方案）→ BUILD-084 / REVIEW-084 (done)。Issue [`asgard-js-sdk#476`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/476)，issue body 即規格。**react only、不新增 host 設定**。
 - asgard-freyr-pm#901 授權卡片的允許／拒絕讓 host 接得到，並寫明 `toolCallId` 與 `toolUseId` 的對應（pm#885 的上游前置）→ BUILD-085 / REVIEW-085 (done)。Issue [`asgard-freyr-pm#901`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901)，issue body 即規格。**react + 文件，core 只補 JSDoc**：`onToolCallConsentReply(answers)` 在後端接受回覆後觸發；後端自動放行的呼叫不會出現在 consent frame，寫成限制。
+- asgard-freyr-pm#901 留言（2026-10-01）`<Chatbot>` 可不掛內建 consent modal、host 自做就地同意卡 → BUILD-086 / REVIEW-086 (done)。Issue [`asgard-freyr-pm#901` 留言](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901#issuecomment-5928013125)，留言即規格、形狀見[評估回覆](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901#issuecomment-5928886722)。**react only**：`toolCallConsent: 'builtin' | 'off'` + 公開 `useToolCallConsentQueue()`（Gate 改由它驅動）；佇列在非自己送出的回覆後清掉（改寫 #455 R5）。
 
 ## ▶ Next Task
 
@@ -332,3 +333,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-084` | Review: gate clipboard and source editing on providers      | —        | done   | [REVIEW-084-read-only-source-actions.md](./REVIEW-084-read-only-source-actions.md)                       |
 | `BUILD-085`  | Notify the host when a consent reply is accepted            | M        | done   | [BUILD-085-consent-reply-notification.md](./BUILD-085-consent-reply-notification.md)                     |
 | `REVIEW-085` | Review: notify the host on consent reply                    | —        | done   | [REVIEW-085-consent-reply-notification.md](./REVIEW-085-consent-reply-notification.md)                   |
+| `BUILD-086`  | Let the host replace the built-in consent modal             | M        | done   | [BUILD-086-tool-call-consent-off.md](./BUILD-086-tool-call-consent-off.md)                               |
+| `REVIEW-086` | Review: let the host replace the consent modal              | —        | done   | [REVIEW-086-tool-call-consent-off.md](./REVIEW-086-tool-call-consent-off.md)                             |
