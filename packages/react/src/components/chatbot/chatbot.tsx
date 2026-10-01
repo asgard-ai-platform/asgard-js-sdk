@@ -171,6 +171,14 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   onSseError?: (error: unknown) => void;
 
   /**
+   * Fired once per tool-call consent reply the backend has accepted, with the answers that were sent
+   * (`toolCallId` + `ALLOW_ONCE` / `ALLOW_ALWAYS` / `DENY_ONCE`) — including the ones the consent card
+   * gives without prompting. Runs before the resumed run's first frame reaches `onSseMessage`; a refused
+   * reply never fires it. See `UseChannelProps.onToolCallConsentReply` for the full contract.
+   */
+  onToolCallConsentReply?: AsgardServiceContextProviderProps['onToolCallConsentReply'];
+
+  /**
    * Callback to modify outbound params before they hit the wire. Fires for
    * both regular `sendMessage` and tool-call consent reply (Allow / Deny on
    * the consent modal). For consent reply, `params.text` is always `''` and
@@ -340,6 +348,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onApiKeySubmit,
     onAuthError,
     onSseError,
+    onToolCallConsentReply,
     onBeforeSendMessage,
     onMessageSent,
     onChannelReady,
@@ -622,6 +631,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             onSseMessage={onSseMessage}
             onAuthError={onAuthError}
             onSseError={onSseError}
+            onToolCallConsentReply={onToolCallConsentReply}
             onBeforeSendMessage={onBeforeSendMessage}
             onMessageSent={onMessageSent}
             onChannelReady={onChannelReady}
