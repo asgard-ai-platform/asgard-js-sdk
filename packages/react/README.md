@@ -1884,6 +1884,22 @@ const providers = createSandboxFsProviders(client, {
 It is read on each call, so one providers instance may outlive a channel switch. See the core README's
 channel-scope section for the endpoint-level contract.
 
+### Read-only sources
+
+A source is read-only when its providers leave out the writes. Every action gates on the provider it
+needs — copy on `copy`; cut, rename and a cut's paste on `move`; new file and the viewer's edit toggle on
+`saveFile` — so a host with mixed sources hands over a write-free set while the read-only one is active:
+
+```tsx
+const { listDir, readFile, watchFile, download } = createSandboxFsProviders(client, { customChannelId });
+const readOnlyProviders = { listDir, readFile, watchFile, download };
+```
+
+The clipboard remembers the source id an entry was copied or cut in, and paste is only offered while a
+source with that id is active. The match is by id alone: a source removed and later added back under the
+same id — such as a sandbox name reused by the next channel — counts as the same source, so clear the
+clipboard (`setClipboard(null)`) when the sources behind the ids change.
+
 ## SourceSet File Explorer
 
 `SourceSetFileExplorer` browses and edits a **SourceSet volume** directly. There is no chat, no channel

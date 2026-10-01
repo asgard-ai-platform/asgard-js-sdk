@@ -5,6 +5,7 @@ import {
   Chatbot,
   FileExplorer as FileExplorerParts,
   FileExplorerPanel,
+  FsProviders,
   FsSource,
   useFileExplorerController,
   type Locale,
@@ -46,6 +47,49 @@ const FIXED_SOURCE: FsSource = {
   label: 'fixed-source',
   rootPath: '/home/user/project',
 };
+
+/**
+ * Issue #476 — one writable and one read-only source over the same in-memory fs, the shape of Heimdall's
+ * ed-chat asset panel (a writable workspace next to a `readOnly: true` mount).
+ */
+const WRITABLE_SOURCE: FsSource = { id: 'rw-demo', label: 'workspace（可寫）', rootPath: '/home/user/project' };
+const READ_ONLY_SOURCE: FsSource = { id: 'ro-demo', label: 'content（唯讀）', rootPath: '/home/user/project/out' };
+
+/**
+ * The host side of a read-only source: hand the explorer a provider set without the writes while that source
+ * is active. Nothing else is configured — the explorer reads "read-only" off the missing providers.
+ */
+function ReadOnlySourcePanel({
+  controller,
+  providers,
+}: {
+  controller: ReturnType<typeof useFileExplorerController>;
+  providers: FsProviders;
+}): ReactNode {
+  const readOnlyProviders = useMemo<FsProviders>(
+    () => ({ listDir: providers.listDir, readFile: providers.readFile, download: providers.download }),
+    [providers],
+  );
+  const active = controller.activeSourceId === READ_ONLY_SOURCE.id ? readOnlyProviders : providers;
+
+  return (
+    <FileExplorerParts.Provider
+      sources={[WRITABLE_SOURCE, READ_ONLY_SOURCE]}
+      controller={controller}
+      providers={active}
+    >
+      <FileExplorerParts.Root>
+        <FileExplorerParts.Header>
+          <FileExplorerParts.HeaderRow>
+            <FileExplorerParts.SourceSelect />
+          </FileExplorerParts.HeaderRow>
+          <FileExplorerParts.Cwd />
+        </FileExplorerParts.Header>
+        <FileExplorerParts.Workspace />
+      </FileExplorerParts.Root>
+    </FileExplorerParts.Provider>
+  );
+}
 
 interface MemEntry {
   name: string;
@@ -307,6 +351,9 @@ export function FileExplorer(): ReactNode {
   // en-US only. Acceptance happens in zh-TW, and a missing key is invisible in English (the code's own
   // fallback *is* the English string), so the switch has to exist here.
   const [batchLocale, setBatchLocale] = useState<Locale>('zh-TW');
+  // Issue #476 pair — one controller each so the two widths can be compared side by side.
+  const readOnlyWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  const readOnlyNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
 
   const providers = useMemo(
     () => ({
@@ -527,6 +574,35 @@ export function FileExplorer(): ReactNode {
                 />
               </div>
               <FolderCardButtons controller={folderNarrowController} idPrefix="narrow" />
+            </div>
+          </div>
+        </AsgardTemplateContextProvider>
+
+        <h3 style={{ marginTop: '1.5rem' }}>唯讀來源（#476）——寬窄並排</h3>
+        <p style={{ fontSize: '0.85rem', color: '#666' }}>
+          兩個來源共用同一份 in-memory fs：<code>workspace（可寫）</code>給完整 providers，
+          <code>content（唯讀）</code>只給 <code>listDir</code> / <code>readFile</code> / <code>download</code>
+          ——host 不需要任何 <code>readOnly</code> 設定。切到唯讀來源：<strong>複製、剪下、貼上</strong>
+          在工具列與右鍵選單都停用，開檔<strong>沒有</strong>預覽／原始碼切換鈕。在可寫來源剪下或複製後切到唯讀來源，
+          貼上停用、樹上不會有變淡的項目；切回可寫來源，剪貼簿還在、可以貼上。
+        </p>
+        <AsgardTemplateContextProvider locale={batchLocale}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 28rem', minWidth: 0 }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                寬（full-bleed，實裝形態）
+              </div>
+              <div style={{ height: '420px' }} data-testid="read-only-wide">
+                <ReadOnlySourcePanel controller={readOnlyWideController} providers={providers} />
+              </div>
+            </div>
+            <div style={{ flex: '0 0 343px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                窄（343px，預設 theme 寬度）
+              </div>
+              <div style={{ width: '343px', height: '420px' }} data-testid="read-only-narrow">
+                <ReadOnlySourcePanel controller={readOnlyNarrowController} providers={providers} />
+              </div>
             </div>
           </div>
         </AsgardTemplateContextProvider>
