@@ -172,3 +172,5 @@ Files:
   對照 `/tool-call-consent`（預設 `'builtin'`）：內建 dialog 照常出現、`body` overflow 為 `hidden`。
 - 2026-10-01: Build complete — lint（0 error；5 warnings 皆為 `main` 既有）/ format / typecheck（core + react + react-demo）/
   build / test（core 430、react 619）全綠 (Status: `in-progress → done`).
+- 2026-10-01: demo 改為 zh-TW，並加「重現 #901」區（`'builtin'` shell、modal 以 CSS 藏起、host 直接回覆鈕、`body` overflow 即時指示）。暫時拿掉 null 分支重拍：回覆被收下後指示器仍為 `hidden`；還原後轉為空。
+- 2026-10-01: 補驗被拒（頁內攔截 `RESPONSE_TOOL_CALL_CONSENT` 回 HTTP 500）：`onSseError` 一次、無 reply callback、卡片回到 1/4 同 id；解除後重答，回覆一次。

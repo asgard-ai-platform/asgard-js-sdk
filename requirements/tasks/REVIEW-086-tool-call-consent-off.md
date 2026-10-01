@@ -85,15 +85,15 @@ test:          PASS — core 430、react 619
 
 ## §3 Functional Validation
 
-| R#   | Result | Evidence                                                                                                                                                                                                                                                                    |
-| ---- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `R1` | ✅     | dev（`/tool-call-consent-custom`，`toolCallConsent="off"`）：consent 抵達時 `[role=dialog]` 0 個、`body.style.overflow` 為空。對照 `/tool-call-consent`（預設）：dialog 出現、overflow 為 `hidden`。spec：host 卡片單獨掛載無 dialog；`chatbot.tsx` 掛載條件的 source 斷言  |
-| `R2` | ✅     | spec：`alreadyAllowed` 與同批 ALLOW_ALWAYS 的呼叫逐 render 都未曾露出、`currentIndex`/`totalCount` 為 2/4→4/4、答完送出一次且 4 筆依序。dev：兩個 shell 各 1/4→4/4 依序露出，`onToolCallConsentReply` 每批一次、內容與按下的一致                                            |
-| `R3` | ✅     | spec：被拒後同一批從第一筆重新露出、未重送；reset（channel 替換）由 `consent-queue-invalidation` R4 經 Gate（即 hook）覆蓋。dev 上造不出被拒的回覆，被拒只有 spec 覆蓋                                                                                                      |
-| `R4` | ✅     | spec：host 直接呼叫 `replyToolCallConsents` 後內建 dialog 卸載、overflow 還原、只送出 host 那一次；hook 端卡片同樣變空。反向驗證：拿掉 null 分支 → 3 紅                                                                                                                     |
-| `R5` | ✅     | Gate 為 hook ＋ modal；`consent-reply-error` 6 案、`consent-reply-notification` 7 案、`nudge-consent-gate` 3 案原樣通過，`consent-queue-invalidation` 2 案（R5 改寫）通過                                                                                                   |
-| `R6` | ✅     | README：props 列表 `toolCallConsent`；Hooks 章節 `useToolCallConsentQueue()` 入口；〈Building your own consent UI〉含回傳欄位表、`renderComposerAbove` 範例、兩條限制與「直接呼叫 `replyToolCallConsents` 也可」；`pendingConsent`／`replyToolCallConsents` 兩列改指向 hook |
-| `R7` | ✅     | 閘門全綠（§1.4）；dev consent bot 兩寬度並排：卡片皆在 composer 上方（寬 712px／窄 319px），寬版 允許 ×3 ＋拒絕、窄版 拒絕 ×4，兩個 run 都續跑完成、composer 恢復可用，無 dialog、頁面可捲動                                                                                |
+| R#   | Result | Evidence                                                                                                                                                                                                                                                                                                                                 |
+| ---- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `R1` | ✅     | dev（`/tool-call-consent-custom`，`toolCallConsent="off"`）：consent 抵達時 `[role=dialog]` 0 個、`body.style.overflow` 為空。對照 `/tool-call-consent`（預設）：dialog 出現、overflow 為 `hidden`。spec：host 卡片單獨掛載無 dialog；`chatbot.tsx` 掛載條件的 source 斷言                                                               |
+| `R2` | ✅     | spec：`alreadyAllowed` 與同批 ALLOW_ALWAYS 的呼叫逐 render 都未曾露出、`currentIndex`/`totalCount` 為 2/4→4/4、答完送出一次且 4 筆依序。dev：兩個 shell 各 1/4→4/4 依序露出，`onToolCallConsentReply` 每批一次、內容與按下的一致                                                                                                         |
+| `R3` | ✅     | spec：被拒後同一批從第一筆重新露出、未重送；reset（channel 替換）由 `consent-queue-invalidation` R4 經 Gate（即 hook）覆蓋。dev（補驗）：頁內攔截 `RESPONSE_TOOL_CALL_CONSENT` 的 `message/sse` 回 HTTP 500 → `onSseError · HTTP 500`、無 `onToolCallConsentReply`、寬版卡片回到 1/4 且 `toolCallId` 不變；解除攔截後重答，回覆一次 4 筆 |
+| `R4` | ✅     | spec：host 直接呼叫 `replyToolCallConsents` 後內建 dialog 卸載、overflow 還原、只送出 host 那一次；hook 端卡片同樣變空。反向驗證：拿掉 null 分支 → 3 紅                                                                                                                                                                                  |
+| `R5` | ✅     | Gate 為 hook ＋ modal；`consent-reply-error` 6 案、`consent-reply-notification` 7 案、`nudge-consent-gate` 3 案原樣通過，`consent-queue-invalidation` 2 案（R5 改寫）通過                                                                                                                                                                |
+| `R6` | ✅     | README：props 列表 `toolCallConsent`；Hooks 章節 `useToolCallConsentQueue()` 入口；〈Building your own consent UI〉含回傳欄位表、`renderComposerAbove` 範例、兩條限制與「直接呼叫 `replyToolCallConsents` 也可」；`pendingConsent`／`replyToolCallConsents` 兩列改指向 hook                                                              |
+| `R7` | ✅     | 閘門全綠（§1.4）；dev consent bot 兩寬度並排：卡片皆在 composer 上方（寬 712px／窄 319px），寬版 允許 ×3 ＋拒絕、窄版 拒絕 ×4，兩個 run 都續跑完成、composer 恢復可用，無 dialog、頁面可捲動                                                                                                                                             |
 
 ---
 
@@ -121,4 +121,5 @@ None.
 
 - 2026-10-01: REVIEW task created, paired with BUILD-086 (Status: `draft`).
 - 2026-10-01: BUILD-086 done (Status: `draft → ready`).
-- 2026-10-01: §1 — 20 項 ✅、0 違規；§3 — R1–R7 全 Pass（R3 被拒情境僅 spec 覆蓋）；2 Minor (Status: `ready → in-progress → done`).
+- 2026-10-01: §1 — 20 項 ✅、0 違規；§3 — R1–R7 全 Pass；2 Minor (Status: `ready → in-progress → done`).
+- 2026-10-01: 本地驗收通過後補驗 R3 被拒情境於 dev（頁內攔截回 HTTP 500），原先誤記為「dev 造不出」——上一張 BUILD-085 已用同樣手法驗過。
