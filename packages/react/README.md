@@ -355,6 +355,7 @@ config: {
 - **onApiKeySubmit?**: `(apiKey: string) => Promise<void>` - Callback function when user submits API key for authentication
 - **onAuthError?**: `(error: { isAuthError: boolean; isBotProviderError: boolean; errorDetail?: unknown }) => void` - **Deprecated — use `onSseError`.** This never fires for the first-party `AsgardServiceClient`: core has never constructed that error shape, so a real 401 / 403 arrives as a plain `HTTP 403: Forbidden` and reaches `onSseError` only. It still fires for a custom `IAsgardServiceClient` that throws the shape itself, which is why it is kept rather than removed; scheduled for removal in the next major.
 - **onSseError?**: `(error: unknown) => void` - Callback fired when the SSE connection encounters an error.
+- **toolCallConsent?**: `'builtin' | 'off'` - Whether the SDK mounts its own tool-call consent modal. `'builtin'` (default) mounts it; `'off'` mounts nothing so the consumer can render its own consent UI from `useToolCallConsentQueue()`. See [Tool Call Consent → Building your own consent UI](#tool-call-consent).
 - **onToolCallConsentReply?**: `(answers: ToolCallConsentAnswer[]) => void` - Fired once per tool-call consent reply the backend has accepted, with the answers that were sent. See [Tool Call Consent → Observing the answers](#tool-call-consent).
 - **onErrorClick?**: `(message: ConversationErrorMessage) => void` - Callback fired when the user clicks on an error message bubble. Useful for retry or diagnostic flows.
 - **errorMessageRenderer?**: `(message: ConversationErrorMessage) => ReactNode` - Custom renderer for error message bubbles. When provided, completely replaces the default error UI.
@@ -706,7 +707,7 @@ function MyCustomFooter() {
 | `enableDocumentUpload`     | `boolean \| undefined`                     | Whether document upload is enabled.                                                                                                                                                           |
 | `allowedImageMimeTypes`    | `string[] \| undefined`                    | Resolved image MIME allow-list (from the `allowedImageMimeTypes` prop). `undefined` means all defaults are accepted.                                                                          |
 | `allowedDocumentMimeTypes` | `string[] \| undefined`                    | Resolved document MIME allow-list (from the `allowedDocumentMimeTypes` prop). `undefined` means the default list with extension fallback is used.                                             |
-| `pendingConsent`           | `ToolCallConsentEventData \| null`         | The pending tool-call consent prompt awaiting a user decision, or `null`. Read this to build a custom consent UI.                                                                             |
+| `pendingConsent`           | `ToolCallConsentEventData \| null`         | The pending tool-call consent prompt awaiting a user decision, or `null`. Raw input behind `useToolCallConsentQueue()`; prefer the hook for a custom consent UI.                              |
 | `messageBoxBottomRef`      | `RefObject<HTMLDivElement \| null>`        | Ref to the sentinel element at the bottom of the message list.                                                                                                                                |
 | `scrollContainerRef`       | `RefObject<HTMLDivElement \| null>`        | Ref to the scrollable message container.                                                                                                                                                      |
 | `isFollowingLatest`        | `boolean`                                  | Whether auto-scroll to the latest message is active. Becomes `false` when the user scrolls up.                                                                                                |
@@ -725,13 +726,20 @@ function MyCustomFooter() {
 | `closeChannel`               | `(() => void) \| undefined`                                             | Close the SSE connection without resetting.                                                                                                                                                                                                                                                                                                                                                                                 |
 | `stopGeneration`             | `((options?: { force?: boolean }) => Promise<void>) \| undefined`       | Ask the backend to stop the in-flight run. Resolving means _accepted_, not _stopped_; rejects if the request failed. Gate on `canStop`.                                                                                                                                                                                                                                                                                     |
 | `clearPromptSuggestion`      | `() => void`                                                            | Drop the current `promptSuggestion`. The built-in composer calls this once the user adopts it; a custom footer must call it itself.                                                                                                                                                                                                                                                                                         |
-| `replyToolCallConsents`      | `((answers, payload?) => Promise<void>) \| undefined`                   | Reply to the pending tool-call consent prompt (see `pendingConsent`). Used to build a custom consent UI. `undefined` before the channel is ready.                                                                                                                                                                                                                                                                           |
+| `replyToolCallConsents`      | `((answers, payload?) => Promise<void>) \| undefined`                   | Reply to the pending tool-call consent prompt (see `pendingConsent`). `useToolCallConsentQueue()` sends through this; call it yourself only to answer a whole batch at once. `undefined` before the channel is ready.                                                                                                                                                                                                       |
 | `sendMessageFeedback`        | `((messageId, feedback) => Promise<MessageFeedbackReply>) \| undefined` | Rate one assistant reply Good or Bad (F-033) — what the built-in feedback bar calls. Posts to `/message/feedback`; on success the reply's `feedback` is updated in the conversation, on failure nothing changes and the promise rejects. `undefined` in preview mode.                                                                                                                                                       |
 | `nudge`                      | `((payload?) => Promise<void>) \| undefined`                            | Wake an idle / recycled sandbox with an invisible `action=NUDGE` turn — nothing is rendered in the thread; watch `sandboxPhase` and `useLaunchedSandboxes()` for the result. Runs through `onBeforeSendMessage`, so a session-level payload attaches on its own; the argument is an extra the callback receives as `params.payload`. Takes a parameter, so bind it as `onClick={() => nudge?.()}`, never `onClick={nudge}`. |
 | `scrollToBottom`             | `(behavior?: ScrollBehavior) => void`                                   | Scroll the message list to the bottom. Also resumes auto-scroll (`isFollowingLatest → true`).                                                                                                                                                                                                                                                                                                                               |
 | `programmaticScrollToBottom` | `(behavior?: ScrollBehavior) => void`                                   | Scroll to bottom without affecting `isFollowingLatest`.                                                                                                                                                                                                                                                                                                                                                                     |
 | `setFollowingLatest`         | `(value: boolean) => void`                                              | Manually set auto-scroll state.                                                                                                                                                                                                                                                                                                                                                                                             |
 | `setPendingInputValue`       | `(value: string \| null) => void`                                       | Push text into the textarea from outside. Clear it (`null`) after reading in `renderFooter`.                                                                                                                                                                                                                                                                                                                                |
+
+<a id="use-tool-call-consent-queue"></a>
+<br/>
+
+### useToolCallConsentQueue()
+
+The tool-call consent queue the built-in modal runs on, for rendering your own consent UI with `<Chatbot toolCallConsent="off">`. Returns `{ pendingCall, currentIndex, totalCount, decide }`. See [Tool Call Consent → Building your own consent UI](#building-your-own-consent-ui) for the fields, an example and the two rules for using it.
 
 <a id="event-handlers"></a>
 <br/>
@@ -909,7 +917,7 @@ const handleToolCall = (response: SseResponse<EventType.TOOL_CALL_START | EventT
 
 ### Tool Call Consent
 
-When a bot provider is configured with consent-required toolsets, the SDK automatically surfaces an approval modal before each tool call executes. No additional wiring is needed — `ToolCallConsentGate` is mounted inside `<Chatbot>` automatically.
+When a bot provider is configured with consent-required toolsets, the SDK automatically surfaces an approval modal before each tool call executes. No additional wiring is needed — `ToolCallConsentGate` is mounted inside `<Chatbot>` automatically. To render the prompt yourself instead, see [Building your own consent UI](#building-your-own-consent-ui).
 
 #### How it works
 
@@ -948,6 +956,52 @@ The modal answers on its own, so a host that needs to act on the decision — fo
 - **What**: `ToolCallConsentAnswer[]` (`{ toolCallId, result, denyReason }`), the whole batch in one call — including the answers the modal gave without asking (`alreadyAllowed`, and a tool allowed for this chat earlier in the same batch). A host that calls `replyToolCallConsents` itself is reported the same way.
 - **Matching tool calls**: `toolCallId` equals the `toolUseId` on the call's `asgard.tool_call.start`. Do not count on a `tool_call.complete` under that id afterwards: a single approved call has come back that way, but a batch of several has come back as new calls with new ids.
 - **Not covered**: calls the backend approves on its own (bypass, allow list, a tool allowed for this chat in an earlier turn) are never listed in a consent event, so they raise no modal and no callback.
+
+<a id="building-your-own-consent-ui"></a>
+
+#### Building your own consent UI
+
+Pass `toolCallConsent="off"` and the modal is not mounted. Render your own prompt from `useToolCallConsentQueue()` anywhere inside the `<Chatbot>` tree — for example in `renderComposerAbove`, which puts it in the panel right above the input:
+
+```tsx
+import { Chatbot, useToolCallConsentQueue } from '@asgard-js/react';
+
+function ConsentCard() {
+  const { pendingCall, currentIndex, totalCount, decide } = useToolCallConsentQueue();
+
+  if (!pendingCall) return null;
+
+  return (
+    <div role="group" aria-label="Tool call approval">
+      <p>
+        Allow {pendingCall.reason || pendingCall.toolName}? ({currentIndex}/{totalCount})
+      </p>
+      <button onClick={() => decide({ result: 'ALLOW_ONCE' })}>Allow once</button>
+      <button onClick={() => decide({ result: 'DENY_ONCE', denyReason: '' })}>Deny</button>
+    </div>
+  );
+}
+
+<Chatbot
+  config={config}
+  customChannelId="your-channel-id"
+  toolCallConsent="off"
+  renderComposerAbove={() => <ConsentCard />}
+/>;
+```
+
+| Field          | Type                                          | Description                                                                                                                                                                   |
+| -------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pendingCall`  | `ToolCallConsentPendingCall \| null`          | The call to ask about next, or `null` when nothing needs an answer. Calls answered by the auto-skip rules above are never exposed here.                                       |
+| `currentIndex` | `number`                                      | 1-based position of `pendingCall` in its batch.                                                                                                                               |
+| `totalCount`   | `number`                                      | Calls in the batch, auto-answered ones included.                                                                                                                              |
+| `decide`       | `(decision: ToolCallConsentDecision) => void` | Answer `pendingCall` with `{ result: 'ALLOW_ONCE' }`, `{ result: 'ALLOW_ALWAYS' }` or `{ result: 'DENY_ONCE', denyReason }`. The batch is sent once every call has an answer. |
+
+It is the same queue the built-in modal runs on, so everything above still applies: the auto-skip rules, one reply per batch, a refused reply bringing the batch back from its first call, a reset dropping it, and `onToolCallConsentReply` firing as described. Which answers to offer is yours — leaving out "Allow for This Chat" is just not calling `decide` with `ALLOW_ALWAYS`.
+
+- **Only with `toolCallConsent="off"`**: every mounted queue replies on its own, so using the hook next to the built-in modal would answer each batch twice.
+- **Keep it mounted** while a run may raise consent. A batch made only of auto-answered calls is sent by the queue without asking anyone; with no queue mounted, nothing answers it and the run stays paused.
+- **Answering through `replyToolCallConsents` directly** also works: the queue drops a batch once it has been answered, whoever answered it.
 
 #### Zero-config usage
 

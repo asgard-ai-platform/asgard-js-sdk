@@ -2,6 +2,7 @@ import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useState } f
 import clsx from 'clsx';
 import { ToolCallConsentPendingCall } from '@asgard-js/core';
 import { useAsgardThemeContext } from '../../context/asgard-theme-context';
+import type { ToolCallConsentDecision } from '../../hooks/use-tool-call-consent-queue';
 import { CloseIcon, JsonViewer } from '../templates/tool-call-group/tool-call-group';
 import styles from './tool-call-consent-modal.module.scss';
 
@@ -12,11 +13,6 @@ function ChevronRightIcon({ className }: { className?: string }): ReactNode {
     </svg>
   );
 }
-
-export type ToolCallConsentDecision =
-  | { result: 'ALLOW_ONCE' }
-  | { result: 'ALLOW_ALWAYS' }
-  | { result: 'DENY_ONCE'; denyReason: string };
 
 export interface ToolCallConsentModalProps {
   /** The pending call currently awaiting user response. */

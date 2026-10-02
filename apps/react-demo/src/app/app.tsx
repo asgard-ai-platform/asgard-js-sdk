@@ -24,6 +24,7 @@ import { HttpErrorDemo } from './routes/http-error';
 import { HttpErrorOnSendDemo } from './routes/http-error-on-send';
 import { ToolCallDemo } from './routes/tool-call';
 import { ToolCallConsentDemo } from './routes/tool-call-consent';
+import { ToolCallConsentCustomDemo } from './routes/tool-call-consent-custom';
 import { UserIdentityHint } from './routes/user-identity-hint';
 import { OnChannelReady } from './routes/on-channel-ready';
 import { FooterEndActions } from './routes/footer-end-actions';
@@ -104,6 +105,7 @@ export function App(): React.ReactElement {
         <Route path="/http-error-on-send" element={<HttpErrorOnSendDemo />} />
         <Route path="/tool-call" element={<ToolCallDemo />} />
         <Route path="/tool-call-consent" element={<ToolCallConsentDemo />} />
+        <Route path="/tool-call-consent-custom" element={<ToolCallConsentCustomDemo />} />
         <Route path="/user-identity-hint" element={<UserIdentityHint />} />
         <Route path="/on-channel-ready" element={<OnChannelReady />} />
         <Route path="/footer-end-actions" element={<FooterEndActions />} />
