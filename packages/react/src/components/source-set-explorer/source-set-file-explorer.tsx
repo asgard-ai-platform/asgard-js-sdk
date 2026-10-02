@@ -30,10 +30,13 @@ import { SourceSetFileView } from './file-view';
 import { SourceSetTree } from './tree';
 import { useSourceSetDialog } from './dialog';
 import {
+  ChevronDownIcon,
+  ChevronRightIcon,
   ClipboardPasteIcon,
   CircleAlertIcon,
   CopyIcon,
   DownloadIcon,
+  EyeIcon,
   FilePlusIcon,
   FolderPlusIcon,
   FolderUpIcon,
@@ -44,7 +47,7 @@ import {
   UploadIcon,
   XIcon,
 } from './icons';
-import { normalizeRefPath, pathChain } from './paths';
+import { isWithin, normalizeRefPath, parentDir, pathChain } from './paths';
 import { useSourceSetExplorer } from './use-source-set-explorer';
 import styles from './source-set-explorer.module.scss';
 
@@ -158,6 +161,20 @@ export interface SourceSetFileExplorerProps {
    * status marker is information rather than an operation.
    */
   entryBadge?: (entry: FsEntry) => ReactNode;
+  /**
+   * Keep entries off the tree: return `true` and that entry, with everything under it, is not drawn — at
+   * every level. Sindri and Mimir pass `entry => entry.isDir && entry.name.startsWith('.')` to hide `.git`
+   * and its kind while `.`-prefixed files stay (asgard-sdk-pm#116).
+   *
+   * Only the drawing changes. A hidden entry is still on the volume, so name deduplication still counts it
+   * and a paste into its directory never writes over it. A directory whose every loaded entry is hidden
+   * reads as empty — or, while its listing is short, as the count still to load. A selection that becomes
+   * hidden is dropped, so the toolbar never acts on something the tree does not show; an `initialPath` at
+   * or under a hidden entry therefore ends up selecting nothing, and `autoExpandPaths` / `highlightPaths`
+   * there have no row to open or paint. In an editable tree, an entry created or renamed into a hidden
+   * name is hidden like any other.
+   */
+  hideEntry?: (entry: FsEntry) => boolean;
   onError?: (error: unknown) => void;
 }
 
@@ -226,6 +243,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     extraEntryActions,
     onSelectEntry,
     entryBadge,
+    hideEntry,
     onError,
   } = props;
 
@@ -275,7 +293,8 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   const fileInput = useRef<HTMLInputElement>(null);
   /** The folder picker. Reaches every file in a tree, but never an empty folder — only a drag can. */
   const dirInput = useRef<HTMLInputElement>(null);
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  // `onRow`: the menu was opened on a row rather than the tree's background — see the navigation section.
+  const [menu, setMenu] = useState<{ x: number; y: number; onRow: boolean } | null>(null);
   const [uploadMenu, setUploadMenu] = useState<{ x: number; y: number } | null>(null);
   const [dropping, setDropping] = useState(false);
 
@@ -287,6 +306,26 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   // falls `targetDir` back to `rootPath`; only the callers were missing.
   const { select } = explorer;
   const clearSelection = useCallback((): void => select(null), [select]);
+
+  // A selection the tree no longer draws — the entry or a folder above it hidden by `hideEntry` — would leave
+  // the toolbar deleting, renaming and uploading into something the user cannot see. Drop it instead. Only
+  // reachable when `hideEntry` changes while mounted, or an `initialPath` points into what it hides.
+  const { listings } = explorer;
+  const selectionHidden = useMemo((): boolean => {
+    if (!hideEntry || !selected) return false;
+
+    return pathChain(selected.path)
+      .filter(path => path !== rootPath && isWithin(rootPath, path))
+      .some(path => {
+        const entry = listings[parentDir(path)]?.entries.find(it => it.path === path);
+
+        return entry != null && hideEntry(entry);
+      });
+  }, [hideEntry, selected, listings, rootPath]);
+
+  useEffect(() => {
+    if (selectionHidden) clearSelection();
+  }, [selectionHidden, clearSelection]);
 
   // Esc sits on the root rather than the tree so it still answers after a background click, which lands
   // focus here — that is what `tabIndex={-1}` on the root is for.
@@ -515,13 +554,16 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     event.preventDefault();
     const host = event.currentTarget.closest<HTMLElement>(`.${styles.root}`);
     const bounds = host?.getBoundingClientRect();
-    setMenu({ x: event.clientX - (bounds?.left ?? 0), y: event.clientY - (bounds?.top ?? 0) });
+    const onRow = event.target instanceof Element && event.target.closest('[role="treeitem"]') !== null;
+    setMenu({ x: event.clientX - (bounds?.left ?? 0), y: event.clientY - (bounds?.top ?? 0), onRow });
   }, []);
 
   const closeMenu = useCallback((): void => setMenu(null), []);
+  const menuOnRow = menu?.onRow === true;
+  const { expanded, toggleExpand, open: openEntry } = explorer;
 
-  // Grouping only — the menu carries exactly the built-in actions the toolbar does, plus whatever
-  // section the host contributes.
+  // The menu carries exactly the built-in actions the toolbar does, plus two sections the toolbar has no
+  // place for: moving about the tree (open / expand / collapse) and whatever the host contributes.
   const menuSections = useMemo((): ContextMenuItem[][] => {
     const group = (keys: string[]): ContextMenuItem[] =>
       actions
@@ -543,17 +585,54 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     // read-only case is the one that needs them — see the prop's doc comment.
     const extra = extraEntryActions ? extraEntryActions(selected) : [];
 
+    // Moving about the tree from the menu — open a file, expand or collapse a folder — the first section, as
+    // in the prototype (asgard-sdk-pm#116). Context-menu only: these act on the row under the pointer, which
+    // the toolbar has no notion of, and they change nothing on the volume, so `readOnly` keeps them.
+    // A right-click on the background keeps whatever was selected — the built-in actions still resolve
+    // against it — but there is no row under the pointer to open or fold, so this section stays out.
+    const isOpen = selected?.isDir === true && expanded.has(selected.path);
+    const navigate: ContextMenuItem[] =
+      !selected || !menuOnRow
+        ? []
+        : [
+            selected.isDir
+              ? {
+                  key: 'toggle',
+                  label: t(locale, isOpen ? 'sourceSetExplorer.collapse' : 'sourceSetExplorer.expand'),
+                  icon: isOpen ? <ChevronDownIcon size={15} /> : <ChevronRightIcon size={15} />,
+                  onSelect: () => toggleExpand(selected),
+                }
+              : {
+                  key: 'open',
+                  label: t(locale, 'sourceSetExplorer.open'),
+                  icon: <EyeIcon size={15} />,
+                  onSelect: () => openEntry(selected),
+                },
+          ];
+
     // Upload is the one action the toolbar renders as a menu rather than a command, so here it expands
     // into its two rows instead of nesting a second menu inside this one. Same two `uploadEntries` the
     // toolbar menu shows, so the pair cannot drift.
     return [
+      navigate,
       [...group(['newFile', 'newFolder']), ...uploadEntries],
       group(['download', 'copy', 'cut', 'paste']),
       group(['rename', 'delete']),
       extra,
       group(['refresh']),
     ].filter(section => section.length > 0);
-  }, [actions, labelOf, extraEntryActions, selected, uploadEntries]);
+  }, [
+    actions,
+    labelOf,
+    extraEntryActions,
+    selected,
+    uploadEntries,
+    expanded,
+    toggleExpand,
+    openEntry,
+    locale,
+    menuOnRow,
+  ]);
 
   /**
    * This explorer's copy for the shared upload UI, drawn from `sourceSetExplorer.*`.
@@ -758,6 +837,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
             onContextMenu={openMenu}
             onClearSelection={clearSelection}
             entryBadge={entryBadge}
+            hideEntry={hideEntry}
             highlightTargets={highlight.targets}
             highlightAncestors={highlight.ancestors}
           />

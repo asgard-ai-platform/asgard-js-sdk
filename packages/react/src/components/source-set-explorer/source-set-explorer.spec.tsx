@@ -124,6 +124,13 @@ function toolbarLabels(): (string | null)[] {
   return Array.from(screen.getByRole('toolbar').querySelectorAll('button')).map(b => b.getAttribute('aria-label'));
 }
 
+/** Every menu item's label, in the order the menu lays them out. */
+function menuLabels(): (string | null)[] {
+  return within(screen.getByRole('menu'))
+    .getAllByRole('menuitem')
+    .map(item => item.textContent);
+}
+
 /** The ten actions, in the order F-025 lists them. */
 const ACTION_ORDER = [
   'sourceSetExplorer.newFile',
@@ -217,11 +224,13 @@ describe('F-025 R5 — toolbar and context menu offer one set of actions', () =>
 
     fireEvent.contextMenu(await screen.findByText('a.txt'));
 
-    const labels = within(await screen.findByRole('menu'))
-      .getAllByRole('menuitem')
-      .map(item => item.textContent);
+    await screen.findByRole('menu');
+    const labels = menuLabels();
 
-    expect(new Set(labels)).toEqual(new Set(MENU_ORDER.map(key => t('en-US', key))));
+    // Plus the one row the toolbar has no place for: opening the file under the pointer (asgard-sdk-pm#116).
+    expect(new Set(labels)).toEqual(
+      new Set([t('en-US', 'sourceSetExplorer.open'), ...MENU_ORDER.map(key => t('en-US', key))]),
+    );
   });
 
   it('disables selection-dependent actions rather than hiding them', async () => {
@@ -308,9 +317,8 @@ describe('F-025 R10 — readOnly removes every mutating affordance', () => {
 
     fireEvent.contextMenu(await screen.findByText('a.txt'));
 
-    const labels = within(await screen.findByRole('menu'))
-      .getAllByRole('menuitem')
-      .map(item => item.textContent);
+    await screen.findByRole('menu');
+    const labels = menuLabels();
 
     expect(labels).not.toContain(t('en-US', 'sourceSetExplorer.delete'));
     expect(labels).not.toContain(t('en-US', 'sourceSetExplorer.rename'));
@@ -411,13 +419,6 @@ describe('F-025 R3 — auth reaches the volume the way the host chose', () => {
 });
 
 describe('BUILD-064 — host extension points', () => {
-  /** Every menu item's label, in the order the menu lays them out. */
-  function menuLabels(): (string | null)[] {
-    return within(screen.getByRole('menu'))
-      .getAllByRole('menuitem')
-      .map(item => item.textContent);
-  }
-
   function rows(): HTMLElement[] {
     return screen.getAllByRole('treeitem');
   }
@@ -443,6 +444,7 @@ describe('BUILD-064 — host extension points', () => {
     await screen.findByRole('menu');
 
     expect(menuLabels()).toEqual([
+      t('en-US', 'sourceSetExplorer.open'),
       ...MENU_ORDER.slice(0, -1).map(key => t('en-US', key)),
       'Pull from external source',
       t('en-US', 'sourceSetExplorer.refresh'),
@@ -499,6 +501,7 @@ describe('BUILD-064 — host extension points', () => {
     fireEvent.contextMenu(await screen.findByText('a.txt'));
 
     expect(menuLabels()).toEqual([
+      t('en-US', 'sourceSetExplorer.open'),
       t('en-US', 'sourceSetExplorer.download'),
       'Pull from external source',
       t('en-US', 'sourceSetExplorer.refresh'),
@@ -736,12 +739,6 @@ describe('BUILD-075 — search-path affordances', () => {
 
   /** The span carrying an entry's name — the element `highlightPaths` colours. */
   const nameOf = (name: string): HTMLElement => screen.getByText(name);
-
-  function menuLabels(): (string | null)[] {
-    return within(screen.getByRole('menu'))
-      .getAllByRole('menuitem')
-      .map(item => item.textContent);
-  }
 
   it('asks the host for its actions while readOnly, with every built-in mutating one still gone (R1)', async () => {
     installVolume(SIMPLE);
@@ -1145,5 +1142,209 @@ describe('BUILD-075 — search-path affordances', () => {
     // And no row's name carries a highlight class it did not carry before.
     expect(nameOf('git').className).toBe(nameOf('a.txt').className);
     expect(nameOf('git').className).not.toContain('labelHighlight');
+  });
+});
+
+/** The PM rule both Sindri and Mimir pass (asgard-sdk-pm#116): hide `.` directories, keep `.` files. */
+const hideDotDirs = (entry: FsEntry): boolean => entry.isDir && entry.name.startsWith('.');
+
+const DOTTED: FakeVolume = {
+  dirs: {
+    '': [dir('.git'), dir('skills'), file('.env.example'), file('a.txt')],
+    '.git': [file('config')],
+    skills: [dir('.cache'), file('SKILL.md')],
+  },
+  files: { 'a.txt': 'hi', '.env.example': 'X=1', 'skills/SKILL.md': '# skill' },
+};
+
+describe('asgard-sdk-pm#116 — hideEntry keeps entries off the tree', () => {
+  it('hides what it matches at every level, and keeps the rest — `.` files included', async () => {
+    installVolume(DOTTED);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+
+    await screen.findByText('a.txt');
+    expect(screen.getAllByRole('treeitem').map(r => r.textContent)).toEqual(['skills', '.env.example', 'a.txt']);
+
+    fireEvent.click(screen.getByText('skills'));
+    await screen.findByText('SKILL.md');
+    expect(screen.queryByText('.cache')).toBeNull();
+  });
+
+  it('reads as empty when every entry of a directory is hidden', async () => {
+    installVolume({ dirs: { '': [dir('repo')], repo: [dir('.git')] } });
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+
+    fireEvent.click(await screen.findByText('repo'));
+
+    expect(await screen.findByText(t('en-US', 'sourceSetExplorer.emptyDir'))).toBeTruthy();
+    expect(screen.queryByText('.git')).toBeNull();
+  });
+
+  it('still counts a hidden entry as taken, so a paste never lands on it', async () => {
+    // `docs/a.txt` is on the volume but off the tree. Pasting `a.txt` into `docs` must not reuse its name.
+    const probe = installVolume({
+      dirs: { '': [dir('docs'), file('a.txt')], docs: [file('a.txt')] },
+      files: { 'a.txt': 'hi', 'docs/a.txt': 'hidden' },
+    });
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        hideEntry={entry => entry.path === 'docs/a.txt'}
+      />,
+    );
+
+    fireEvent.click(await screen.findByText('a.txt'));
+    fireEvent.click(requireToolButton('sourceSetExplorer.copy'));
+    fireEvent.click(screen.getByText('docs'));
+    await screen.findByText(t('en-US', 'sourceSetExplorer.emptyDir'));
+    fireEvent.click(requireToolButton('sourceSetExplorer.pasteNamed', { name: 'a.txt' }));
+
+    await waitFor(() => {
+      const copy = probe.calls.find(c => c.op === 'copy');
+      expect(copy?.url.searchParams.get('dst')).toBe('docs/a (1).txt');
+    });
+  });
+
+  it('still owes the count of a short listing whose loaded entries are all hidden', async () => {
+    // Directories sort first and `.` sorts before letters, so a long directory's first page can be nothing
+    // but hidden folders. That is not an empty directory.
+    installVolume({ dirs: { '': [dir('.a'), dir('.b')] }, claimedTotal: { '': 5 } });
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+
+    expect(await screen.findByText(t('en-US', 'sourceSetExplorer.moreNotLoaded', { n: 3 }))).toBeTruthy();
+    expect(screen.queryByText(t('en-US', 'sourceSetExplorer.emptyDir'))).toBeNull();
+  });
+
+  it('drops a selection the tree no longer shows, so the toolbar cannot act on it', async () => {
+    installVolume(DOTTED);
+    const { rerender } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    // Inside a folder that is about to be hidden: the entry itself matches nothing, its parent does.
+    fireEvent.click(await screen.findByText('.git'));
+    fireEvent.click(await screen.findByText('config'));
+    expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(false);
+
+    rerender(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+
+    await waitFor(() => expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(true));
+    expect(screen.queryByText('config')).toBeNull();
+  });
+
+  it('selects nothing when initialPath points into what it hides', async () => {
+    installVolume(DOTTED);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        initialPath=".git/config"
+        hideEntry={hideDotDirs}
+      />,
+    );
+
+    await screen.findByText('a.txt');
+    await waitFor(() => expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(true));
+  });
+
+  it('draws everything when it is not given', async () => {
+    installVolume(DOTTED);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    await screen.findByText('a.txt');
+    expect(screen.getAllByRole('treeitem').map(r => r.textContent)).toEqual([
+      '.git',
+      'skills',
+      '.env.example',
+      'a.txt',
+    ]);
+  });
+});
+
+describe('asgard-sdk-pm#116 — the context menu opens files and folds folders', () => {
+  it('leads with Open on a file, and Open opens it', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    fireEvent.contextMenu(await screen.findByText('a.txt'));
+    expect(menuLabels()[0]).toBe(t('en-US', 'sourceSetExplorer.open'));
+
+    fireEvent.click(within(screen.getByRole('menu')).getByText(t('en-US', 'sourceSetExplorer.open')));
+
+    expect(await screen.findByLabelText(t('en-US', 'sourceSetExplorer.reloadFile'))).toBeTruthy();
+  });
+
+  it('leads with Expand on a closed folder and Collapse on an open one, toggling it either way', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    fireEvent.contextMenu(await screen.findByText('notes'));
+    expect(menuLabels()[0]).toBe(t('en-US', 'sourceSetExplorer.expand'));
+    fireEvent.click(within(screen.getByRole('menu')).getByText(t('en-US', 'sourceSetExplorer.expand')));
+    await screen.findByText('todo.md');
+
+    fireEvent.contextMenu(screen.getByText('notes'));
+    expect(menuLabels()[0]).toBe(t('en-US', 'sourceSetExplorer.collapse'));
+    fireEvent.click(within(screen.getByRole('menu')).getByText(t('en-US', 'sourceSetExplorer.collapse')));
+    await waitFor(() => expect(screen.queryByText('todo.md')).toBeNull());
+  });
+
+  it('keeps both while readOnly, since neither changes the volume', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" readOnly />);
+
+    fireEvent.contextMenu(await screen.findByText('a.txt'));
+    expect(menuLabels()).toEqual([
+      t('en-US', 'sourceSetExplorer.open'),
+      t('en-US', 'sourceSetExplorer.download'),
+      t('en-US', 'sourceSetExplorer.refresh'),
+    ]);
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    fireEvent.contextMenu(screen.getByText('notes'));
+    expect(menuLabels()).toEqual([
+      t('en-US', 'sourceSetExplorer.expand'),
+      t('en-US', 'sourceSetExplorer.download'),
+      t('en-US', 'sourceSetExplorer.refresh'),
+    ]);
+  });
+
+  it('offers neither on the background, and adds nothing to the toolbar', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    await screen.findByText('a.txt');
+
+    fireEvent.contextMenu(screen.getByRole('tree'));
+    const labels = menuLabels();
+    for (const key of ['sourceSetExplorer.open', 'sourceSetExplorer.expand', 'sourceSetExplorer.collapse']) {
+      expect(labels).not.toContain(t('en-US', key));
+      expect(toolButton(key)).toBeNull();
+    }
+  });
+
+  it('leaves them out on the background even while a row is selected', async () => {
+    // A background right-click keeps the selection — the built-in actions still act on it — but nothing is
+    // under the pointer to open or fold.
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    fireEvent.click(await screen.findByText('a.txt'));
+    fireEvent.contextMenu(screen.getByRole('tree'));
+    expect(menuLabels()).not.toContain(t('en-US', 'sourceSetExplorer.open'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    fireEvent.click(screen.getByText('notes'));
+    fireEvent.contextMenu(screen.getByRole('tree'));
+    for (const key of ['sourceSetExplorer.expand', 'sourceSetExplorer.collapse']) {
+      expect(menuLabels()).not.toContain(t('en-US', key));
+    }
+  });
+
+  it('carries its own labels in all three locales', () => {
+    for (const key of ['sourceSetExplorer.open', 'sourceSetExplorer.expand', 'sourceSetExplorer.collapse']) {
+      for (const locale of ['ja-JP', 'zh-TW'] as const) {
+        expect(t(locale, key)).not.toBe(t('en-US', key));
+        expect(t(locale, key)).not.toBe(key);
+      }
+    }
   });
 });

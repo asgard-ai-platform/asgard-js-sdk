@@ -21,6 +21,8 @@ export interface SourceSetTreeProps {
   onClearSelection: () => void;
   /** Host decoration for the right of a row's name; `null` leaves the row untouched. */
   entryBadge?: (entry: FsEntry) => ReactNode;
+  /** Entries the host keeps off the tree — and so everything under them. The listing itself is untouched. */
+  hideEntry?: (entry: FsEntry) => boolean;
   /** Paths the host marked — painted in the accent colour. Already normalized by the shell. */
   highlightTargets: ReadonlySet<string>;
   /** Directories on the way to one of those — painted a step weaker. */
@@ -49,6 +51,7 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
     onContextMenu,
     onClearSelection,
     entryBadge,
+    hideEntry,
     highlightTargets,
     highlightAncestors,
   } = props;
@@ -76,7 +79,14 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
       );
     }
 
-    if (listing.entries.length === 0) {
+    // Hidden here, at the drawing, rather than in the listing: a hidden entry is still on the volume, and the
+    // name deduplication that paste relies on reads the listing — filtering it there would let a paste land on
+    // top of the very entry the user cannot see (asgard-sdk-pm#116).
+    const shown = hideEntry ? listing.entries.filter(entry => !hideEntry(entry)) : listing.entries;
+
+    // Empty only when there is nothing more to come: a short listing whose loaded entries are all hidden
+    // still owes the count of what it did not load (F-026), which the early return would swallow.
+    if (listing.entries.length === 0 || (shown.length === 0 && listing.complete)) {
       return (
         <div className={styles.nodeStatus} style={{ paddingLeft: `${depth * INDENT_REM}rem` }}>
           {t(locale, 'sourceSetExplorer.emptyDir')}
@@ -86,7 +96,7 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
 
     return (
       <>
-        {listing.entries.map(entry => renderNode(entry, depth))}
+        {shown.map(entry => renderNode(entry, depth))}
         {!listing.complete && (
           <div
             className={`${styles.nodeStatus} ${styles.nodeShortfall}`}

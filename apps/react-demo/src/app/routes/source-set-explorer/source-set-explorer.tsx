@@ -51,6 +51,9 @@ const SKILL_GLYPH = <span aria-hidden>◆</span>;
  */
 const asSearchPath = (path: string): string => `${path}/`;
 
+/** The rule Sindri and Mimir pass to `hideEntry` (asgard-sdk-pm#116): `.` directories go, `.` files stay. */
+const hideDotDirectories = (entry: FsEntry): boolean => entry.isDir && entry.name.startsWith('.');
+
 /**
  * The two widths, side by side rather than behind a toggle. `id` doubles as the stylesheet key, so the
  * pair cannot drift into a mount the layout has no column for.
@@ -64,6 +67,7 @@ export function SourceSetExplorerRoute(): ReactNode {
   const usingMock = !REAL_ENDPOINT;
   const [ready, setReady] = useState(!usingMock);
   const [readOnly, setReadOnly] = useState(false);
+  const [hideDotDirs, setHideDotDirs] = useState(false);
   const [locale, setLocale] = useState<DemoLocale>('en-US');
   const [rootPath, setRootPath] = useState('');
   const [hostExtras, setHostExtras] = useState(true);
@@ -188,6 +192,11 @@ export function SourceSetExplorerRoute(): ReactNode {
           </label>
 
           <label className={styles.control}>
+            <input type="checkbox" checked={hideDotDirs} onChange={event => setHideDotDirs(event.target.checked)} />
+            hide <code>.</code> directories
+          </label>
+
+          <label className={styles.control}>
             <input type="checkbox" checked={hostExtras} onChange={event => setHostExtras(event.target.checked)} />
             host extension points
           </label>
@@ -235,9 +244,10 @@ export function SourceSetExplorerRoute(): ReactNode {
 
         <p className={styles.hint}>
           Try: <code>notes/</code> for markdown and plain text · <code>logo.png</code> for the image branch ·{' '}
-          <code>empty/</code> for the empty-directory state · <code>paged/</code> for a 1,200-entry directory that pages
-          twice and still loads completely · <code>overclaimed/</code> for one where the volume claims more than it
-          serves, which is where the “not loaded” notice appears.
+          <code>empty/</code> for the empty-directory state · <code>.git/</code> and <code>skills/.cache/</code>, which{' '}
+          <code>hide . directories</code> takes off the tree while <code>.env.example</code> stays · <code>paged/</code>{' '}
+          for a 1,200-entry directory that pages twice and still loads completely · <code>overclaimed/</code> for one
+          where the volume claims more than it serves, which is where the “not loaded” notice appears.
         </p>
 
         <p className={styles.hint}>
@@ -246,6 +256,12 @@ export function SourceSetExplorerRoute(): ReactNode {
           long enough to read the <code>n / N</code> count and to hit Cancel; <code>volume pushes back</code> makes the
           first four writes answer <code>429</code>, which is what brings the concurrency ceiling down and puts the
           “slowed to N” line on screen. Upload something named <code>README.md</code> to reach the conflict dialog.
+        </p>
+
+        <p className={styles.hint}>
+          Right-click a file and the menu leads with <code>Open</code>; right-click a folder and it leads with{' '}
+          <code>Expand</code> or <code>Collapse</code>. Both stay with <code>readOnly</code> on, since neither changes
+          the volume.
         </p>
 
         {hostExtras && (
@@ -279,6 +295,7 @@ export function SourceSetExplorerRoute(): ReactNode {
                 connection={connection}
                 rootPath={rootPath}
                 readOnly={readOnly}
+                hideEntry={hideDotDirs ? hideDotDirectories : undefined}
                 locale={locale}
                 extraEntryActions={hostExtras || searchPathsOn ? extraEntryActions : undefined}
                 entryBadge={hostExtras ? entryBadge : undefined}
@@ -302,6 +319,7 @@ interface ExplorerMountProps {
   connection: { sourceSetEndpoint: string; apiKey?: string; customHeaders?: Record<string, string> };
   rootPath: string;
   readOnly: boolean;
+  hideEntry?: (entry: FsEntry) => boolean;
   locale: DemoLocale;
   extraEntryActions?: (entry: FsEntry | null) => ContextMenuItem[];
   entryBadge?: (entry: FsEntry) => ReactNode;
@@ -325,6 +343,7 @@ function ExplorerMount(props: ExplorerMountProps): ReactNode {
     connection,
     rootPath,
     readOnly,
+    hideEntry,
     locale,
     extraEntryActions,
     entryBadge,
@@ -353,6 +372,7 @@ function ExplorerMount(props: ExplorerMountProps): ReactNode {
           customHeaders={connection.customHeaders}
           rootPath={rootPath}
           readOnly={readOnly}
+          hideEntry={hideEntry}
           locale={locale}
           extraEntryActions={extraEntryActions}
           entryBadge={entryBadge}
