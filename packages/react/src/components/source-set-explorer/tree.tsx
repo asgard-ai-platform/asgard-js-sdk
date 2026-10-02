@@ -84,7 +84,9 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
     // top of the very entry the user cannot see (asgard-sdk-pm#116).
     const shown = hideEntry ? listing.entries.filter(entry => !hideEntry(entry)) : listing.entries;
 
-    if (shown.length === 0) {
+    // Empty only when there is nothing more to come: a short listing whose loaded entries are all hidden
+    // still owes the count of what it did not load (F-026), which the early return would swallow.
+    if (listing.entries.length === 0 || (shown.length === 0 && listing.complete)) {
       return (
         <div className={styles.nodeStatus} style={{ paddingLeft: `${depth * INDENT_REM}rem` }}>
           {t(locale, 'sourceSetExplorer.emptyDir')}

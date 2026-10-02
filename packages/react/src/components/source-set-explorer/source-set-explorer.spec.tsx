@@ -224,9 +224,8 @@ describe('F-025 R5 — toolbar and context menu offer one set of actions', () =>
 
     fireEvent.contextMenu(await screen.findByText('a.txt'));
 
-    const labels = within(await screen.findByRole('menu'))
-      .getAllByRole('menuitem')
-      .map(item => item.textContent);
+    await screen.findByRole('menu');
+    const labels = menuLabels();
 
     // Plus the one row the toolbar has no place for: opening the file under the pointer (asgard-sdk-pm#116).
     expect(new Set(labels)).toEqual(
@@ -318,9 +317,8 @@ describe('F-025 R10 — readOnly removes every mutating affordance', () => {
 
     fireEvent.contextMenu(await screen.findByText('a.txt'));
 
-    const labels = within(await screen.findByRole('menu'))
-      .getAllByRole('menuitem')
-      .map(item => item.textContent);
+    await screen.findByRole('menu');
+    const labels = menuLabels();
 
     expect(labels).not.toContain(t('en-US', 'sourceSetExplorer.delete'));
     expect(labels).not.toContain(t('en-US', 'sourceSetExplorer.rename'));
@@ -1208,6 +1206,46 @@ describe('asgard-sdk-pm#116 — hideEntry keeps entries off the tree', () => {
     });
   });
 
+  it('still owes the count of a short listing whose loaded entries are all hidden', async () => {
+    // Directories sort first and `.` sorts before letters, so a long directory's first page can be nothing
+    // but hidden folders. That is not an empty directory.
+    installVolume({ dirs: { '': [dir('.a'), dir('.b')] }, claimedTotal: { '': 5 } });
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+
+    expect(await screen.findByText(t('en-US', 'sourceSetExplorer.moreNotLoaded', { n: 3 }))).toBeTruthy();
+    expect(screen.queryByText(t('en-US', 'sourceSetExplorer.emptyDir'))).toBeNull();
+  });
+
+  it('drops a selection the tree no longer shows, so the toolbar cannot act on it', async () => {
+    installVolume(DOTTED);
+    const { rerender } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    // Inside a folder that is about to be hidden: the entry itself matches nothing, its parent does.
+    fireEvent.click(await screen.findByText('.git'));
+    fireEvent.click(await screen.findByText('config'));
+    expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(false);
+
+    rerender(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+
+    await waitFor(() => expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(true));
+    expect(screen.queryByText('config')).toBeNull();
+  });
+
+  it('selects nothing when initialPath points into what it hides', async () => {
+    installVolume(DOTTED);
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        initialPath=".git/config"
+        hideEntry={hideDotDirs}
+      />,
+    );
+
+    await screen.findByText('a.txt');
+    await waitFor(() => expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(true));
+  });
+
   it('draws everything when it is not given', async () => {
     installVolume(DOTTED);
     render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
@@ -1280,6 +1318,24 @@ describe('asgard-sdk-pm#116 — the context menu opens files and folds folders',
     for (const key of ['sourceSetExplorer.open', 'sourceSetExplorer.expand', 'sourceSetExplorer.collapse']) {
       expect(labels).not.toContain(t('en-US', key));
       expect(toolButton(key)).toBeNull();
+    }
+  });
+
+  it('leaves them out on the background even while a row is selected', async () => {
+    // A background right-click keeps the selection — the built-in actions still act on it — but nothing is
+    // under the pointer to open or fold.
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    fireEvent.click(await screen.findByText('a.txt'));
+    fireEvent.contextMenu(screen.getByRole('tree'));
+    expect(menuLabels()).not.toContain(t('en-US', 'sourceSetExplorer.open'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    fireEvent.click(screen.getByText('notes'));
+    fireEvent.contextMenu(screen.getByRole('tree'));
+    for (const key of ['sourceSetExplorer.expand', 'sourceSetExplorer.collapse']) {
+      expect(menuLabels()).not.toContain(t('en-US', key));
     }
   });
 
