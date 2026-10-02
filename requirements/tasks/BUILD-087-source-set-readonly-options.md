@@ -110,6 +110,10 @@ Extra rows for this task:
 - **`hideEntry` 用 predicate，不做成元件內建的固定規則**：#116 第 1 題問 PM 的內容。predicate 涵蓋固定規則
   （兩個產品傳同一行即可），又不把「`.` 目錄」寫死成元件語意；2026-10-01 決定先照此做。
 - **只過濾畫面、不過濾資料**：被隱藏的項目還在 volume 上，資料層一起濾掉會讓去重看不到它，貼上同名時就會寫到它頭上。
+- **右鍵分組沿用 SDK 既有規則，不完全照原型**：原型的檔案選單是「開啟、下載」同一組，資料夾唯讀時只有「展開／收合」與
+  「重新整理」。這裡導覽項目自成第一組，後面接 SDK 既有的分組；資料夾也照樣列出停用的「下載」。出處是 F-025 既有決議：
+  工具列與右鍵共用同一張 action 表、該停用的動作停用而不隱藏（R5）。要完全照原型得改那條既有規則，不在本 task 範圍
+  （2026-10-02 code review 指出）。
 
 ---
 
@@ -131,7 +135,7 @@ Files:
 | `apps/react-demo/src/app/routes/source-set-explorer/source-set-explorer.tsx`     | 「hide . directories」開關與說明（T7）                                                 |
 
 **公開 API 影響（§1.7）**：全部 additive。`SourceSetFileExplorerProps` 多一個選填 `hideEntry`；右鍵選單多一組內建導覽項目
-（不傳任何 prop 就有），工具列不變。chat 版 `components/file-explorer/` 零變更。未 bump 版本（仍為 `0.3.89`）。
+（不傳任何 prop 就有），工具列不變。chat 版 `components/file-explorer/` 零變更。未 bump 版本。
 
 ---
 
@@ -148,3 +152,11 @@ Files:
 - 2026-10-01: Build complete — lint（0 error；5 warnings 皆為既有、不在本 task 的檔案）/ format / typecheck / build / test
   （core 430、react 622）全綠 (Status: `in-progress → done`).
 - 2026-10-02: 改編號 BUILD-086 → BUILD-087：同一天另一個 cycle（#484，freyr-pm#901 的 consent modal 替換）先以 BUILD-086 合入 `main`，由尚未合併的這邊讓號。
+- 2026-10-02: 合入 `main`（`0.3.90`，含 #484）後重跑全部閘門：react 628 案全綠。
+- 2026-10-02: 發版前 `/code-review`（high）找到 3 項需修、數項小問題，全部處理（細節見 REVIEW-087）：
+  (1) 背景右鍵在已有選取時仍帶出導覽項目 → 選單記住是否開在列上，導覽項目只在列上出現；(2) 部分載入的目錄若載入到的
+  全被隱藏，會顯示為空並吞掉 F-026 的「還有 N 項」→ 只在清單完整時顯示為空；(3) 選取的項目（或其上層）變成隱藏時仍是
+  選取、工具列會作用在看不見的項目上 → 自動清掉選取（也涵蓋 `initialPath` 指進被隱藏處）。另：展開／收合合為一項、
+  `menuSections` 的依賴改為實際用到的欄位、README `extraEntryActions` 一列的錯誤說明改正、測試檔剩餘兩處手寫選單讀取改用
+  helper、補上右鍵分組與原型差異的決定。新增 4 案，反向驗證三項修正各自轉紅；閘門全綠（core 430、react 632）；demo 確認
+  背景右鍵不帶「開啟」、選取 `.git` 後開啟隱藏刪除鈕即停用。

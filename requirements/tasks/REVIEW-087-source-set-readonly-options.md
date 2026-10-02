@@ -114,3 +114,8 @@ None.
 - 2026-10-01: REVIEW task created, paired with BUILD-087 (Status: `draft`).
 - 2026-10-01: BUILD-087 done (Status: `draft → ready`).
 - 2026-10-01: §1 — 20 項 ✅、0 違規；§3 — R1–R8 全 Pass；2 Minor（其一已改 JSDoc）(Status: `ready → in-progress → done`).
+- 2026-10-02: 發版前 `/code-review`（high，14 項）。需修並已修：背景右鍵帶出導覽項目（high）、部分載入且全被隱藏時吞掉
+  shortfall 提示、隱藏後選取仍作用於看不見的項目；小問題已修：README `extraEntryActions` 說明、展開／收合重複物件、
+  `menuSections` 依賴、測試 helper 重複、與原型分組差異補記決定、BUILD 文件過時數字。未修、另開 follow-up：被隱藏但已展開的
+  目錄仍會被 refresh 重新列出、可寫模式下新建成隱藏名稱會無聲消失（已寫進 JSDoc）、`hideEntry` 每次重繪重跑、把 `hideEntry`
+  交給 hook 的根本改法。修正後閘門全綠（react 632）。
