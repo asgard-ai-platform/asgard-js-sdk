@@ -1,8 +1,8 @@
-# BUILD-086 Let SourceSetFileExplorer hide entries and open or toggle from the context menu
+# BUILD-087 Let SourceSetFileExplorer hide entries and open or toggle from the context menu
 
 ## Meta
 
-- Task ID: `BUILD-086`
+- Task ID: `BUILD-087`
 - Status: `done`
 - Issue: [asgard-sdk-pm#116](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/116)（需求來源：Sindri F-052／UC-048 [asgard-sindri-pm#300](https://github.com/asgard-ai-platform/asgard-sindri-pm/issues/300)、Mimir F-010 [asgard-mimir-pm#163](https://github.com/asgard-ai-platform/asgard-mimir-pm/issues/163)）
 - Source spec: `references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-025-sourceset-file-explorer-元件.md`；原型 `asgard-sindri-prototype` @ `20f7b9c` `src/app/components/files/VolumeFileExplorer.tsx:205-249`（右鍵選單）
@@ -147,3 +147,4 @@ Files:
   開啟的檔案沒有「切換為編輯」；工具列兩種模式都與改前相同（一般 10 顆、唯讀 2 顆）。
 - 2026-10-01: Build complete — lint（0 error；5 warnings 皆為既有、不在本 task 的檔案）/ format / typecheck / build / test
   （core 430、react 622）全綠 (Status: `in-progress → done`).
+- 2026-10-02: 改編號 BUILD-086 → BUILD-087：同一天另一個 cycle（#484，freyr-pm#901 的 consent modal 替換）先以 BUILD-086 合入 `main`，由尚未合併的這邊讓號。

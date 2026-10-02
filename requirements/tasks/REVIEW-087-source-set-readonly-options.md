@@ -1,10 +1,10 @@
-# REVIEW-086 Review: SourceSetFileExplorer hideEntry and context-menu navigation
+# REVIEW-087 Review: SourceSetFileExplorer hideEntry and context-menu navigation
 
 ## Meta
 
-- Task ID: `REVIEW-086`
+- Task ID: `REVIEW-087`
 - Status: `done`
-- BUILD Task: `BUILD-086`
+- BUILD Task: `BUILD-087`
 - Reviewed commit: `689e53aa`
 - Reviewed branch: `feat/116-source-set-readonly-options`
 
@@ -12,7 +12,7 @@
 
 ## §1 Static Code Review
 
-Scope is `BUILD-086 ## Coverage`（`tree.tsx`、`source-set-file-explorer.tsx`、`i18n.ts`、spec、README、demo route 兩檔）。
+Scope is `BUILD-087 ## Coverage`（`tree.tsx`、`source-set-file-explorer.tsx`、`i18n.ts`、spec、README、demo route 兩檔）。
 `lint` / `format` / `typecheck` / `build` / `test` run project-wide.
 
 ### §1.1 Checklist
@@ -85,7 +85,7 @@ test:          PASS — core 430、react 622（新增 9 案）
 | `R5` | ✅     | spec 4 案；demo 兩種寬度 × 兩種模式：檔案第一項「開啟」可開檔，資料夾「展開」→「收合」可切換，唯讀時保留；背景右鍵沒有                   |
 | `R6` | ✅     | spec：工具列沒有這三個按鈕；demo 工具列一般 10 顆、唯讀 2 顆，與改前相同；唯讀時從右鍵開啟的檔案沒有「切換為編輯」                       |
 | `R7` | ✅     | spec：ja-JP、zh-TW 的三個 key 皆與 en-US 不同；demo zh-TW 顯示「開啟／展開／收合」                                                       |
-| `R8` | ✅     | 閘門全綠（§1.4）；demo 走查見 BUILD-086 Execution Log                                                                                    |
+| `R8` | ✅     | 閘門全綠（§1.4）；demo 走查見 BUILD-087 Execution Log                                                                                    |
 
 ---
 
@@ -104,13 +104,13 @@ None.
 - `hideEntry` 不檢查宿主自己給的路徑 prop：`initialPath` 指在被隱藏的項目（或其底下）時仍會選取它，畫面上沒有那一列、工具列卻
   作用在它身上；宿主在執行中改變 `hideEntry` 讓已選取的項目變成隱藏，也是同樣情形。Sindri／Mimir 傳的是固定規則、路徑 prop 也
   不會指進 `.` 目錄，碰不到。已把 JSDoc 從「沒有東西碰得到被隱藏的項目」改成照實寫（commit `689e53aa`），行為不改。
-- 導覽項目只在右鍵，與 F-025 R5「toolbar 與右鍵選單提供同一組動作」字面不同（照原型；BUILD-086 Decisions 已記）。#116 第 2 題
+- 導覽項目只在右鍵，與 F-025 R5「toolbar 與右鍵選單提供同一組動作」字面不同（照原型；BUILD-087 Decisions 已記）。#116 第 2 題
   PM 回覆後若要調整再改。
 
 ---
 
 ## Execution Log
 
-- 2026-10-01: REVIEW task created, paired with BUILD-086 (Status: `draft`).
-- 2026-10-01: BUILD-086 done (Status: `draft → ready`).
+- 2026-10-01: REVIEW task created, paired with BUILD-087 (Status: `draft`).
+- 2026-10-01: BUILD-087 done (Status: `draft → ready`).
 - 2026-10-01: §1 — 20 項 ✅、0 違規；§3 — R1–R8 全 Pass；2 Minor（其一已改 JSDoc）(Status: `ready → in-progress → done`).
