@@ -71,6 +71,7 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 
 - `R1` When a `.md` / `.markdown` file whose content starts with a well-formed frontmatter block (`---` line, any lines, `---` line) is shown in preview mode, the system shall render the markdown after that block as the body — no leading `<hr>`, no heading built from the frontmatter lines — so the body's `# 標題` is the only heading of that title. → T1, T2
 - `R1a` When that block parses to a YAML mapping, the system shall show it above the body as a field table: one row per top-level key, in file order, key on the left and value on the right. A string value shows as parsed (a folded `>-` block reads as one paragraph, a literal `|` block keeps its line breaks); a list of strings shows comma-joined; any other value (nested mapping, list of mappings) shows as YAML text. Values keep their written form (no number / date / boolean coercion). → T1, T2
+- `R1c` When the block has a `title` key whose string value, trimmed, equals the text of the body's first level-1 ATX heading (`# …`), the system shall leave that row out of the table — the same title is never shown twice (#375 Expected ¶2); when that leaves no rows, no table is shown. Any other key, a `title` that differs from the heading, or a body without a `# ` heading keeps the row. → T8, T9
 - `R1b` When the block is empty or parses to nothing, the system shall show no table; when it does not parse, or parses to something other than a mapping, the system shall show the block's raw text in a monospace box instead — the frontmatter is never silently dropped from the preview. → T1, T2
 - `R2` When the same file is switched to edit mode, the system shall show the full original source including the frontmatter, and a save shall write the full content (frontmatter included) through `onSaveFile`. → T1, T2
 - `R3` When the content does not start with a well-formed frontmatter block (no `---` on the first line, or no closing `---` line), the system shall render the content unchanged — a `---` thematic break later in the body is still rendered as `<hr>`. → T1, T2
@@ -84,6 +85,8 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 - [x] T2 (R1–R3): `file-view.tsx` feeds `StreamdownClient` the content without the leading block; `content` state, `CodeEditor`, `scheduleSave` untouched.
 - [x] T5 (R1a, R1b): Vitest first — field table rows / order, `>-` folded and `|` literal strings, string list, nested value as YAML, no coercion (`1.0`, `2026-10-05`, `yes`), empty block → no table, unparsable block and scalar block → raw box. Confirm red before T6.
 - [x] T6 (R1a, R1b): Add `js-yaml` (dependency) + `@types/js-yaml` (devDependency) to `@asgard-js/react`; split the leading block into `{ frontmatter, body }`, parse with `FAILSAFE_SCHEMA`, render the table / raw box above the body; styles via `--asg-color-*` in `file-view.module.scss`.
+- [x] T8 (R1c): Vitest first — equal `title` hidden (and the table gone when it was the only row), other rows kept, differing `title` kept, `name` equal to the heading kept, `## ` heading does not count. Confirm red before T9.
+- [x] T9 (R1c): In `file-view.tsx`, drop the `title` row when it matches the body's first `# ` heading; render nothing for zero rows.
 - [x] T3 (R4): Add a frontmatter `.md` sample to the react-demo file-explorer mock so the route exercises it.
 - [x] T7 (R4): Add a `SKILL.md`-shaped sample (folded multi-line `description`, list) to the demo mock.
 - [x] T4-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
@@ -93,15 +96,15 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 
 ## Coverage
 
-Use Cases: R1, R1a, R1b, R2, R3, R4
+Use Cases: R1, R1a, R1b, R1c, R2, R3, R4
 
 Files:
 
-- `packages/react/src/components/file-explorer/file-view.tsx`（react）— `FRONTMATTER` regex（捕捉內容）、`splitFrontmatter()`、`fieldText()`、module-local `Frontmatter` 元件；只作用在預覽分支
+- `packages/react/src/components/file-explorer/file-view.tsx`（react）— `FRONTMATTER` regex（捕捉內容）、`splitFrontmatter()`、`FIRST_HEADING`／`firstHeading()`、`fieldText()`、module-local `Frontmatter` 元件；只作用在預覽分支
 - `packages/react/src/components/file-explorer/file-view.module.scss`（react）— `.frontmatter` 欄位表、`.frontmatterRaw` 原樣區塊，顏色走 `--asg-color-*`
-- `packages/react/src/components/file-explorer/file-view-frontmatter.spec.tsx`（react，新增）— R1–R3 7 案、R1a／R1b 10 案
+- `packages/react/src/components/file-explorer/file-view-frontmatter.spec.tsx`（react，新增）— R1–R3 7 案、R1a／R1b 10 案、R1c 6 案
 - `packages/react/package.json`、`package-lock.json` — `js-yaml` ^4.3.2（dependency）、`@types/js-yaml` ^4.0.9（devDependency）
-- `apps/react-demo/src/app/routes/file-explorer/file-explorer.tsx`（demo）— `article.md`、`SKILL.md` 樣本
+- `apps/react-demo/src/app/routes/file-explorer/file-explorer.tsx`（demo）— `article.md`（title 與 `# ` 標題相同 → 預覽只剩正文）、`SKILL.md` 樣本
 
 ---
 
@@ -116,3 +119,5 @@ Files:
 - 2026-10-05: Re-opened after the merge-confidence check found Sindri also mounts `FileExplorer` (directory files tab, conversation files panel): stripping would hide `SKILL.md`'s `name` / `description`. Decided to show the block as a field table above the body, parsed with `js-yaml` (`FAILSAFE_SCHEMA`) because real `SKILL.md` files use folded multi-line values. Added R1a / R1b, T5–T7 (Status: `done → in-progress`).
 - 2026-10-05: T5 specs written first — 7 of the 10 field-table cases red against the strip-only build (the empty-block case passes either way). T6: `js-yaml` resolved to 4.3.2 (README `load` / `FAILSAFE_SCHEMA` unchanged from 4.1.1, lines 70–83); `dump` needs `noCompatMode` (else `yes` is quoted) and throws on a nested null, which falls back to the raw block. 168 file-explorer cases green; full gate green (react 649; lint 0 errors, same 5 pre-existing warnings). js-yaml adds ≈44 KB min / 15 KB gzip to the bundled dist (Status: `in-progress → done`).
 - 2026-10-05: Demo walk (zh-TW, 987px / 341px): `article.md` shows one `title` row then the single `H1`; `SKILL.md` shows `name` / `description` (folded into one paragraph, wraps at 341px) / `tags` (`git, pr`) / `version` (`1.0`), no horizontal overflow. Dark: the demo shells have no theme scope, so Heimdall's `.dark` token values were set on the shell as the `--asg-color-*` vars its `AsgardThemeScope` would emit (bg `#141414`, border `#434343`, secondary `#ae8d0e`, foreground `oklch(0.985 0 0)`) — keys gold, values white, rules visible. An unclosed quote typed into `SKILL.md` falls back to the raw block, readable in dark.
+- 2026-10-05: Re-opened for R1c. The Heimdall session pointed out that #375 Expected ¶2 (「標題只出現一次」) can be read as failing when `article.md` shows a `title` field and the same `# ` heading. Decided: hide only the `title` row, and only when it equals the body's first `# ` heading; Sindri's `name` / `description` untouched, a mismatched `title` still shown (Status: `done → in-progress`).
+- 2026-10-05: R1c built (commit `28f89d49`). T8 specs first: the 3 "leave it out" cases red, the 3 "keep it" cases green before T9. `firstHeading()` reads the first `# ` line (closing `#`s and padding trimmed); the `title` row is dropped only for a string value equal to it, and zero rows render nothing. 174 file-explorer cases; full gate green (react 655). Demo: `article.md` shows no table and one `H1` at 987px / 341px; `SKILL.md` still lists `name` / `description` / `tags` / `version` (Status: `in-progress → done`).

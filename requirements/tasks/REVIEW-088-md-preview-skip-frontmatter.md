@@ -5,7 +5,7 @@
 - Task ID: `REVIEW-088`
 - Status: `done`
 - BUILD Task: `BUILD-088`
-- Reviewed commit: `af9b62cd`
+- Reviewed commit: `28f89d49`
 - Reviewed branch: `fix/heimdall-375-md-preview-frontmatter`
 
 ---
@@ -13,7 +13,7 @@
 ## §1 Static Code Review
 
 Scope is `BUILD-088 ## Coverage`（`file-view.tsx`、`file-view.module.scss`、`file-view-frontmatter.spec.tsx`、react `package.json`／lock、demo
-`file-explorer.tsx`）。Grep 範圍是整條分支相對 `main`（`35e32adf..af9b62cd`）的新增行。`lint` / `format` / `typecheck` / `build` / `test`
+`file-explorer.tsx`）。Grep 範圍是整條分支相對 `main`（`35e32adf..28f89d49`）的新增行。`lint` / `format` / `typecheck` / `build` / `test`
 run project-wide.
 
 ### §1.1 Checklist
@@ -41,8 +41,8 @@ run project-wide.
 | 只動預覽；`content`、編輯器、存檔不變                | #375                           | ✅ ⁷   |
 | 檔案內容只當文字渲染，不注入 HTML                    | —                              | ✅ ⁸   |
 
-¹ `FileViewProps` 不變；`splitFrontmatter`／`fieldText`／`Frontmatter` 皆 module-local、未導出。行為變更只在 `.md`／`.markdown` 預覽。
-² 三個 helper 都標了回傳型別（未導出）。
+¹ `FileViewProps` 不變；`splitFrontmatter`／`firstHeading`／`fieldText`／`Frontmatter` 皆 module-local、未導出。行為變更只在 `.md`／`.markdown` 預覽。
+² 四個 helper 都標了回傳型別（未導出）。
 ³ 命中 8 處：5 處票號 `#375`；3 處是 `var(--asg-color-…, fallback)` 的後備值，與同檔 `.header`／`.actionBtn` 既有寫法一致，有主題時不生效。
 原樣區塊的底色原本寫了 `#111827` 後備，review 時改成 `color-mix(in srgb, currentColor 5%, transparent)`，跟著文字色走。
 ⁴ `js-yaml` 進 `dependencies`；react build 只 externalize react／react-dom／core／streamdown，所以它被打包進 dist（≈44 KB min／15 KB gzip）。
@@ -52,7 +52,7 @@ run project-wide.
 ⁸ key 與 value 都是 React 文字節點，沒有 `dangerouslySetInnerHTML`。實測 `__proto__:` key 只是一般的 own key、不污染原型；
 alias 炸彈（9 層 × 9 個 alias）`load` 與 `dump` 各 1 ms，`dump` 以 YAML 參照輸出、不展開。
 
-### §1.2 Mechanical grep（`35e32adf..af9b62cd` 新增行）
+### §1.2 Mechanical grep（`35e32adf..28f89d49` 新增行）
 
 ```text
 [any]              0
@@ -73,7 +73,7 @@ lint:packages: PASS — 0 errors；5 warnings 皆為既有（file-view.tsx 的 u
 format:check:  PASS
 typecheck:     PASS — core + react + react-demo
 build:         PASS — core, react
-test:          PASS — core 430、react 649（本 task 新增 17 案）
+test:          PASS — core 430、react 655（本 task 新增 23 案）
 ```
 
 本 repo 沒有 `lint:check` script；唯讀 lint 以 `lint:packages` 代替（同 REVIEW-087）。
@@ -82,14 +82,15 @@ test:          PASS — core 430、react 649（本 task 新增 17 案）
 
 ## §3 Functional Validation
 
-| R#    | Result | Evidence                                                                                                                                                                  |
-| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `R1`  | ✅     | spec 3 案（LF、CRLF、`.markdown`）。demo 987px／341px：`article.md` 頂部無 `<hr>`、無 `title: "…"` 大標題，`H1` 只有一個                                                  |
-| `R1a` | ✅     | spec 6 案（順序、`>-` 折疊、字串清單、`\|` 保留換行、巢狀以 YAML 文字、不轉型）。demo：`SKILL.md` 四列 `name`／`description`／`tags`／`version`，窄版自動換行、無水平溢出 |
-| `R1b` | ✅     | spec 4 案（空區塊無表、解析失敗、非 mapping、巢狀空值 → 原樣區塊）。demo：在 `SKILL.md` 打一個未閉合引號，預覽退回原樣區塊、內容完整                                      |
-| `R2`  | ✅     | spec：編輯模式含完整 frontmatter。demo（上一輪）：打字存檔後從記憶體 fs 重讀，frontmatter 與編輯都在；本輪 diff 未動編輯／存檔路徑                                        |
-| `R3`  | ✅     | spec 3 案：正文中的 `---` 仍是 `<hr>`；開頭 `---` 無結尾照原文；空 frontmatter 不吃到後面的分隔線                                                                         |
-| `R4`  | ✅     | 閘門全綠（§1.4）。深色：以 Heimdall `.dark` token 值設定其 `AsgardThemeScope` 會產生的 `--asg-color-*`，欄位表與原樣區塊皆可讀                                            |
+| R#    | Result | Evidence                                                                                                                                                                             |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `R1`  | ✅     | spec 3 案（LF、CRLF、`.markdown`）。demo 987px／341px：`article.md` 頂部無 `<hr>`、無 `title: "…"` 大標題，`H1` 只有一個                                                             |
+| `R1a` | ✅     | spec 6 案（順序、`>-` 折疊、字串清單、`\|` 保留換行、巢狀以 YAML 文字、不轉型）。demo：`SKILL.md` 四列 `name`／`description`／`tags`／`version`，窄版自動換行、無水平溢出            |
+| `R1b` | ✅     | spec 4 案（空區塊無表、解析失敗、非 mapping、巢狀空值 → 原樣區塊）。demo：在 `SKILL.md` 打一個未閉合引號，預覽退回原樣區塊、內容完整                                                 |
+| `R1c` | ✅     | spec 6 案（相同就藏、只剩它時整表不顯示、其他列保留、去空白比對、不同就留、只認 `title`、`##` 不算）。demo 987px／341px：`article.md` 沒有欄位表、只有一個 `H1`；`SKILL.md` 四列不變 |
+| `R2`  | ✅     | spec：編輯模式含完整 frontmatter。demo（上一輪）：打字存檔後從記憶體 fs 重讀，frontmatter 與編輯都在；本輪 diff 未動編輯／存檔路徑                                                   |
+| `R3`  | ✅     | spec 3 案：正文中的 `---` 仍是 `<hr>`；開頭 `---` 無結尾照原文；空 frontmatter 不吃到後面的分隔線                                                                                    |
+| `R4`  | ✅     | 閘門全綠（§1.4）。深色：以 Heimdall `.dark` token 值設定其 `AsgardThemeScope` 會產生的 `--asg-color-*`，欄位表與原樣區塊皆可讀                                                       |
 
 ---
 
@@ -104,11 +105,12 @@ None.
 - **已修（`9ba7bca1`）** 空的 frontmatter（`---\n---\n`）後面正文又有 `---` 分隔線時，第一版 regex 跳過真正的結尾、一路配對到正文的分隔線，
   標題與前段正文都不顯示。補了會失敗的 spec 後把中間內容改成可空、且先試空（`(?:…)??`）。
 
+- **已修（`28f89d49`）** 欄位表讓 `article.md` 的標題文字出現兩次（`title` 欄位＋`# ` 標題），可能被 #375 Expected ¶2「標題只出現一次」
+  退件（Heimdall session 提出）。上一輪只列成 Minor，低估了。改成 `title` 與正文第一個 `# ` 標題相同時不顯示那一列（R1c）。
+
 ### Minor (nice to have)
 
 - YAML 折疊（`>-`）把換行變成一個空白，所以中文的兩行之間會多一個空格（「佔位， 本地驗收」）。這是 YAML 規格本身的行為，不改。
-- Heimdall 的文章標題會出現在 `title` 欄位一次、正文 `# 標題` 一次；PM Expected 明列「frontmatter 以欄位形式另行顯示」為可接受，
-  欄位列是中繼資料的樣式、不是第二個標題。
 - 檔案開頭有 BOM、或結尾 `---` 後面帶空白時不當成 frontmatter（實測）。agent 產的 `article.md` 碰不到，不改。
 - `source-set-explorer/file-view.tsx`（Sindri／Mimir 的 `SourceSetFileExplorer`）有同一個 bug，未在本 task 範圍。
 
@@ -121,3 +123,5 @@ None.
 - 2026-10-05: §1 — 18 項 ✅、0 違規；§3 — R1–R4 全 Pass；邊界實測找到 1 Important（空 frontmatter 吃到正文分隔線），已修並重跑閘門與 demo；3 Minor 不改 (Status: `ready → in-progress → done`).
 - 2026-10-05: Reset — BUILD-088 re-opened for the field-table display (R1a / R1b); the review above covers the strip-only version and is re-run after the build (Status: `done → draft`).
 - 2026-10-05: Re-run on the field-table build (`af9b62cd`): §1 — 20 項 ✅、0 違規（`#111827` 後備改 `currentColor`）；§3 — R1／R1a／R1b／R2／R3／R4 全 Pass；1 Important（前一輪已修）、4 Minor 不改 (Status: `draft → in-progress → done`).
+- 2026-10-05: Reset for R1c (hide a `title` row equal to the first `# ` heading); re-run after the build (Status: `done → draft`).
+- 2026-10-05: Re-run on `28f89d49` (R1c): §1 — 20 項 ✅、0 違規；§3 — R1／R1a／R1b／R1c／R2／R3／R4 全 Pass；Important 2（皆已修）、Minor 3 不改 (Status: `draft → in-progress → done`).
