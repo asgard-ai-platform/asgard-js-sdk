@@ -90,3 +90,23 @@ describe('resolveSandboxUri — open-folder (F-034 AC1 / UC-060)', () => {
     expect(resolveSandboxUri('sandbox://sbx-1/open?absolute_path=/a')).toBeNull();
   });
 });
+
+// F-038 — the download card. Parsed by the same `absolute_path` rule as the two open-* actions; the path may be
+// anywhere in the sandbox (a SourceSet mount here), since a download never enters the File Explorer tree.
+describe('resolveSandboxUri — download-file (F-038 AC6 / UC-062)', () => {
+  it('parses download-file with a percent-encoded absolute_path', () => {
+    expect(
+      resolveSandboxUri(
+        'sandbox://sb-1/download-file?absolute_path=%2Fagent-hub-work%2F2026-Q3-%E7%87%9F%E6%94%B6%E5%A0%B1%E5%91%8A.pdf',
+      ),
+    ).toEqual({ kind: 'download-file', sandboxName: 'sb-1', absolutePath: '/agent-hub-work/2026-Q3-營收報告.pdf' });
+    expect(resolveSandboxUri('sandbox://sb-1/download-file?absolute_path=%2FMHdata%2Fa.csv')?.kind).toBe(
+      'download-file',
+    );
+  });
+
+  it('returns null for download-file without absolute_path', () => {
+    expect(resolveSandboxUri('sandbox://sb-1/download-file')).toBeNull();
+    expect(resolveSandboxUri('sandbox://sb-1/download-file?absolute_path=')).toBeNull();
+  });
+});

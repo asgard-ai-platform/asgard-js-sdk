@@ -73,3 +73,17 @@ describe('FileExplorerArrivalBridge — open-folder (F-034 AC8)', () => {
     expect(onFolderIntent).toHaveBeenNthCalledWith(2, 'sb-1', '/work/other');
   });
 });
+
+// F-038 AC7 — a download card does nothing on arrival: it acts on a click only.
+describe('FileExplorerArrivalBridge — download-file (F-038 AC7)', () => {
+  it('ignores a download card on arrival', () => {
+    const onFileIntent = vi.fn();
+    const onFolderIntent = vi.fn();
+    conversation.messages.set('m1', botCardMessage('m1', 'sandbox://sb-1/download-file?absolute_path=%2Fwork%2Fa.pdf'));
+
+    render(<FileExplorerArrivalBridge onFileIntent={onFileIntent} onFolderIntent={onFolderIntent} />);
+
+    expect(onFileIntent).not.toHaveBeenCalled();
+    expect(onFolderIntent).not.toHaveBeenCalled();
+  });
+});

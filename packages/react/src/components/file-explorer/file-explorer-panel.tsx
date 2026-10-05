@@ -1,5 +1,5 @@
 import { ReactNode, useMemo } from 'react';
-import { LaunchedSandbox } from '@asgard-js/core';
+import { LaunchedSandbox, SandboxWakePhase } from '@asgard-js/core';
 import { FileExplorerController } from '../../hooks/use-file-explorer-controller';
 import { FileExplorerProvider } from './file-explorer-context';
 import {
@@ -55,6 +55,12 @@ export interface FileExplorerPanelProps extends FileExplorerMutations {
    * screen during exactly that window — between the send and the sandbox coming up.
    */
   nudgeDisabled?: boolean;
+  /**
+   * The channel's shared sandbox-wake phase (F-038) — pass `useSandboxWake().phase` (or read
+   * `channel.sandboxWake$`) so a wake started elsewhere, e.g. from a download card, shows here at once and a
+   * failed wake shows here too. Omitted, the panel only tracks its own `onNudge` call.
+   */
+  wakePhase?: SandboxWakePhase;
   /** When provided, the header shows a close (X) button (the built-in aside passes `controller.closeExplorer`). */
   onClose?: () => void;
   /**
@@ -98,6 +104,7 @@ export function FileExplorerPanel(props: FileExplorerPanelProps): ReactNode {
     download,
     onNudge,
     nudgeDisabled,
+    wakePhase,
     onClose,
     chrome = 'card',
     maxUploadBytes,
@@ -124,6 +131,7 @@ export function FileExplorerPanel(props: FileExplorerPanelProps): ReactNode {
       basePath={basePath}
       onNudge={onNudge}
       nudgeDisabled={nudgeDisabled}
+      wakePhase={wakePhase}
       onClose={onClose}
       maxUploadBytes={maxUploadBytes}
       uploadConcurrency={uploadConcurrency}

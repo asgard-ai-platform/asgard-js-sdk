@@ -14,6 +14,8 @@ import {
   RunKind,
   RunStatus,
   SandboxPhase,
+  SandboxWakeResult,
+  SandboxWakeState,
   StopGenerationOptions,
   Subagent,
   SseResponse,
@@ -53,6 +55,11 @@ export default class Channel {
   private promptSuggestionSubject: BehaviorSubject<string | null>;
   private sandboxPhaseSubject: BehaviorSubject<SandboxPhase>;
   private launchedSandboxesSubject: BehaviorSubject<LaunchedSandbox[]>;
+  private sandboxWakeSubject: BehaviorSubject<SandboxWakeState>;
+  // The one wake in flight (F-038): set when a nudge is accepted, cleared once the metadata re-fetch after it
+  // has settled. Resolves `true` when the nudge turn ended normally (and metadata was re-fetched), `false`
+  // when it was refused or failed. Every entry point joins this instead of sending a nudge of its own.
+  private wakeInFlight?: Promise<boolean>;
   // Sandboxes hinted live by an `asgard.sandbox.launch` frame but not yet confirmed by metadata (F-019).
   // Never merged into the live list directly — cleared once metadata confirms (or held until it does).
   private pendingLaunches: string[] = [];
@@ -78,6 +85,12 @@ export default class Channel {
   public readonly launchedSandboxes$: Observable<LaunchedSandbox[]>;
   /** Reactive run identity + stop lifecycle store (F-023): who holds the connection, and is a stop pending. */
   public readonly runStatus$: Observable<RunStatus>;
+  /**
+   * Reactive sandbox-wake store (F-038): the channel's **only** record of "waking / last wake failed". The
+   * File Explorer's wake button, the download card and any later entry point all read this one, so a wake
+   * started from one of them shows on the others at once. Per-slice; replay-safe.
+   */
+  public readonly sandboxWake$: Observable<SandboxWakeState>;
   private currentUserMessageId?: string;
   // The most-recently-sent user message id. Unlike currentUserMessageId (which
   // is cleared once a traceId is attached), this is kept across the SSE
@@ -119,6 +132,7 @@ export default class Channel {
     this.launchedSandboxesSubject = new BehaviorSubject<LaunchedSandbox[]>(
       reconcileLaunched(config.launchedSandboxes ?? []),
     );
+    this.sandboxWakeSubject = new BehaviorSubject<SandboxWakeState>({ phase: 'idle' });
     this.derivedStores = createDerivedStores(this.conversation$);
     this.tasks$ = this.derivedStores.tasks$;
     this.subagents$ = this.derivedStores.subagents$;
@@ -135,6 +149,7 @@ export default class Channel {
     // Per-slice: `RunStatus` is a fresh object on every write, so compare by field — otherwise the
     // states observer would re-notify on every identical write during a run (F-023).
     this.runStatus$ = this.runStatusSubject.pipe(distinctUntilChanged(runStatusEqual));
+    this.sandboxWake$ = this.sandboxWakeSubject.pipe(distinctUntilChanged((a, b) => a.phase === b.phase));
     this.statesObserver = config.statesObserver;
   }
 
@@ -180,6 +195,11 @@ export default class Channel {
   /** Current run identity + stop lifecycle snapshot (F-023) — for framework-agnostic `getSnapshot()` bridging. */
   public getRunStatus(): RunStatus {
     return this.runStatusSubject.value;
+  }
+
+  /** Current sandbox-wake snapshot (F-038) — for framework-agnostic `getSnapshot()` bridging. */
+  public getSandboxWake(): SandboxWakeState {
+    return this.sandboxWakeSubject.value;
   }
 
   /** Names hinted by `sandbox.launch` but not yet confirmed live by metadata (F-019) — "starting" placeholders. */
@@ -772,8 +792,94 @@ export default class Channel {
    *
    * Rejects with `ChannelBusyError` when a run already holds the channel, and with
    * `ChannelAwaitingConsentError` while a consent prompt is pending — exactly like `sendMessage`.
+   *
+   * Every accepted nudge is the channel's shared sandbox wake (F-038): it drives {@link sandboxWake$}
+   * whether it came from here or from {@link wakeSandbox}, so a host that calls this directly still shows
+   * up as "waking" on every other entry point. Called while the metadata re-fetch after a nudge is still
+   * running, it joins that wake instead of sending a second nudge.
    */
   public nudge(options?: FetchSseOptions, payload?: FetchSsePayload['payload']): Promise<void> {
+    if (this.wakeInFlight && !this.runStatusSubject.value.kind) return this.wakeInFlight.then(() => undefined);
+
+    return this.sendNudge(options, payload);
+  }
+
+  /**
+   * Wake the channel's sandbox through the **one** shared wake (F-038, UC-063) and report how it ended.
+   *
+   * - **single-flight** — while a wake is in flight (started by any entry point, including a direct
+   *   {@link nudge}), this joins it and never sends a second nudge.
+   * - **no timeout** — how long a wake may take is the nudge turn's own business. It failed when the nudge
+   *   was refused / failed, or when it ended normally but `/channel/metadata` still does not list the
+   *   target. {@link sandboxWake$} stays `waking` through both the turn and that re-fetch.
+   * - **`blocked`** — while another run holds the channel (that run brings the sandbox up by itself; wait
+   *   for it) or a consent prompt is pending, nothing is sent and the store is left alone.
+   *
+   * @param sandboxName The sandbox to wait for. Omit it when any sandbox will do — the File Explorer's empty
+   * state does not know which one is coming. Each joining caller is judged by its own target; the store
+   * follows the caller that started the wake.
+   * @param payload Turn-level payload, exactly as for {@link nudge} (BUG-004).
+   */
+  public async wakeSandbox(
+    sandboxName?: string,
+    payload?: FetchSsePayload['payload'],
+    options?: FetchSseOptions,
+  ): Promise<SandboxWakeResult> {
+    if (this.wakeInFlight) return this.judgeWake(await this.wakeInFlight, sandboxName);
+
+    if (this.isSandboxLive(sandboxName)) return 'live';
+
+    if (this.runStatusSubject.value.kind || this.conversation$.value.pendingConsent) return 'blocked';
+
+    // The rejection is already recorded on the store by `trackWake`; the result below is what callers read.
+    this.sendNudge(options, payload, sandboxName).catch(() => undefined);
+
+    return this.judgeWake(await (this.wakeInFlight ?? Promise.resolve(false)), sandboxName);
+  }
+
+  private isSandboxLive(sandboxName: string | undefined): boolean {
+    const live = this.launchedSandboxesSubject.value;
+
+    return sandboxName ? live.some(sandbox => sandbox.sandboxName === sandboxName) : live.length > 0;
+  }
+
+  private judgeWake(nudgeEnded: boolean, sandboxName: string | undefined): SandboxWakeResult {
+    return nudgeEnded && this.isSandboxLive(sandboxName) ? 'live' : 'failed';
+  }
+
+  /**
+   * Record an accepted nudge as the shared wake (F-038): `waking` until the turn has ended **and** metadata
+   * has been re-fetched, then `idle` if the target is listed, else `failed`. No timer anywhere.
+   */
+  private trackWake(run: Promise<void>, sandboxName: string | undefined): void {
+    this.sandboxWakeSubject.next({ phase: 'waking' });
+
+    const wake = (async (): Promise<boolean> => {
+      try {
+        await run;
+        await this.refetchMetadata();
+
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
+    this.wakeInFlight = wake;
+
+    void wake.then(nudgeEnded => {
+      this.wakeInFlight = undefined;
+      if (this.sandboxWakeSubject.closed) return;
+
+      this.sandboxWakeSubject.next({ phase: this.judgeWake(nudgeEnded, sandboxName) === 'live' ? 'idle' : 'failed' });
+    });
+  }
+
+  private sendNudge(
+    options: FetchSseOptions | undefined,
+    payload: FetchSsePayload['payload'] | undefined,
+    sandboxName?: string,
+  ): Promise<void> {
     // F-023 AC6 / UC-045 — one run per channel. Invisible or not, a nudge is a turn, so it queues
     // behind whatever is running instead of displacing it. Without this the damage went past a
     // duplicate run: `fetchSse` replaces `currentRun` without unsubscribing the old one and stamps
@@ -792,7 +898,7 @@ export default class Channel {
     if (pendingConsent) return Promise.reject(new ChannelAwaitingConsentError(pendingConsent.processId));
 
     // `nudge` — invisible to the user, so it must never surface a stop control (F-023 AC8).
-    return this.fetchSse(
+    const run = this.fetchSse(
       'nudge',
       {
         action: FetchSseAction.NUDGE,
@@ -803,6 +909,10 @@ export default class Channel {
       },
       options,
     );
+
+    this.trackWake(run, sandboxName);
+
+    return run;
   }
 
   /**
@@ -918,6 +1028,7 @@ export default class Channel {
     this.channelTitleSubject.complete();
     this.sandboxPhaseSubject.complete();
     this.launchedSandboxesSubject.complete();
+    this.sandboxWakeSubject.complete();
     this.derivedStores.teardown();
     this.statesSubscription?.unsubscribe();
   }

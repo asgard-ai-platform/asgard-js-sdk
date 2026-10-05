@@ -42,6 +42,9 @@ describe('isDownloadAction', () => {
     expect(isDownloadAction(DOWNLOAD_URI)).toBe(true);
     expect(isDownloadAction(DOWNLOAD_EMIT)).toBe(true);
     expect(isDownloadAction({ type: 'URI', uri: 'channel-home://a.txt' })).toBe(true);
+    // F-038 — the sandbox download card counts as a download too.
+    expect(isDownloadAction({ type: 'uri', uri: 'sandbox://sb-1/download-file?absolute_path=%2Fa.pdf' })).toBe(true);
+    expect(isDownloadAction({ type: 'uri', uri: 'sandbox://sb-1/open-file?absolute_path=%2Fa.pdf' })).toBe(false);
     expect(isDownloadAction({ type: 'EMIT', eventName: 'download_file', payload: {} })).toBe(true);
 
     expect(isDownloadAction(undefined)).toBe(false);

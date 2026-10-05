@@ -36,6 +36,25 @@ export interface LaunchedSandbox {
 }
 
 /**
+ * Phase of the channel's one shared sandbox wake (F-038). `waking` covers both the nudge turn still running
+ * **and** the `/channel/metadata` re-fetch after it; `failed` means the last wake ended without bringing the
+ * target up (nudge refused / failed, or metadata still not listing it) and is cleared by the next wake.
+ */
+export type SandboxWakePhase = 'idle' | 'waking' | 'failed';
+
+/** The channel's sandbox-wake store value (F-038) — one per channel, read by every entry point. */
+export interface SandboxWakeState {
+  phase: SandboxWakePhase;
+}
+
+/**
+ * How one `wakeSandbox()` call ended (F-038): `live` — metadata now lists the target; `failed` — the shared
+ * wake did not bring it up; `blocked` — no nudge could be sent right now (a run holds the channel, or a
+ * consent prompt is pending), so nothing was attempted.
+ */
+export type SandboxWakeResult = 'live' | 'failed' | 'blocked';
+
+/**
  * Which kind of run is currently holding the connection (F-023 AC8). `isConnecting` alone conflates
  * four unrelated sources, and only the first is the user's own turn — stop-generation must never fire
  * against a welcome message, a transcript replay, or an invisible nudge.

@@ -1,7 +1,8 @@
-import { ReactNode, useEffect, useMemo, useRef } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ConversationMessage, resolveSandboxUri } from '@asgard-js/core';
 import { useAsgardContext } from '../../context/asgard-service-context';
 import { useLaunchedSandboxes } from '../../hooks/use-derived-state';
+import { useSandboxWake } from '../../hooks/use-sandbox-wake';
 import { FileExplorerController } from '../../hooks/use-file-explorer-controller';
 import { useAsgardTemplateContext } from '../../context/asgard-template-context';
 import { t } from '../../i18n';
@@ -136,8 +137,15 @@ export function ChatbotFileExplorerAside({
   basePath?: string;
   maxUploadBytes?: number;
 }): ReactNode {
-  const { client, channel, customChannelId, nudge, isRunning, pendingConsent } = useAsgardContext();
+  const { client, channel, customChannelId, isRunning, pendingConsent } = useAsgardContext();
   const sandboxes = useLaunchedSandboxes(channel);
+  // F-038 — the channel's one shared wake: a wake started from a download card shows here at once, and the
+  // button joins a wake already in flight instead of sending a second nudge. No sandbox name — this empty
+  // state does not know which one is coming, so any sandbox appearing counts.
+  const { phase: wakePhase, wake } = useSandboxWake();
+  const handleWake = useCallback(async (): Promise<void> => {
+    await wake();
+  }, [wake]);
   // A sandbox whose fs calls keep failing is dropped from the dropdown (AC5); metadata stays authoritative.
   // `customChannelId` is the sandbox relay's ownership proof (`SandboxChannelScope`): without it a relay
   // such as `asgard-freyr-api` answers `400` for every fs call, so the aside would open onto an error.
@@ -174,7 +182,8 @@ export function ChatbotFileExplorerAside({
       uploadMany={providers.uploadMany}
       maxUploadBytes={maxUploadBytes}
       download={providers.download}
-      onNudge={nudge}
+      onNudge={handleWake}
+      wakePhase={wakePhase}
       // A nudge is a turn, so the channel refuses one while a run holds it (F-023 AC6) — and this
       // empty state is on screen during exactly that window, between the send and the sandbox coming up.
       // #409 — core refuses a nudge while a consent prompt is pending (#407), and `isRunning` is false

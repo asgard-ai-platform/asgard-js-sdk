@@ -26,6 +26,7 @@ vi.mock('../../context/asgard-service-context', () => ({
 // No live sandboxes → FileExplorerPanel renders its empty state, which is where the nudge button lives.
 vi.mock('../../hooks/use-derived-state', () => ({
   useLaunchedSandboxes: (): unknown[] => [],
+  useSandboxWakeState: (): { phase: 'idle' } => ({ phase: 'idle' }),
 }));
 
 const { ChatbotFileExplorerAside } = await import('./chatbot-file-explorer');

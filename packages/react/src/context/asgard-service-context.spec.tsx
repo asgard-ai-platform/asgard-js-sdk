@@ -20,6 +20,7 @@ import type { AsgardServiceContextValue, SendMessageParams } from './asgard-serv
 
 const inner = vi.hoisted(() => ({
   nudge: vi.fn<[unknown?], Promise<void>>(() => Promise.resolve()),
+  wakeSandbox: vi.fn<[string?, unknown?], Promise<string>>(() => Promise.resolve('live')),
   replyToolCallConsents: vi.fn<[unknown, unknown?], Promise<void>>(() => Promise.resolve()),
 }));
 
@@ -35,6 +36,7 @@ vi.mock('../hooks', () => ({
     sandboxPhase: 'idle',
     runStatus: { kind: null, stopPhase: 'idle' },
     nudge: inner.nudge,
+    wakeSandbox: inner.wakeSandbox,
     replyToolCallConsents: inner.replyToolCallConsents,
   }),
 }));
@@ -106,6 +108,21 @@ describe('AsgardServiceContextProvider — nudge payload (BUG-004)', () => {
     await mount().nudge?.();
 
     expect(inner.nudge).toHaveBeenCalledWith(undefined);
+  });
+
+  // F-038 — a wake is a nudge: the File Explorer button and the download card wake through it, so it has to
+  // collect payload exactly like `nudge`, or a card-started wake would bring up an unconfigured sandbox.
+  it('runs wakeSandbox through onBeforeSendMessage and keeps the sandbox name', async () => {
+    inner.wakeSandbox.mockClear();
+    const onBeforeSendMessage = vi.fn((params: SendMessageParams) => ({
+      ...params,
+      payload: { agent_hub: { agent_names: ['writer'] } },
+    }));
+
+    await expect(mount(onBeforeSendMessage).wakeSandbox?.('sbx-1')).resolves.toBe('live');
+
+    expect(onBeforeSendMessage).toHaveBeenCalledWith({ text: '', payload: undefined });
+    expect(inner.wakeSandbox).toHaveBeenCalledWith('sbx-1', { agent_hub: { agent_names: ['writer'] } });
   });
 
   it('keeps the consent reply on the same collection path', async () => {

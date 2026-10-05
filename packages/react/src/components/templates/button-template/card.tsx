@@ -4,6 +4,7 @@ import { ButtonAction, ButtonMessageTemplate, CarouselMessageTemplate } from '@a
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import { dispatchUriAction } from '../../../utils/dispatch-uri-action';
+import { useSandboxDownload } from '../../sandbox-download/sandbox-download-context';
 import clsx from 'clsx';
 
 interface CardProps {
@@ -35,6 +36,7 @@ export function Card(props: CardProps): ReactNode {
     onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
   } = useAsgardTemplateContext();
+  const sandboxDownload = useSandboxDownload();
 
   const [imageError, setImageError] = useState(false);
 
@@ -76,6 +78,7 @@ export function Card(props: CardProps): ReactNode {
               onSandboxOpenFile,
               onSandboxOpenFolder,
               sandboxBrowserOpenTarget,
+              onSandboxDownloadFile: sandboxDownload?.download,
             });
 
             return;
@@ -100,6 +103,7 @@ export function Card(props: CardProps): ReactNode {
       onSandboxOpenFile,
       onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
+      sandboxDownload,
     ],
   );
 

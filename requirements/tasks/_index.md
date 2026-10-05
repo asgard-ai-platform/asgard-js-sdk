@@ -74,10 +74,13 @@
 - asgard-freyr-pm#901 授權卡片的允許／拒絕讓 host 接得到，並寫明 `toolCallId` 與 `toolUseId` 的對應（pm#885 的上游前置）→ BUILD-085 / REVIEW-085 (done)。Issue [`asgard-freyr-pm#901`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901)，issue body 即規格。**react + 文件，core 只補 JSDoc**：`onToolCallConsentReply(answers)` 在後端接受回覆後觸發；後端自動放行的呼叫不會出現在 consent frame，寫成限制。
 - asgard-freyr-pm#901 留言（2026-10-01）`<Chatbot>` 可不掛內建 consent modal、host 自做就地同意卡 → BUILD-086 / REVIEW-086 (done)。Issue [`asgard-freyr-pm#901` 留言](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901#issuecomment-5928013125)，留言即規格、形狀見[評估回覆](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901#issuecomment-5928886722)。**react only**：`toolCallConsent: 'builtin' | 'off'` + 公開 `useToolCallConsentQueue()`（Gate 改由它驅動）；佇列在非自己送出的回覆後清掉（改寫 #455 R5）。
 - asgard-sdk-pm#116 SourceSetFileExplorer 唯讀補兩個選項（Sindri F-052／Mimir F-010 共用）：`hideEntry` 隱藏指定項目（`.` 開頭目錄）、右鍵導覽項目（開啟／展開／收合）→ BUILD-087 / REVIEW-087 (done)。Issue [`asgard-sdk-pm#116`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/116)，仍為 `To Do`、PM 未回兩題，經使用者 2026-10-01 決定先照提案與原型開工。**react only、additive**。
+- `F-038` sandbox 下載卡（download-file）與 channel 層共用喚醒 (UC-062, UC-063, UC-064) → BUILD-088 / REVIEW-088（core 共用喚醒 store + File Explorer 改讀）+ BUILD-089 / REVIEW-089（下載卡）(done)。Issue [`asgard-sdk-pm#118`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/118)，規格為 `docs/spec/asgard-js-sdk/sandbox-download.md`（§3–§7 平台中立），原型 @ `bb14a65`。**動 core + react + demo**。計畫階段決定：任何被接受的 `nudge()` 都驅動喚醒 store、`wakeSandbox` 的 `sandboxName` 選填、未傳 `wakePhase` 的宿主保留 local 轉圈。agent-hub-web 的 `isArtifactCardMessage` 排除 download-file 不在本 repo。
 
 ## ▶ Next Task
 
 **目前無 ready 的 task — awaiting task selection。**
+
+**`BUILD-088` / `REVIEW-088` 與 `BUILD-089` / `REVIEW-089`（[`asgard-sdk-pm#118`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/118) F-038：sandbox 下載卡與 channel 層共用喚醒）皆 `done`，2026-10-05 授權完成 cycle**，分支 `feat/118-sandbox-download-card`。下游 agent-hub-web（`isArtifactCardMessage` 排除 download-file、`FileExplorerPanel` 傳 `wakePhase`）待 SDK 發版後另開 PR。
 
 **`BUILD-081` / `REVIEW-081` 與 `BUILD-082` / `REVIEW-082`（[`asgard-sdk-pm#109`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/109) F-035：sandbox 瀏覽器面板 — SDK 內渲染 WebRTC 與接管）皆 `done`，分支 `feat/109-sandbox-browser-panel`，待開 draft PR 並產驗收文件。** §1 兩輪皆 0 違規、§3 共 35 條 R# 全 Pass（其中 3 條部分依賴人工觀察）。
 
@@ -338,3 +341,7 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-086` | Review: let the host replace the consent modal              | —        | done   | [REVIEW-086-tool-call-consent-off.md](./REVIEW-086-tool-call-consent-off.md)                             |
 | `BUILD-087`  | SourceSetFileExplorer hideEntry and menu navigation         | M        | done   | [BUILD-087-source-set-readonly-options.md](./BUILD-087-source-set-readonly-options.md)                   |
 | `REVIEW-087` | Review: SourceSetFileExplorer hideEntry and menu navigation | —        | done   | [REVIEW-087-source-set-readonly-options.md](./REVIEW-087-source-set-readonly-options.md)                 |
+| `BUILD-088`  | Shared channel-level sandbox wake                           | L        | done   | [BUILD-088-shared-sandbox-wake.md](./BUILD-088-shared-sandbox-wake.md)                                   |
+| `REVIEW-088` | Review: shared channel-level sandbox wake                   | —        | done   | [REVIEW-088-shared-sandbox-wake.md](./REVIEW-088-shared-sandbox-wake.md)                                 |
+| `BUILD-089`  | Sandbox download-file card                                  | L        | done   | [BUILD-089-sandbox-download-card.md](./BUILD-089-sandbox-download-card.md)                               |
+| `REVIEW-089` | Review: sandbox download-file card                          | —        | done   | [REVIEW-089-sandbox-download-card.md](./REVIEW-089-sandbox-download-card.md)                             |

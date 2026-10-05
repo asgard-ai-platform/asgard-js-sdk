@@ -61,3 +61,30 @@ describe('dispatchUriAction — open-folder (F-034 AC2)', () => {
     expect(windowOpen).not.toHaveBeenCalled();
   });
 });
+
+// F-038 AC7 — the download card has its own branch. Without it, the sandbox branch's `else` took it for an
+// open-file card and sent it to the File Explorer.
+describe('dispatchUriAction — download-file (F-038 AC7)', () => {
+  const DOWNLOAD = 'sandbox://sb-1/download-file?absolute_path=%2FMHdata%2Fq3.pdf';
+
+  it('calls the download handler with the decoded path, and neither open handler', () => {
+    const onSandboxDownloadFile = vi.fn();
+    const onSandboxOpenFile = vi.fn();
+    const onSandboxOpenFolder = vi.fn();
+
+    dispatchUriAction(DOWNLOAD, { onSandboxDownloadFile, onSandboxOpenFile, onSandboxOpenFolder });
+
+    expect(onSandboxDownloadFile).toHaveBeenCalledWith('sb-1', '/MHdata/q3.pdf');
+    expect(onSandboxOpenFile).not.toHaveBeenCalled();
+    expect(onSandboxOpenFolder).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op — never the file handler, never window.open — without a download handler', () => {
+    const onSandboxOpenFile = vi.fn();
+
+    dispatchUriAction(DOWNLOAD, { onSandboxOpenFile });
+
+    expect(onSandboxOpenFile).not.toHaveBeenCalled();
+    expect(windowOpen).not.toHaveBeenCalled();
+  });
+});
