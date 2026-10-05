@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { EditorView } from '@uiw/react-codemirror';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { t } from '../../i18n';
 import { FileView } from './file-view';
-import { FsEntry } from './types';
+import { FsEntry, FsSaveFile } from './types';
 
 /**
  * asgard-heimdall-pm#375（BUG-032）：agent 寫的 article.md 以 YAML frontmatter 開頭。frontmatter 是檔案的中繼資料，
@@ -21,13 +22,13 @@ function file(name: string): FsEntry {
   return { name, path: `/work/${name}`, isDir: false, sizeBytes: 1, mtimeUnix: 0, mode: 420 };
 }
 
-function renderView(name: string, content: string): HTMLElement {
+function renderView(name: string, content: string, onSaveFile: FsSaveFile = vi.fn()): HTMLElement {
   const { container } = render(
     <FileView
       sandboxName="sbx"
       file={file(name)}
       readFile={async (): Promise<string> => content}
-      onSaveFile={vi.fn()}
+      onSaveFile={onSaveFile}
       onBack={vi.fn()}
     />,
   );
@@ -41,15 +42,15 @@ async function renderedMarkdown(container: HTMLElement): Promise<HTMLElement> {
   return container;
 }
 
-/** The field table's rows as `[key, value]`, or `null` when there is no table. */
+/** The field list's entries as `[key, value]`, or `null` when there is no list. */
 function fields(container: HTMLElement): [string, string][] | null {
-  const table = container.querySelector('table');
+  const list = container.querySelector('dl');
 
-  if (!table) return null;
+  if (!list) return null;
 
-  return Array.from(table.querySelectorAll('tr')).map(tr => [
-    tr.querySelector('th')?.textContent ?? '',
-    tr.querySelector('td')?.textContent ?? '',
+  return Array.from(list.querySelectorAll('dt')).map(dt => [
+    dt.textContent ?? '',
+    dt.nextElementSibling?.textContent ?? '',
   ]);
 }
 
@@ -93,6 +94,29 @@ describe('#375 — markdown preview skips a leading frontmatter block', () => {
     const source = container.querySelector('.cm-content')?.textContent ?? '';
     expect(source).toContain('---');
     expect(source).toContain('title: "Metro line opens"');
+  });
+
+  it('saves the full source, frontmatter included, after an edit', async () => {
+    const save = vi.fn();
+    const container = renderView('article.md', ARTICLE, save);
+
+    fireEvent.click(await screen.findByLabelText(t('en-US', 'fileExplorer.switchToEdit')));
+    await waitFor(() => expect(container.querySelector('.cm-editor')).toBeTruthy());
+    const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement);
+    view?.dispatch({ changes: { from: view.state.doc.length, insert: 'Edited.\n' } });
+
+    await waitFor(() => expect(save).toHaveBeenCalled(), { timeout: 2000 });
+    expect(save).toHaveBeenLastCalledWith('sbx', '/work/article.md', `${ARTICLE}Edited.\n`);
+  });
+
+  it('renders a document that opens with a thematic break and a blank line as before', async () => {
+    const deck = '---\n\n# Title\n\nText\n\n---\n\nMore.\n';
+    const container = await renderedMarkdown(renderView('deck.md', deck));
+
+    expect(container.querySelector('pre')).toBeNull();
+    expect(fields(container)).toBeNull();
+    expect(Array.from(container.querySelectorAll('h1')).map(h => h.textContent)).toEqual(['Title']);
+    expect(container.querySelectorAll('hr')).toHaveLength(2);
   });
 
   it('still renders a thematic break that is not at the very start', async () => {
@@ -156,7 +180,7 @@ describe('#375 — the frontmatter shows as fields above the body', () => {
     ]);
   });
 
-  it('shows no table for an empty block', async () => {
+  it('shows no list for an empty block', async () => {
     const container = await renderedMarkdown(renderView('notes.md', '---\n---\n\nBody.\n'));
 
     expect(fields(container)).toBeNull();
@@ -196,7 +220,7 @@ describe('#375 — the frontmatter shows as fields above the body', () => {
 });
 
 describe('#375 Expected ¶2 — the title is shown only once', () => {
-  it('leaves out a title equal to the first # heading, and the table with it when nothing else is left', async () => {
+  it('leaves out a title equal to the first # heading, and the list with it when nothing else is left', async () => {
     const container = await renderedMarkdown(renderView('article.md', ARTICLE));
 
     expect(fields(container)).toBeNull();
@@ -232,10 +256,57 @@ describe('#375 Expected ¶2 — the title is shown only once', () => {
     expect(fields(container)).toEqual([['name', 'Open PR']]);
   });
 
+  it('ignores closing #s on the heading', async () => {
+    const closed = '---\ntitle: Metro line opens\n---\n\n# Metro line opens ##\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', closed));
+
+    expect(fields(container)).toBeNull();
+  });
+
+  it('does not take a # line inside a code fence as the heading', async () => {
+    const fenced = '---\ntitle: Real\n---\n\n```sh\n# Real\n```\n\n# Other\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', fenced));
+
+    expect(fields(container)).toEqual([['title', 'Real']]);
+  });
+
+  it('does not take a # line inside an HTML comment as the heading', async () => {
+    const commented = '---\ntitle: Real\n---\n\n<!--\n# Real\n-->\n\n# Other\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', commented));
+
+    expect(fields(container)).toEqual([['title', 'Real']]);
+  });
+
+  it('finds the heading after a closed code fence', async () => {
+    const after = '---\ntitle: Real\n---\n\n```\ncode\n```\n\n# Real\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', after));
+
+    expect(fields(container)).toBeNull();
+  });
+
   it('only counts a level-1 heading', async () => {
     const subheading = '---\ntitle: Metro line opens\n---\n\n## Metro line opens\n\nBody text.\n';
     const container = await renderedMarkdown(renderView('article.md', subheading));
 
     expect(fields(container)).toEqual([['title', 'Metro line opens']]);
+  });
+});
+
+describe('#375 review — a heading padded with spaces stays cheap', () => {
+  // The old heading regex backtracked quadratically on this shape: 20k spaces took ~1.5 s.
+  const padded = `# Metro${' '.repeat(50_000)}x\n\nBody text.\n`;
+
+  it('renders such a file without frontmatter quickly', async () => {
+    const started = performance.now();
+    await renderedMarkdown(renderView('notes.md', padded));
+
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it('renders it quickly with a title to compare, too', async () => {
+    const started = performance.now();
+    await renderedMarkdown(renderView('article.md', `---\ntitle: Metro\n---\n\n${padded}`));
+
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });

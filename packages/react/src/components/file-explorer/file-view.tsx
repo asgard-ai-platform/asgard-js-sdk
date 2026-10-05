@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { dump, FAILSAFE_SCHEMA, load } from 'js-yaml';
 import { useAsgardTemplateContext } from '../../context/asgard-template-context';
 import { t } from '../../i18n';
@@ -15,7 +15,8 @@ const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 
 // A leading YAML frontmatter block: `---` on the first line, through the next line that is exactly `---`. The body is
 // optional and tried empty first (`??`), so an empty block closes on its own `---` rather than on a later thematic break.
-const FRONTMATTER = /^---\r?\n((?:[\s\S]*?\r?\n)??)---(?:\r?\n|$)/;
+// A blank line right after the opening `---` means the file opens with a thematic break, not with frontmatter.
+const FRONTMATTER = /^---\r?\n(?![ \t]*\r?\n)((?:[\s\S]*?\r?\n)??)---(?:\r?\n|$)/;
 
 export interface FileViewProps {
   sandboxName: string;
@@ -67,11 +68,63 @@ function splitFrontmatter(markdown: string): { frontmatter: string; body: string
   return { frontmatter: match[1].replace(/\r?\n$/, ''), body: markdown.slice(match[0].length) };
 }
 
-// The body's first level-1 ATX heading (`# Title`), optional closing `#`s aside.
-const FIRST_HEADING = /^ {0,3}#[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/m;
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+const ATX_H1 = /^ {0,3}#[ \t]+(.*)$/;
 
+// `# Title ##` → `Title`; the closing run only counts when it stands apart (`# C#` keeps its `#`).
+function withoutClosingHashes(text: string): string {
+  const trimmed = text.trim();
+  let end = trimmed.length;
+
+  while (end > 0 && trimmed[end - 1] === '#') end--;
+
+  if (end === 0) return '';
+
+  return end < trimmed.length && /[ \t]/.test(trimmed[end - 1]) ? trimmed.slice(0, end).trimEnd() : trimmed;
+}
+
+/**
+ * The body's first level-1 ATX heading. A line scan rather than one regex over the body, so it stays linear on a
+ * heading padded with thousands of spaces; `# ` lines inside fenced code or an HTML comment are not headings.
+ */
 function firstHeading(body: string): string | null {
-  return FIRST_HEADING.exec(body)?.[1].trim() ?? null;
+  let fence = '';
+  let inComment = false;
+
+  for (const line of body.split(/\r?\n/)) {
+    if (fence) {
+      const close = FENCE.exec(line);
+
+      if (close && close[1][0] === fence[0] && close[1].length >= fence.length && !line.slice(close[0].length).trim()) {
+        fence = '';
+      }
+
+      continue;
+    }
+
+    if (inComment) {
+      inComment = !line.includes('-->');
+      continue;
+    }
+
+    const open = FENCE.exec(line);
+
+    if (open) {
+      fence = open[1];
+      continue;
+    }
+
+    if (/^ {0,3}<!--/.test(line)) {
+      inComment = !line.includes('-->', line.indexOf('<!--') + 4);
+      continue;
+    }
+
+    const heading = ATX_H1.exec(line);
+
+    if (heading) return withoutClosingHashes(heading[1]);
+  }
+
+  return null;
 }
 
 // FAILSAFE keeps every scalar a string, so `1.0`, `2026-10-05` and `yes` read as written.
@@ -88,10 +141,10 @@ function fieldText(value: unknown): string {
 }
 
 /**
- * A table of the block's top-level keys; the raw block when it does not read as one (nothing is dropped). A `title`
+ * A key / value list of the block's top-level keys; the raw block when it does not read as one (nothing is dropped). A `title`
  * that repeats the body's first `# ` heading is left out, so the title shows once (asgard-heimdall-pm#375).
  */
-function Frontmatter({ text, heading }: { text: string; heading: string | null }): ReactNode {
+function Frontmatter({ text, body }: { text: string; body: string }): ReactNode {
   if (!text.trim()) return null;
 
   let rows: [string, string][] | null = null;
@@ -100,7 +153,12 @@ function Frontmatter({ text, heading }: { text: string; heading: string | null }
     const doc = load(text, YAML_TEXT);
 
     if (doc !== null && typeof doc === 'object' && !Array.isArray(doc)) {
-      rows = Object.entries(doc)
+      const entries = Object.entries(doc);
+      const title = entries.find(([key]) => key === 'title')?.[1];
+      // Only looked up when there is a title to compare, so a file without one never scans its body.
+      const heading = typeof title === 'string' ? firstHeading(body) : null;
+
+      rows = entries
         .filter(([key, value]) => !(key === 'title' && typeof value === 'string' && value.trim() === heading))
         .map(([key, value]) => [key, fieldText(value)]);
     }
@@ -113,16 +171,14 @@ function Frontmatter({ text, heading }: { text: string; heading: string | null }
   if (rows.length === 0) return null;
 
   return (
-    <table className={styles.frontmatter}>
-      <tbody>
-        {rows.map(([key, value]) => (
-          <tr key={key}>
-            <th scope="row">{key}</th>
-            <td>{value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <dl className={styles.frontmatter}>
+      {rows.map(([key, value]) => (
+        <Fragment key={key}>
+          <dt>{key}</dt>
+          <dd>{value}</dd>
+        </Fragment>
+      ))}
+    </dl>
   );
 }
 
@@ -246,7 +302,7 @@ export function FileView(props: FileViewProps): ReactNode {
 
       return (
         <div className={styles.markdown}>
-          <Frontmatter text={frontmatter} heading={firstHeading(body)} />
+          <Frontmatter text={frontmatter} body={body} />
           <StreamdownClient>{body}</StreamdownClient>
         </div>
       );
