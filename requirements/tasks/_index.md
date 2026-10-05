@@ -74,6 +74,7 @@
 - asgard-freyr-pm#901 授權卡片的允許／拒絕讓 host 接得到，並寫明 `toolCallId` 與 `toolUseId` 的對應（pm#885 的上游前置）→ BUILD-085 / REVIEW-085 (done)。Issue [`asgard-freyr-pm#901`](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901)，issue body 即規格。**react + 文件，core 只補 JSDoc**：`onToolCallConsentReply(answers)` 在後端接受回覆後觸發；後端自動放行的呼叫不會出現在 consent frame，寫成限制。
 - asgard-freyr-pm#901 留言（2026-10-01）`<Chatbot>` 可不掛內建 consent modal、host 自做就地同意卡 → BUILD-086 / REVIEW-086 (done)。Issue [`asgard-freyr-pm#901` 留言](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901#issuecomment-5928013125)，留言即規格、形狀見[評估回覆](https://github.com/asgard-ai-platform/asgard-freyr-pm/issues/901#issuecomment-5928886722)。**react only**：`toolCallConsent: 'builtin' | 'off'` + 公開 `useToolCallConsentQueue()`（Gate 改由它驅動）；佇列在非自己送出的回覆後清掉（改寫 #455 R5）。
 - asgard-sdk-pm#116 SourceSetFileExplorer 唯讀補兩個選項（Sindri F-052／Mimir F-010 共用）：`hideEntry` 隱藏指定項目（`.` 開頭目錄）、右鍵導覽項目（開啟／展開／收合）→ BUILD-087 / REVIEW-087 (done)。Issue [`asgard-sdk-pm#116`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/116)，仍為 `To Do`、PM 未回兩題，經使用者 2026-10-01 決定先照提案與原型開工。**react only、additive**。
+- asgard-heimdall-pm#375 Heimdall BUG-032 預覽那一半：`.md` 預覽略過開頭的 YAML frontmatter → BUILD-088 / REVIEW-088 (done)。Issue [`asgard-heimdall-pm#375`](https://github.com/asgard-ai-platform/asgard-heimdall-pm/issues/375)，issue body 即規格；列表摘要那一半由 Heimdall 自修。**react only**：只改預覽的渲染輸入，編輯／存檔維持完整原文。
 
 ## ▶ Next Task
 
@@ -338,3 +339,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-086` | Review: let the host replace the consent modal              | —        | done   | [REVIEW-086-tool-call-consent-off.md](./REVIEW-086-tool-call-consent-off.md)                             |
 | `BUILD-087`  | SourceSetFileExplorer hideEntry and menu navigation         | M        | done   | [BUILD-087-source-set-readonly-options.md](./BUILD-087-source-set-readonly-options.md)                   |
 | `REVIEW-087` | Review: SourceSetFileExplorer hideEntry and menu navigation | —        | done   | [REVIEW-087-source-set-readonly-options.md](./REVIEW-087-source-set-readonly-options.md)                 |
+| `BUILD-088`  | Skip leading YAML frontmatter in the markdown preview       | S        | done   | [BUILD-088-md-preview-skip-frontmatter.md](./BUILD-088-md-preview-skip-frontmatter.md)                   |
+| `REVIEW-088` | Review: skip leading frontmatter in the markdown preview    | —        | done   | [REVIEW-088-md-preview-skip-frontmatter.md](./REVIEW-088-md-preview-skip-frontmatter.md)                 |
