@@ -1,8 +1,8 @@
-# BUILD-088 Show leading YAML frontmatter as fields in the markdown file preview
+# BUILD-090 Show leading YAML frontmatter as fields in the markdown file preview
 
 ## Meta
 
-- Task ID: `BUILD-088`
+- Task ID: `BUILD-090`
 - Status: `done`
 - Issue: [asgard-heimdall-pm#375](https://github.com/asgard-ai-platform/asgard-heimdall-pm/issues/375)（Heimdall BUG-032 的「預覽」那一半；「文章列表卡片摘要」那一半由 Heimdall 自己修）
 - Source spec: issue body 即規格（`tracking/newsreport/bugs/BUG-032-文章預覽與列表摘要未剝除-article-md-的-yaml-frontmatter-標題重複顯示.md` in `asgard-heimdall-pm`）
@@ -30,7 +30,7 @@ PM Expected 允許「只呈現正文」或「frontmatter 以欄位另外顯示�
 
 判斷條件以 Heimdall `src/lib/parse-article-frontmatter.ts` 的 `/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/` 為底，但**不**要求內含
 `title:`——預覽不關心欄位內容；並把中間內容改成可空且先試空（`/^---\r?\n(?:[\s\S]*?\r?\n)??---(?:\r?\n|$)/`），否則空的 frontmatter
-會跳過自己的結尾 `---`、改配對到正文裡的分隔線（review 時發現，見 REVIEW-088）。這與 GitHub／Obsidian 的判讀一致：檔案第一行就是
+會跳過自己的結尾 `---`、改配對到正文裡的分隔線（review 時發現，見 REVIEW-090）。這與 GitHub／Obsidian 的判讀一致：檔案第一行就是
 `---` 且下面某行又是 `---` 時視為 frontmatter。
 
 **Already exists:** `packages/react/src/components/file-explorer/file-view.tsx`（`body` 的 `kind === 'markdown' && mode === 'preview'` 分支）；
@@ -129,3 +129,4 @@ Files:
 - 2026-10-05: Consumer check in Heimdall (`asgard-ai-auto-post-web`, on the BUG-032 list-summary branch, local dev restarted after installing `0.3.92-local` with `--no-save`): a `/chat` request produced a real agent `article.md` whose `title` equals its `# ` heading. The ed-chat 「本篇草稿」 preview (458px panel) showed one `H1`, no `<hr>`, no field table, no `title:`; source mode kept the frontmatter. Restored to 0.3.91 (git clean) and restarted the dev server. The test article (`zz-test-` prefix) is left for the owner to delete. Noted for the Heimdall half, not this task: the list card summary starts with the raw `# title` text, and the panel's SDK labels are English (Heimdall does not pass `zh-TW` to the explorer).
 - 2026-10-05: Re-opened for a sub-agent code review (verified by reproduction): the heading regex backtracks quadratically (20k spaces → 1.5 s, on every `.md` preview); a document opening with `---` + blank line was swallowed into the raw box (regression vs main); a `# ` line inside a code fence counted as the heading; long keys overflow the narrow shell; R2's save was not asserted. Added R5 / R6, tightened R1c / R3, T10–T11. Kept as known limitations: integer-like keys are listed first (`Object.entries` order), and a heading with inline markdown (`# **x**`) does not match a plain `title` (Status: `done → in-progress`).
 - 2026-10-05: Review fixes built (commit `de0055a2`). T10 specs first: 5 red (blank-line deck, fence, comment, two perf cases at ~10 s each), 3 already green and now pinned (save content, closing `#`s, heading after a fence). T11: `firstHeading()` is a line scan (each regex linear), looked up only for a string `title`; FRONTMATTER rejects `---` + blank line; the fields became a `<dl>` grid because a table cell ignores `max-width` and a wrapping key in a `width: 1%` cell collapses to one letter (both measured on a 341px repro). 182 file-explorer cases; full gate green (react 663). Demo: `SKILL.md` grid at 987px / 341px, no overflow; a 46-char key pasted in at 341px caps the key column at 127px (40%) and wraps, value column 190px, no overflow (Status: `in-progress → done`).
+- 2026-10-06: Renumbered from BUILD-088 / REVIEW-088 to BUILD-090 / REVIEW-090 when merging `main`: asgard-sdk-pm#118 had landed BUILD-088 / BUILD-089 first. Earlier log lines and commit messages still say 088.

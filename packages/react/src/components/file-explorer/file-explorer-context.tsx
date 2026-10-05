@@ -1,3 +1,4 @@
+import { SandboxWakePhase } from '@asgard-js/core';
 import {
   createContext,
   DragEvent as ReactDragEvent,
@@ -101,7 +102,10 @@ export interface FileExplorerContextValue {
   uploadMenu: OpenUploadMenu;
   /** External files are hovering the panel — highlight the tree container as one drop target. */
   dropping: boolean;
+  /** A wake is in flight — from `wakePhase` when the host passes it, else this explorer's own nudge. */
   nudging: boolean;
+  /** The channel's last wake failed (F-038). Only ever `true` when the host passes `wakePhase`. */
+  wakeFailed: boolean;
   /** The directory actions target: the selected dir, else the root. */
   targetDir: string;
   /** Shared so the paste hint reads identically in the toolbar and both context-menu variants. */
@@ -199,6 +203,13 @@ export interface FileExplorerProviderProps {
   onNudge?: () => void | Promise<void>;
   /** Greys out the Nudge button — pass the host's "a run already holds the channel" state (F-023 AC6). */
   nudgeDisabled?: boolean;
+  /**
+   * The channel's shared sandbox-wake phase (F-038) — `useSandboxWake().phase`, or `channel.sandboxWake$`.
+   * Pass it so a wake started anywhere else (a download card, another panel) shows here as waking at once,
+   * and a failed wake shows here too. Without it the explorer falls back to tracking only its own
+   * `onNudge` call, and cannot see a wake started elsewhere.
+   */
+  wakePhase?: SandboxWakePhase;
   /** When provided, the header shows a close (X) button. */
   onClose?: () => void;
   /**
@@ -226,6 +237,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     basePath,
     onNudge,
     nudgeDisabled,
+    wakePhase,
     onClose,
     maxUploadBytes,
     uploadConcurrency,
@@ -269,7 +281,10 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   const [menu, setMenu] = useState<OpenMenu>(null);
   const [uploadMenu, setUploadMenu] = useState<OpenUploadMenu>(null);
   const [dropping, setDropping] = useState(false);
-  const [nudging, setNudging] = useState(false);
+  // Only the fallback for a host that does not pass `wakePhase`: it sees this explorer's own call and nothing else.
+  const [ownNudging, setOwnNudging] = useState(false);
+  const nudging = wakePhase ? wakePhase === 'waking' : ownNudging;
+  const wakeFailed = wakePhase === 'failed';
   // Not part of a source's remembered view: it describes one request that could not be served, not "where
   // the user was". It is cleared on a source switch below, alongside the context menu.
   const [outOfRoot, setOutOfRoot] = useState<string | null>(null);
@@ -696,7 +711,11 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   const handleNudge = useCallback(async (): Promise<void> => {
     if (!onNudge || nudging || nudgeDisabled) return;
 
-    setNudging(true);
+    // With `wakePhase` the channel's store is the record; keeping a second one here is what F-038 removed.
+    const tracksOwn = !wakePhase;
+
+    if (tracksOwn) setOwnNudging(true);
+
     try {
       await onNudge();
     } catch {
@@ -704,9 +723,9 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       // for its own reasons. Nothing here can act on that, and this runs from a click handler — an
       // uncaught rejection would surface as an unhandled promise rejection rather than anything useful.
     } finally {
-      setNudging(false);
+      if (tracksOwn) setOwnNudging(false);
     }
-  }, [onNudge, nudging, nudgeDisabled]);
+  }, [onNudge, nudging, nudgeDisabled, wakePhase]);
 
   const openContext = useCallback(
     (e: ReactMouseEvent, target: MenuTarget): void => {
@@ -832,6 +851,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       uploadMenu,
       dropping,
       nudging,
+      wakeFailed,
       targetDir,
       pasteLabel,
       outOfRoot,
@@ -890,6 +910,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       uploadMenu,
       dropping,
       nudging,
+      wakeFailed,
       targetDir,
       pasteLabel,
       outOfRoot,

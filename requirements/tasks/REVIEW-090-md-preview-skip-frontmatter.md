@@ -1,10 +1,10 @@
-# REVIEW-088 Review: show leading YAML frontmatter as fields in the markdown file preview
+# REVIEW-090 Review: show leading YAML frontmatter as fields in the markdown file preview
 
 ## Meta
 
-- Task ID: `REVIEW-088`
+- Task ID: `REVIEW-090`
 - Status: `done`
-- BUILD Task: `BUILD-088`
+- BUILD Task: `BUILD-090`
 - Reviewed commit: `de0055a2`
 - Reviewed branch: `fix/heimdall-375-md-preview-frontmatter`
 
@@ -12,7 +12,7 @@
 
 ## §1 Static Code Review
 
-Scope is `BUILD-088 ## Coverage`（`file-view.tsx`、`file-view.module.scss`、`file-view-frontmatter.spec.tsx`、react `package.json`／lock、demo
+Scope is `BUILD-090 ## Coverage`（`file-view.tsx`、`file-view.module.scss`、`file-view-frontmatter.spec.tsx`、react `package.json`／lock、demo
 `file-explorer.tsx`）。Grep 範圍是整條分支相對 `main`（`35e32adf..28f89d49`）的新增行。`lint` / `format` / `typecheck` / `build` / `test`
 run project-wide.
 
@@ -130,14 +130,14 @@ None.
 
 ## Execution Log
 
-- 2026-10-05: REVIEW task created, paired with BUILD-088 (Status: `draft`).
-- 2026-10-05: BUILD-088 done (Status: `draft → ready`).
+- 2026-10-05: REVIEW task created, paired with BUILD-090 (Status: `draft`).
+- 2026-10-05: BUILD-090 done (Status: `draft → ready`).
 - 2026-10-05: §1 — 18 項 ✅、0 違規；§3 — R1–R4 全 Pass；邊界實測找到 1 Important（空 frontmatter 吃到正文分隔線），已修並重跑閘門與 demo；3 Minor 不改 (Status: `ready → in-progress → done`).
-- 2026-10-05: Reset — BUILD-088 re-opened for the field-table display (R1a / R1b); the review above covers the strip-only version and is re-run after the build (Status: `done → draft`).
+- 2026-10-05: Reset — BUILD-090 re-opened for the field-table display (R1a / R1b); the review above covers the strip-only version and is re-run after the build (Status: `done → draft`).
 - 2026-10-05: Re-run on the field-table build (`af9b62cd`): §1 — 20 項 ✅、0 違規（`#111827` 後備改 `currentColor`）；§3 — R1／R1a／R1b／R2／R3／R4 全 Pass；1 Important（前一輪已修）、4 Minor 不改 (Status: `draft → in-progress → done`).
 - 2026-10-05: Reset for R1c (hide a `title` row equal to the first `# ` heading); re-run after the build (Status: `done → draft`).
 - 2026-10-05: Re-run on `28f89d49` (R1c): §1 — 20 項 ✅、0 違規；§3 — R1／R1a／R1b／R1c／R2／R3／R4 全 Pass；Important 2（皆已修）、Minor 3 不改 (Status: `draft → in-progress → done`).
-- 2026-10-05: Consumer check in Sindri via `npm pack`（directory Files tab, `SKILL.md`）: R1a passes under Sindri's own theme; see BUILD-088 log.
-- 2026-10-05: Consumer check in Heimdall via `npm pack`（real agent `article.md` in 「本篇草稿」）: R1 / R1c pass; see BUILD-088 log.
-- 2026-10-05: Reset — sub-agent code review findings #1/#2/#3/#6 and the R2 save assertion go back to BUILD-088 (Status: `done → draft`).
+- 2026-10-05: Consumer check in Sindri via `npm pack`（directory Files tab, `SKILL.md`）: R1a passes under Sindri's own theme; see BUILD-090 log.
+- 2026-10-05: Consumer check in Heimdall via `npm pack`（real agent `article.md` in 「本篇草稿」）: R1 / R1c pass; see BUILD-090 log.
+- 2026-10-05: Reset — sub-agent code review findings #1/#2/#3/#6 and the R2 save assertion go back to BUILD-090 (Status: `done → draft`).
 - 2026-10-05: Sub-agent code review (read-only, probes under the scratchpad): 0 critical, 1 important, 6 minor, 5 nit, test gaps. #1/#2/#3/#4 and the js-yaml-in-main-chunk point reproduced here before acting. Fixed #1/#2/#3/#6 + the R2 save assertion (`de0055a2`); #4/#5 kept as known limitations; #7 (lazy-load js-yaml) not done; the nits left as is. Gate green (react 663), demo walked at both widths (Status: `draft → in-progress → done`).

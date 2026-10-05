@@ -376,6 +376,38 @@ describe('AsgardServiceClient sandbox fs (F-021)', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('limit_bytes=3');
   });
 
+  // F-038 — the download card shows "X / Y" while a chunked body streams in (no Content-Length; `X-Total-Bytes`
+  // arrives ahead of the body). Without `limit_bytes` the read goes to EOF.
+  it('sandboxFsRead: reports progress chunk by chunk and sends no limit when onProgress is given', async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller): void {
+        ['ab', 'cde', 'f'].forEach(part => controller.enqueue(encoder.encode(part)));
+        controller.close();
+      },
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(stream, { status: 200, headers: { 'X-Total-Bytes': '8' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const progress: [number, number | null][] = [];
+
+    const result = await makeClient().sandboxFsRead('sbx-1', '/w/a.pdf', {
+      onProgress: (received, total) => progress.push([received, total]),
+    });
+
+    expect(progress).toEqual([
+      [0, 8],
+      [2, 8],
+      [5, 8],
+      [6, 8],
+    ]);
+    // A short body is the caller's to judge (incomplete download) — the read itself does not throw.
+    expect(result.content.size).toBe(6);
+    expect(result.totalBytes).toBe(8);
+    expect(fetchMock.mock.calls[0][0]).not.toContain('limit_bytes');
+  });
+
   it('sandboxFsWrite: PUT fs/file multipart → bytesWritten', async () => {
     const fetchMock = vi.fn().mockResolvedValue(fakeResponse(200, { data: { bytesWritten: 5 } }));
     vi.stubGlobal('fetch', fetchMock);

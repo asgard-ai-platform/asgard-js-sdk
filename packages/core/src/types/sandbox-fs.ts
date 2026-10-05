@@ -35,6 +35,12 @@ export interface SandboxChannelScope {
 export interface SandboxFsReadOptions extends SandboxChannelScope {
   offsetBytes?: number;
   limitBytes?: number;
+  /**
+   * F-038 — report progress while the body streams in: bytes received so far, and `X-Total-Bytes` (sent ahead
+   * of the body; `null` if absent). The body is chunked with no `Content-Length`, so this is the only progress
+   * there is. Omitted, the body is read in one go as before.
+   */
+  onProgress?: (receivedBytes: number, totalBytes: number | null) => void;
 }
 
 /** `GET fs/file` result: the raw bytes plus the `X-Total-Bytes` / `X-Truncated` headers. */

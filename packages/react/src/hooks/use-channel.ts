@@ -8,12 +8,14 @@ import {
   ChannelRunState,
   ConversationMessage,
   EventType,
+  FetchSseOptions,
   FetchSsePayload,
   LaunchedSandbox,
   MessageFeedbackReply,
   MessageFeedbackState,
   RunStatus,
   SandboxPhase,
+  SandboxWakeResult,
   SseResponse,
   StopGenerationOptions,
   ToolCallConsentAnswer,
@@ -182,6 +184,12 @@ export interface UseChannelReturn {
    * `onClick={() => nudge()}`, not `onClick={nudge}` (which would send the event as payload).
    */
   nudge?: (payload?: FetchSsePayload['payload']) => Promise<void>;
+  /**
+   * Wake the sandbox through the channel's one shared wake (F-038) — `channel.wakeSandbox`: joins a wake
+   * already in flight instead of sending a second nudge, and resolves `live` / `failed` / `blocked`. Same
+   * payload rule as `nudge`: this hook sends the argument straight through.
+   */
+  wakeSandbox?: (sandboxName?: string, payload?: FetchSsePayload['payload']) => Promise<SandboxWakeResult>;
 }
 
 export function useChannel(props: UseChannelProps): UseChannelReturn {
@@ -727,29 +735,38 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     [channel, refuseWhileResetting],
   );
 
+  // Shared by `nudge` and `wakeSandbox` — a wake *is* a nudge, so it reports the same way.
+  const nudgeSseOptions = useMemo(
+    (): FetchSseOptions => ({
+      delayTime,
+      onSseMessage(response: SseResponse<EventType>): void {
+        onSseMessage?.(response, { conversation });
+      },
+      // #459 §1 — a nudge leaves nothing on screen, failed or not, and that part is the design. What
+      // was missing is any way for the consumer to learn it failed: this handlers object held only
+      // `onSseMessage`, so core's `options?.onSseError?.(err)` was a call on a missing key.
+      onSseError(error): void {
+        const authError = asAuthShapedError(error);
+
+        if (authError) notify(() => onAuthError?.(authError));
+
+        notify(() => onSseError?.(error));
+      },
+    }),
+    [delayTime, onSseMessage, onAuthError, onSseError, conversation, notify],
+  );
+
   const nudge = useCallback(
     async (payload?: FetchSsePayload['payload']): Promise<void> => {
-      await channel?.nudge(
-        {
-          delayTime,
-          onSseMessage(response: SseResponse<EventType>) {
-            onSseMessage?.(response, { conversation });
-          },
-          // #459 §1 — a nudge leaves nothing on screen, failed or not, and that part is the design. What
-          // was missing is any way for the consumer to learn it failed: this handlers object held only
-          // `onSseMessage`, so core's `options?.onSseError?.(err)` was a call on a missing key.
-          onSseError(error) {
-            const authError = asAuthShapedError(error);
-
-            if (authError) notify(() => onAuthError?.(authError));
-
-            notify(() => onSseError?.(error));
-          },
-        },
-        payload,
-      );
+      await channel?.nudge(nudgeSseOptions, payload);
     },
-    [channel, delayTime, onSseMessage, onAuthError, onSseError, conversation, notify],
+    [channel, nudgeSseOptions],
+  );
+
+  const wakeSandbox = useCallback(
+    async (sandboxName?: string, payload?: FetchSsePayload['payload']): Promise<SandboxWakeResult> =>
+      channel ? channel.wakeSandbox(sandboxName, payload, nudgeSseOptions) : 'blocked',
+    [channel, nudgeSseOptions],
   );
 
   // F-015 — metadata-gated join-init. On mount, gate on `GET /channel/metadata` instead of unconditionally
@@ -888,6 +905,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             replyToolCallConsents,
             sendMessageFeedback,
             nudge,
+            wakeSandbox,
           },
     [
       isPreviewMode,
@@ -911,6 +929,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       replyToolCallConsents,
       sendMessageFeedback,
       nudge,
+      wakeSandbox,
     ],
   );
 }

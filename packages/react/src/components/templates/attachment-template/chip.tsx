@@ -9,15 +9,21 @@ import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import { isChannelHomeUri } from '../../../utils/channel-home-download';
 import { dispatchUriAction } from '../../../utils/dispatch-uri-action';
+import { useSandboxDownload } from '../../sandbox-download/sandbox-download-context';
 import styles from './attachment-template.module.scss';
 
-/** Whether an action's effect is "download this file" — an EMIT `download_file` or a `channel-home://` uri. */
+/**
+ * Whether an action's effect is "download this file" — an EMIT `download_file`, a `channel-home://` uri, or a
+ * `sandbox://<name>/download-file` uri (F-038).
+ */
 export function isDownloadAction(action: ButtonAction | undefined): boolean {
   if (!action) return false;
 
   if (action.type === 'emit' || action.type === 'EMIT') return action.eventName === 'download_file';
 
-  if (action.type === 'uri' || action.type === 'URI') return isChannelHomeUri(action.uri);
+  if (action.type === 'uri' || action.type === 'URI') {
+    return isChannelHomeUri(action.uri) || resolveSandboxUri(action.uri)?.kind === 'download-file';
+  }
 
   return false;
 }
@@ -41,6 +47,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
   const { title, text, defaultAction, downloadAction, raw, customStyle } = props;
 
   const { sendMessage, client, customChannelId } = useAsgardContext();
+  const sandboxDownload = useSandboxDownload();
   const {
     onTemplateBtnClick,
     defaultLinkTarget,
@@ -69,6 +76,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
             onSandboxOpenFile,
             onSandboxOpenFolder,
             sandboxBrowserOpenTarget,
+            onSandboxDownloadFile: sandboxDownload?.download,
           });
 
           return;
@@ -92,6 +100,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
       onSandboxOpenFile,
       onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
+      sandboxDownload,
     ],
   );
 

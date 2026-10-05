@@ -234,6 +234,15 @@
   color: var(--asg-color-text-secondary, #6b7280);
 }
 
+// F-038 / UC-064 — the channel's shared wake failed (started here or from a download card).
+.wakeFailed {
+  max-width: 18rem;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--asg-color-error, #ef4444);
+}
+
 .nudgeBtn {
   display: inline-flex;
   align-items: center;

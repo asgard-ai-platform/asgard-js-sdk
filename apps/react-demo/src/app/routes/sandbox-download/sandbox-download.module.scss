@@ -1,0 +1,118 @@
+// DemoWrapper's content area is a ROW flex, so the route needs one column child — otherwise the panels
+// and the chatbots sit side by side and the chatbots get squeezed to zero width.
+.stack {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  font-size: 12px;
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  select,
+  button {
+    padding: 4px 10px;
+    border: 1px solid #888;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+.panels {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.panel {
+  min-width: 240px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.panel__head {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.75;
+}
+
+// Both shells keep their honest height (the narrow one is a hard 375×640); the demo shell's own `main`
+// scrolls on a short window, so no scroller here.
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  padding-bottom: 24px;
+}
+
+.sizeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.chatbotWide {
+  flex: 1;
+  min-width: 0;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+// `min-height: 0`: without it the shell refuses to shrink and pushes the composer below the fold.
+.wideBox {
+  flex: 1;
+  min-height: 0;
+}
+
+.chatbotNarrow {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// The SDK default is a fixed 375×640 shell; a shorter wrapper would not clip it, only get painted over.
+.narrowBox {
+  width: 375px;
+  height: 640px;
+  flex-shrink: 0;
+}

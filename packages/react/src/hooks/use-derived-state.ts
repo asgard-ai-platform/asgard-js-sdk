@@ -1,4 +1,4 @@
-import { Channel, LaunchedSandbox, Subagent, Task } from '@asgard-js/core';
+import { Channel, LaunchedSandbox, SandboxWakeState, Subagent, Task } from '@asgard-js/core';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
 // F-016 — the channel title store is not a list, so a null channel yields a stable `null` snapshot.
@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_SUBAGENTS: Subagent[] = [];
 const EMPTY_LAUNCHED: LaunchedSandbox[] = [];
+const IDLE_WAKE: SandboxWakeState = { phase: 'idle' };
 
 /** Subscribe to a `Channel`'s current Task Check List (F-010 / F-013). Re-renders only on list change. */
 export function useTaskList(channel: Channel | null): Task[] {
@@ -62,6 +63,27 @@ export function useChannelTitle(channel: Channel | null): string | null {
   );
 
   const getSnapshot = useCallback((): string | null => channel?.getChannelTitle() ?? null, [channel]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/**
+ * Subscribe to a `Channel`'s shared sandbox-wake store (F-038). Re-renders only when the phase changes.
+ * Inside the Asgard provider, prefer `useSandboxWake()`, which also hands back the `wake` action.
+ */
+export function useSandboxWakeState(channel: Channel | null): SandboxWakeState {
+  const subscribe = useCallback(
+    (onStoreChange: () => void): (() => void) => {
+      if (!channel) return () => undefined;
+
+      const subscription = channel.sandboxWake$.subscribe(() => onStoreChange());
+
+      return () => subscription.unsubscribe();
+    },
+    [channel],
+  );
+
+  const getSnapshot = useCallback((): SandboxWakeState => channel?.getSandboxWake() ?? IDLE_WAKE, [channel]);
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

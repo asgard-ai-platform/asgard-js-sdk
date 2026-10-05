@@ -1,6 +1,6 @@
-// F-020 / F-034 — the typed intent a `sandbox://` custom URI resolves to. The host runs the side effect from this
-// (open-browser → one-time browser URL; open-file → File Explorer preview; open-folder → expand that directory on
-// the tree); it is never a browsable URL.
+// F-020 / F-034 / F-038 — the typed intent a `sandbox://` custom URI resolves to. The host runs the side effect
+// from this (open-browser → one-time browser URL; open-file → File Explorer preview; open-folder → expand that
+// directory on the tree; download-file → save the file to the user's machine); it is never a browsable URL.
 //
 // `open-file` and `open-folder` are two separate actions rather than one action with a flag, because their
 // destinations are not interchangeable: a file goes into the viewer (read + watch), a folder only unfolds the tree.
@@ -10,10 +10,13 @@
 export type SandboxUriIntent =
   | { kind: 'open-browser'; sandboxName: string }
   | { kind: 'open-file'; sandboxName: string; absolutePath: string }
-  | { kind: 'open-folder'; sandboxName: string; absolutePath: string };
+  | { kind: 'open-folder'; sandboxName: string; absolutePath: string }
+  // F-038 — `absolutePath` may be any readable file in the sandbox (working directory, Channel Home, a SourceSet
+  // mount): a download never enters the File Explorer tree, so it is not limited to its root.
+  | { kind: 'download-file'; sandboxName: string; absolutePath: string };
 
-/** The actions that carry an `absolute_path` — parsed by one shared rule so the two can never drift apart. */
-const PATH_ACTIONS = ['open-file', 'open-folder'] as const;
+/** The actions that carry an `absolute_path` — parsed by one shared rule so they can never drift apart. */
+const PATH_ACTIONS = ['open-file', 'open-folder', 'download-file'] as const;
 
 type PathAction = (typeof PATH_ACTIONS)[number];
 
@@ -22,7 +25,7 @@ function isPathAction(action: string): action is PathAction {
 }
 
 /**
- * Parse `sandbox://<name>/<action>?<query>` into a typed {@link SandboxUriIntent} (F-020 / F-034, UC-036).
+ * Parse `sandbox://<name>/<action>?<query>` into a typed {@link SandboxUriIntent} (F-020 / F-034 / F-038, UC-036).
  * Returns `null` for an unknown action, a missing `absolute_path`, or a non-`sandbox://` / malformed URI —
  * the host must then treat it as a plain card and never `window.open()` the raw scheme.
  *

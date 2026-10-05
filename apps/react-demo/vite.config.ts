@@ -81,6 +81,16 @@ function asgardSseMockPlugin(): Plugin {
         }
       });
 
+      // F-038 — control panel of the /sandbox-download demo: GET reads, POST merges the mock's wake / fault state.
+      server.middlewares.use('/mock-asgard/__sandbox-download', async (req, res, next) => {
+        try {
+          const { handleSandboxDownloadControl } = await import('./src/mock-server/sse-mock');
+
+          await handleSandboxDownloadControl(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
       // F-021 — sandbox fs mock for the /file-explorer demo: list/file/stat + mutations
       // (mkdir/item/all/copy/move) + the `watch` SSE that drives the FileView's watch-and-reload.
       server.middlewares.use('/mock-asgard/sandbox', async (req, res, next) => {

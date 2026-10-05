@@ -27,6 +27,13 @@ export interface DispatchUriActionOptions {
    * `fs/watch` for a directory, so routing a folder into the viewer cannot succeed.
    */
   onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
+  /**
+   * SDK-internal handler for `sandbox://<name>/download-file` (F-038) — the `<Chatbot>`'s download controller,
+   * which owns waking the sandbox through the channel's one shared wake. Deliberately not a host prop: a host
+   * that took over the whole card would have to run the wake itself, and the wake must stay one per channel.
+   * No-op when absent — never routed to the open-file handler and never `window.open`ed.
+   */
+  onSandboxDownloadFile?: (sandboxName: string, absolutePath: string) => void;
   /** Where the default open-browser handler opens the one-time URL. Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: LinkTarget;
 }
@@ -74,6 +81,14 @@ export function dispatchUriAction(uri: string, options: DispatchUriActionOptions
           options.customChannelId,
         );
       }
+
+      return;
+    }
+
+    // download-file → save it to the user's machine (F-038). Its own branch, ahead of the open-* pair: the
+    // `else` below would otherwise take it for an open-file card and send it to the File Explorer.
+    if (intent.kind === 'download-file') {
+      options.onSandboxDownloadFile?.(intent.sandboxName, intent.absolutePath);
 
       return;
     }
