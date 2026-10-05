@@ -1,4 +1,5 @@
 import { AsgardServiceClient } from '@asgard-js/core';
+import { triggerBlobDownload } from './trigger-blob-download';
 
 const CHANNEL_HOME_SCHEME = 'channel-home://';
 
@@ -7,23 +8,6 @@ const CHANNEL_HOME_SCHEME = 'channel-home://';
  */
 export function isChannelHomeUri(uri: string | null | undefined): boolean {
   return typeof uri === 'string' && uri.startsWith(CHANNEL_HOME_SCHEME);
-}
-
-/**
- * 把取回的 blob 透過 <a download> 觸發瀏覽器下載。
- */
-function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = filename;
-
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  URL.revokeObjectURL(url);
 }
 
 /**

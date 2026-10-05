@@ -34,6 +34,7 @@ import { ServiceErrorState } from './service-error-state';
 import { DropZoneOverlay } from './drop-zone-overlay/drop-zone-overlay';
 import { SandboxLaunchHud } from './sandbox-launch-hud';
 import { ChatbotFileExplorerAside, FileExplorerArrivalBridge } from './chatbot-file-explorer';
+import { SandboxDownloadProvider } from '../sandbox-download/sandbox-download-context';
 import { ChatbotSandboxBrowserAside, SandboxBrowserArrivalBridge } from './chatbot-sandbox-browser';
 import { useSandboxBrowserController } from '../../hooks/use-sandbox-browser-controller';
 import { useFileExplorerController } from '../../hooks/use-file-explorer-controller';
@@ -109,6 +110,13 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   /** Where the default open-browser handler opens the one-time URL (F-020). Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
+  /**
+   * Replace the "save" step of a `sandbox://<name>/download-file` card (F-038) — by default the blob is handed
+   * to the browser through `<a download>`, named after the path's basename. Pass this where that does nothing
+   * (e.g. some WebViews). Only the save step: waking the sandbox, waiting for it and reading the file stay with
+   * the SDK, because the wake must remain the channel's one shared wake.
+   */
+  saveDownloadedFile?: (blob: Blob, fileName: string) => void;
 
   /**
    * Built-in File Explorer side panel (F-021). `'builtin'` (default) is the stock layout of AC6 — a folder
@@ -375,6 +383,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onSandboxOpenFile,
     onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
+    saveDownloadedFile,
     fileExplorer = 'builtin',
     toolCallConsent = 'builtin',
     autoRevealOnOpenFileCard = true,
@@ -686,63 +695,65 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               onSandboxOpenFolder={handleSandboxOpenFolder}
               sandboxBrowserOpenTarget={sandboxBrowserOpenTarget}
             >
-              <FileDropContextProvider>
-                <FileDropRefConnector fileDropRef={fileDropRef} />
-                <ChatbotContainer
-                  fullScreen={fullScreen}
-                  className={className}
-                  style={style}
-                  onDragEnter={handleDragEnter}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  {/* The chat column owns the whole vertical stack; the File Explorer aside is its sibling,
+              <SandboxDownloadProvider saveDownloadedFile={saveDownloadedFile}>
+                <FileDropContextProvider>
+                  <FileDropRefConnector fileDropRef={fileDropRef} />
+                  <ChatbotContainer
+                    fullScreen={fullScreen}
+                    className={className}
+                    style={style}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {/* The chat column owns the whole vertical stack; the File Explorer aside is its sibling,
                     so opening the aside narrows header and composer along with the thread (F-021 AC6). */}
-                  <div className={styles.chatbot__chat_column}>
-                    {/* The host mounts unconditionally: it is what assembles `actions`, and a custom
+                    <div className={styles.chatbot__chat_column}>
+                      {/* The host mounts unconditionally: it is what assembles `actions`, and a custom
                       renderer needs those as much as the stock bar does (UC-043 L3 hands the bar over
                       *with* its actions). Branching around the host is what made the built-in File
                       Explorer toggle unreachable for `renderHeader` consumers — issue #432. */}
-                    <ChatHeaderHost
-                      title={title}
-                      onReset={onReset}
-                      onClose={onClose}
-                      customActions={customActions}
-                      headerActions={headerActions}
-                      maintainConnectionWhenClosed={maintainConnectionWhenClosed}
-                      locale={locale}
-                      untitledLabel={untitledLabel}
-                      channelTitleHidden={channelTitleHidden}
-                      renderTitle={renderTitle}
-                      renderHeader={renderHeader}
-                      fileExplorerController={fileExplorerController}
-                      builtinFileExplorer={builtinFileExplorer}
-                      sandboxBrowserController={sandboxBrowserController}
-                      builtinSandboxBrowser={builtinSandboxBrowser}
-                    />
-                    {renderContent()}
-                  </div>
-                  {builtinFileExplorer && fileExplorerController.open && (
-                    <aside className={styles.chatbot__file_explorer_aside}>
-                      <ChatbotFileExplorerAside
-                        controller={fileExplorerController}
-                        basePath={fileExplorerBasePath}
-                        maxUploadBytes={fileExplorerMaxUploadBytes}
+                      <ChatHeaderHost
+                        title={title}
+                        onReset={onReset}
+                        onClose={onClose}
+                        customActions={customActions}
+                        headerActions={headerActions}
+                        maintainConnectionWhenClosed={maintainConnectionWhenClosed}
+                        locale={locale}
+                        untitledLabel={untitledLabel}
+                        channelTitleHidden={channelTitleHidden}
+                        renderTitle={renderTitle}
+                        renderHeader={renderHeader}
+                        fileExplorerController={fileExplorerController}
+                        builtinFileExplorer={builtinFileExplorer}
+                        sandboxBrowserController={sandboxBrowserController}
+                        builtinSandboxBrowser={builtinSandboxBrowser}
                       />
-                    </aside>
-                  )}
-                  {/* F-035 — a sibling of the chat column, like the File Explorer aside, so opening it
+                      {renderContent()}
+                    </div>
+                    {builtinFileExplorer && fileExplorerController.open && (
+                      <aside className={styles.chatbot__file_explorer_aside}>
+                        <ChatbotFileExplorerAside
+                          controller={fileExplorerController}
+                          basePath={fileExplorerBasePath}
+                          maxUploadBytes={fileExplorerMaxUploadBytes}
+                        />
+                      </aside>
+                    )}
+                    {/* F-035 — a sibling of the chat column, like the File Explorer aside, so opening it
                       narrows the header and composer too rather than overlaying them. Wider than that
                       aside because the picture is 16:9 and a narrow one is mostly letterbox. */}
-                  {builtinSandboxBrowser && sandboxBrowserController.open && (
-                    <aside className={styles.chatbot__sandbox_browser_aside}>
-                      <ChatbotSandboxBrowserAside controller={sandboxBrowserController} />
-                    </aside>
-                  )}
-                  <DropZoneOverlay />
-                </ChatbotContainer>
-              </FileDropContextProvider>
+                    {builtinSandboxBrowser && sandboxBrowserController.open && (
+                      <aside className={styles.chatbot__sandbox_browser_aside}>
+                        <ChatbotSandboxBrowserAside controller={sandboxBrowserController} />
+                      </aside>
+                    )}
+                    <DropZoneOverlay />
+                  </ChatbotContainer>
+                </FileDropContextProvider>
+              </SandboxDownloadProvider>
             </AsgardTemplateContextProvider>
           </AsgardServiceContextProvider>
         </AsgardThemeContextProvider>

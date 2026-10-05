@@ -1,0 +1,138 @@
+// F-038 — the download card. It wears the attachment chip's own classes (`attachment-template.module.scss`) so it
+// stays in the same family as the open-file / open-folder cards; this file only adds what a stateful card needs.
+// Colors come from tokens only.
+
+.card {
+  position: relative;
+  overflow: hidden;
+}
+
+// The chip is a `div`, the clickable part a `button` inside it: waiting / error put a second button (Cancel /
+// Retry) next to it, and buttons cannot nest.
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--asg-color-primary, #4767eb);
+    outline-offset: 4px;
+    border-radius: 8px;
+  }
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+
+  > svg {
+    flex: none;
+  }
+}
+
+.side {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.sideIcon {
+  width: 18px;
+  height: 18px;
+  margin: 0 7px;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+}
+
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--asg-color-primary, #4767eb);
+    outline-offset: 2px;
+  }
+}
+
+// The chip family keeps its description on one line, which is right for the agent's text but cuts a state
+// message mid-sentence ("Waking the sandbox, the dow…"). Once the card is not idle the line is the SDK's own,
+// so let it wrap.
+.card:not([data-phase='idle']) .tone {
+  white-space: normal;
+}
+
+// States tint the description, never the card: the card keeps its family look in every phase.
+.card[data-tone='ok'] .tone {
+  color: var(--asg-color-success, #16a34a);
+}
+
+.card[data-tone='error'] .tone {
+  color: var(--asg-color-error, #ef4444);
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: color-mix(in srgb, var(--asg-color-primary, #4767eb) 18%, transparent);
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--asg-color-primary, #4767eb);
+  transition: width 160ms ease;
+}
+
+.indeterminate {
+  width: 35%;
+  animation: asg-download-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes asg-download-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(290%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate {
+    width: 100%;
+    animation: none;
+    opacity: 0.5;
+  }
+}

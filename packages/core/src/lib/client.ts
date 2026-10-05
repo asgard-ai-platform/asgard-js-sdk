@@ -46,6 +46,38 @@ function withChannelScope(url: URL, scope: SandboxChannelScope | undefined): URL
   return url;
 }
 
+/**
+ * F-038 — read a chunked body while reporting how much has arrived. Falls back to `blob()` when the runtime
+ * gives no readable stream. The resulting Blob keeps the response's content type.
+ */
+async function readBodyWithProgress(
+  response: Response,
+  totalBytes: number | null,
+  onProgress: (receivedBytes: number, totalBytes: number | null) => void,
+): Promise<Blob> {
+  if (!response.body) return response.blob();
+
+  const reader = response.body.getReader();
+  const chunks: BlobPart[] = [];
+  let received = 0;
+
+  onProgress(0, totalBytes);
+
+  for (;;) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    // `slice()` hands Blob an ArrayBuffer-backed view: the stream's chunks are typed over `ArrayBufferLike`,
+    // which `BlobPart` does not accept.
+    chunks.push(value.slice());
+    received += value.byteLength;
+    onProgress(received, totalBytes);
+  }
+
+  return new Blob(chunks, { type: response.headers.get('Content-Type') ?? '' });
+}
+
 export default class AsgardServiceClient implements IAsgardServiceClient {
   private apiKey?: string;
   private endpoint!: string;
@@ -736,8 +768,14 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
       throw new HttpError(response.status, response.statusText, await response.text().catch(() => undefined));
     }
 
-    const content = await response.blob();
     const totalBytesHeader = response.headers.get('X-Total-Bytes');
+    const content = options?.onProgress
+      ? await readBodyWithProgress(
+          response,
+          totalBytesHeader != null ? Number(totalBytesHeader) : null,
+          options.onProgress,
+        )
+      : await response.blob();
 
     return {
       content,

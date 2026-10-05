@@ -1,4 +1,5 @@
 import { AsgardServiceClient, isHttpError, SandboxChannelScope, SandboxFsListResult } from '@asgard-js/core';
+import { triggerBlobDownload } from '../../utils/trigger-blob-download';
 import { FsListDir } from './file-explorer-panel';
 import { FsReadFile, FsSaveFile, FsUploadMany, FsWatchFile } from './types';
 
@@ -43,17 +44,6 @@ export interface SandboxFsProviders {
   uploadMany: FsUploadMany;
   /** Download a file to the browser (`GET fs/file` → `<a download>`). */
   download: (sandboxName: string, path: string, name: string) => Promise<void>;
-}
-
-function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
 export interface SandboxFsProvidersOptions {
