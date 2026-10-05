@@ -102,6 +102,7 @@ const DIRS: Record<string, MemEntry[]> = {
     { name: 'out', isDir: true, sizeBytes: 0 },
     { name: 'src', isDir: true, sizeBytes: 0 },
     { name: 'README.md', isDir: false, sizeBytes: 92 },
+    { name: 'article.md', isDir: false, sizeBytes: 96 },
     { name: 'notes.txt', isDir: false, sizeBytes: 34 },
   ],
   '/home/user/project/src': [
@@ -125,6 +126,9 @@ const FILES: Record<string, string> = {
   '/home/user/project/out/archive/chapter-2.md': '# 第二章\n\n解壓縮出來的內容。\n',
   '/home/user/project/README.md':
     '# Demo Workspace\n\n這是 **File Explorer** 展示用的 in-memory 檔案。\n\n- 點資料夾展開\n- 點檔案預覽\n- 切到編輯打字（右上角出現未存圓點）\n- 工具列 / 右鍵選單：新增、重新命名、刪除、複製貼上',
+  // asgard-heimdall-pm#375 — the preview skips the frontmatter; edit mode still shows it.
+  '/home/user/project/article.md':
+    '---\ntitle: "台北捷運新路線通車"\n---\n\n# 台北捷運新路線通車\n\n台北捷運最新路線於本週正式通車。\n\n---\n\n正文中的分隔線照常顯示。\n',
   '/home/user/project/notes.txt': 'plain text note — 切到編輯試打字。',
   '/home/user/project/src/index.ts': 'export const greet = (n: string) => `hi ${n}`;\n',
   '/home/user/project/src/app.tsx': 'export function App() {\n  return <div>hello</div>;\n}\n',

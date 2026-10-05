@@ -12,6 +12,9 @@ type FileKind = 'markdown' | 'image' | 'text';
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 
+// A leading YAML frontmatter block: `---` on the first line, through the next line that is exactly `---`.
+const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+
 export interface FileViewProps {
   sandboxName: string;
   /** The opened file (`isDir: false`). */
@@ -47,6 +50,14 @@ function kindOf(ext: string): FileKind {
   if (IMAGE_EXTS.has(ext)) return 'image';
 
   return 'text';
+}
+
+/**
+ * Frontmatter is the file's metadata, not its body: rendered as markdown its fences become `<hr>` and its last line a
+ * setext heading (asgard-heimdall-pm#375). Preview only — the source and what gets saved keep it.
+ */
+function withoutFrontmatter(markdown: string): string {
+  return markdown.replace(FRONTMATTER, '');
 }
 
 /**
@@ -167,7 +178,7 @@ export function FileView(props: FileViewProps): ReactNode {
     if (kind === 'markdown' && mode === 'preview') {
       return (
         <div className={styles.markdown}>
-          <StreamdownClient>{content ?? ''}</StreamdownClient>
+          <StreamdownClient>{withoutFrontmatter(content ?? '')}</StreamdownClient>
         </div>
       );
     }
