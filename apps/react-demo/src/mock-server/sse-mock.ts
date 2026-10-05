@@ -314,6 +314,13 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     return;
   }
 
+  // F-038 — the download-card channels own their NUDGE (shared server-side wake state, fault injection).
+  if (isSandboxDownloadChannel(customChannelId)) {
+    await handleSandboxDownloadSse(res, payload, customChannelId);
+
+    return;
+  }
+
   // F-021 AC4 — NUDGE: an invisible turn (empty text, no message frames). Wakes an idle sandbox: the mock
   // records the channel as nudged (so the next metadata refetch reports a live sandbox) and emits
   // sandbox.launch → ready. The SDK's launch handler auto-refetches metadata → the dropdown refills.
@@ -1775,6 +1782,13 @@ async function handleStreamResumeMock(
 async function handleMockTranscriptRejoin(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '', 'http://localhost');
   const customChannelId = url.searchParams.get('custom_channel_id') ?? 'mock-channel';
+
+  if (isSandboxDownloadChannel(customChannelId)) {
+    await handleSandboxDownloadRejoin(res, customChannelId);
+
+    return;
+  }
+
   const header: CommonHeader = {
     requestId: randomUUID(),
     namespace: NAMESPACE,
@@ -2172,6 +2186,12 @@ export async function handleMockChannelMetadata(req: IncomingMessage, res: Serve
     return;
   }
 
+  if (isSandboxDownloadChannel(customChannelId)) {
+    handleSandboxDownloadMetadata(res);
+
+    return;
+  }
+
   // F-021 — the File Explorer demo channel: exists + advertises one live sandbox so the built-in aside's
   // dropdown (driven by launchedSandboxes$) has something to show.
   if (customChannelId === 'file-explorer-demo') {
@@ -2399,6 +2419,12 @@ function fsJson(res: ServerResponse, data: unknown, status = 200): void {
 }
 
 export async function handleMockSandboxFs(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (isSandboxDownloadFsRequest(req.url ?? '')) {
+    await handleSandboxDownloadFs(req, res);
+
+    return;
+  }
+
   const url = new URL(req.url ?? '', 'http://localhost');
   const path = url.searchParams.get('path') ?? '';
   const op = url.pathname.split('/fs/')[1] ?? '';
@@ -3224,5 +3250,296 @@ async function handleDockedRunChromeMock(
   }
 
   writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+  res.end();
+}
+
+// ---------------------------------------------------------------------------------------------------
+// F-038 — sandbox download card + the channel's one shared wake (/sandbox-download).
+//
+// One server-side state shared by both shells (matched by the `sandbox-download-` channel prefix, one
+// sandbox name), driven from the route's control panel through `/mock-asgard/__sandbox-download`:
+//   live      — whether the sandbox is up. A NUDGE brings it up after `wakeMs` (unless `wake-failed`); a
+//               user turn does too (the "conversation in progress" case: that run cold-starts it).
+//   fault     — what goes wrong: 404 / stale metadata (lists it while fs answers 412) / truncated body /
+//               a nudge that ends without the sandbox coming up.
+//   nudges    — how many NUDGE turns reached the server, so "three cards = one nudge" can be read off.
+// ---------------------------------------------------------------------------------------------------
+
+export type SandboxDownloadFault = 'none' | 'not-found' | 'stale-live' | 'incomplete' | 'wake-failed';
+
+interface SandboxDownloadState {
+  live: boolean;
+  wakeMs: number;
+  fault: SandboxDownloadFault;
+  nudges: number;
+}
+
+const SANDBOX_DOWNLOAD_NAME = 'sbx-download-demo';
+const SANDBOX_DOWNLOAD_CWD = '/agent-hub-work';
+// The 2026-10-02 prod case: three PDFs the agent had copied into its own cwd.
+const SANDBOX_DOWNLOAD_FILES: Record<string, number> = {
+  [`${SANDBOX_DOWNLOAD_CWD}/2026-Q3-營收報告.pdf`]: 1_800_000,
+  [`${SANDBOX_DOWNLOAD_CWD}/客戶名單-精簡版.pdf`]: 640_000,
+  [`${SANDBOX_DOWNLOAD_CWD}/合約範本-v3.pdf`]: 320_000,
+};
+
+const sandboxDownload: SandboxDownloadState = { live: false, wakeMs: 4000, fault: 'none', nudges: 0 };
+
+export function isSandboxDownloadChannel(customChannelId: string): boolean {
+  return customChannelId.startsWith('sandbox-download-');
+}
+
+export function isSandboxDownloadFsRequest(url: string): boolean {
+  // Mounted under `/mock-asgard/sandbox`, so connect has already stripped that prefix from `req.url`.
+  return url.includes(`/${SANDBOX_DOWNLOAD_NAME}/fs/`);
+}
+
+/** GET → current state; POST → merge the JSON body into it (and answer with the result). */
+export async function handleSandboxDownloadControl(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method === 'POST') {
+    const body = await rawBody(req);
+
+    try {
+      Object.assign(sandboxDownload, JSON.parse(body.toString('utf-8')) as Partial<SandboxDownloadState>);
+    } catch {
+      // A malformed body changes nothing; the current state is still returned below.
+    }
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(sandboxDownload));
+}
+
+function sandboxDownloadLaunched(): object[] {
+  // `stale-live`: metadata still lists a sandbox that has already been recycled (fs answers 412).
+  const listed = sandboxDownload.live || sandboxDownload.fault === 'stale-live';
+
+  return listed
+    ? [
+        {
+          sandboxName: SANDBOX_DOWNLOAD_NAME,
+          sandboxBlueprintName: 'agent-hub-workspace',
+          workingDirectory: SANDBOX_DOWNLOAD_CWD,
+          editorServerEnabled: false,
+          browserEnabled: false,
+        },
+      ]
+    : [];
+}
+
+export function handleSandboxDownloadMetadata(res: ServerResponse): void {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(
+    JSON.stringify({ data: { title: '下載卡展示', runState: 'IDLE', launchedSandboxes: sandboxDownloadLaunched() } }),
+  );
+}
+
+function sandboxDownloadUri(absolutePath: string): string {
+  return `sandbox://${SANDBOX_DOWNLOAD_NAME}/download-file?absolute_path=${encodeURIComponent(absolutePath)}`;
+}
+
+/** The transcript the route opens onto: the user asks for the three PDFs, the agent pushes three cards. */
+export async function handleSandboxDownloadRejoin(res: ServerResponse, customChannelId: string): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+  const complete = (messageId: string, template: object, text = ''): object => ({
+    ...header,
+    eventType: 'asgard.message.complete',
+    fact: {
+      ...emptyFact(),
+      messageComplete: {
+        message: { messageId, replyToCustomMessageId: '', text, payload: null, isDebug: false, idx: null, template },
+      },
+    },
+  });
+  const frames: object[] = [
+    {
+      ...header,
+      eventType: 'asgard.message.user',
+      fact: {
+        ...emptyFact(),
+        messageUser: { messageId: 'u-dl-1', text: '給我這三個 PDF 的下載連結', customMessageId: 'c-dl-1', blobIds: [] },
+      },
+    },
+    complete(
+      'a-dl-1',
+      { type: 'TEXT', text: '三個檔案都準備好了，點卡片即可下載：' },
+      '三個檔案都準備好了，點卡片即可下載：',
+    ),
+    ...Object.keys(SANDBOX_DOWNLOAD_FILES).map((path, i) => {
+      const uri = sandboxDownloadUri(path);
+      const name = path.split('/').pop() ?? path;
+
+      return complete(`a-dl-card-${i}`, {
+        type: 'ATTACHMENT',
+        attachments: [
+          {
+            title: name,
+            text: `${Math.round(SANDBOX_DOWNLOAD_FILES[path] / 1024)} KB · PDF`,
+            defaultAction: { type: 'uri', uri },
+            downloadAction: { type: 'uri', uri },
+          },
+        ],
+        quickReplies: [],
+      });
+    }),
+    // A second card for the first file: two cards, one key — they must show one shared state.
+    complete('a-dl-dup', {
+      type: 'ATTACHMENT',
+      attachments: [
+        {
+          title: '2026-Q3-營收報告.pdf（同一個檔案的第二張卡）',
+          text: '與第一張卡共用狀態',
+          defaultAction: { type: 'uri', uri: sandboxDownloadUri(Object.keys(SANDBOX_DOWNLOAD_FILES)[0]) },
+          downloadAction: { type: 'uri', uri: sandboxDownloadUri(Object.keys(SANDBOX_DOWNLOAD_FILES)[0]) },
+        },
+      ],
+      quickReplies: [],
+    }),
+  ];
+
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+  frames.forEach((event, i) => res.write(`id: seq:${i + 1}\ndata: ${JSON.stringify(event)}\n\n`));
+  res.end();
+}
+
+/** NUDGE → wake after `wakeMs`; any other turn → a short reply whose run cold-starts the sandbox too. */
+export async function handleSandboxDownloadSse(
+  res: ServerResponse,
+  payload: ParsedPayload,
+  customChannelId: string,
+): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+  const isNudge = payload.action === 'NUDGE';
+  const opening = isOpeningTurn(payload);
+
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+
+  if (isNudge) sandboxDownload.nudges += 1;
+
+  if (!opening) {
+    const sandbox = { sandboxName: SANDBOX_DOWNLOAD_NAME, blueprintName: 'agent-hub-workspace' };
+    // `wake-failed` sends no launch frame at all: a launch with no ready after it would leave the SDK's
+    // launch HUD up, which is a different thing from what this fault is about.
+    const comesUp = !(isNudge && sandboxDownload.fault === 'wake-failed');
+
+    if (comesUp) {
+      writeEvent(res, {
+        ...header,
+        eventType: 'asgard.sandbox.launch',
+        fact: { ...emptyFact(), sandboxLaunch: sandbox },
+      });
+    }
+
+    await sleep(sandboxDownload.wakeMs);
+
+    if (comesUp) {
+      sandboxDownload.live = true;
+      writeEvent(res, {
+        ...header,
+        eventType: 'asgard.sandbox.ready',
+        fact: { ...emptyFact(), sandboxReady: sandbox },
+      });
+    }
+  }
+
+  if (!isNudge && !opening) {
+    const messageId = randomUUID();
+    const text = '（這輪對話把 sandbox 帶起來了）';
+
+    writeEvent(res, {
+      ...header,
+      eventType: 'asgard.message.complete',
+      fact: {
+        ...emptyFact(),
+        messageComplete: {
+          message: {
+            messageId,
+            replyToCustomMessageId: payload.customMessageId ?? '',
+            text,
+            payload: null,
+            isDebug: false,
+            idx: null,
+            template: { type: 'TEXT', text },
+          },
+        },
+      },
+    });
+  }
+
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+  res.end();
+}
+
+export async function handleSandboxDownloadFs(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? '', 'http://localhost');
+  const path = url.searchParams.get('path') ?? '';
+  const op = url.pathname.split('/fs/')[1] ?? '';
+  const { live, fault } = sandboxDownload;
+
+  if (!live) {
+    res.writeHead(412, { 'Content-Type': 'text/plain' });
+    res.end('sandbox is not running');
+
+    return;
+  }
+
+  if (op === 'list') {
+    const entries =
+      path === SANDBOX_DOWNLOAD_CWD
+        ? Object.entries(SANDBOX_DOWNLOAD_FILES).map(([file, size]) => ({
+            name: file.split('/').pop(),
+            isDir: false,
+            sizeBytes: size,
+            mtimeUnix: 1_700_000_000,
+            mode: 420,
+          }))
+        : [];
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ data: { entries, truncated: false } }));
+
+    return;
+  }
+
+  if (op !== 'file') {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('not mocked');
+
+    return;
+  }
+
+  const size = SANDBOX_DOWNLOAD_FILES[path];
+
+  if (size === undefined || fault === 'not-found') {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('file not found');
+
+    return;
+  }
+
+  // Chunked, no Content-Length, `X-Total-Bytes` ahead of the body — the real `fs/file` shape. `incomplete`
+  // drops the connection after ~60% while the status is already 200.
+  res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'X-Total-Bytes': String(size) });
+
+  const sent = fault === 'incomplete' ? Math.floor(size * 0.6) : size;
+  const chunks = 20;
+  const chunkSize = Math.ceil(sent / chunks);
+
+  for (let offset = 0; offset < sent; offset += chunkSize) {
+    res.write(Buffer.alloc(Math.min(chunkSize, sent - offset), offset === 0 ? 0x25 : 0x20));
+    await sleep(90);
+  }
+
   res.end();
 }

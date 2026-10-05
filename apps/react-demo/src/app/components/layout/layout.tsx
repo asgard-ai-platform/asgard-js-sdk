@@ -45,6 +45,7 @@ const navItems = [
   { to: '/run-indicator', label: 'Run Indicator (F-003)' },
   { to: '/sandbox-hud', label: 'Sandbox Launch HUD (F-018)' },
   { to: '/sandbox-cards', label: 'Sandbox Handoff Cards (F-020)' },
+  { to: '/sandbox-download', label: 'Sandbox Download Card (F-038)' },
   { to: '/file-explorer', label: 'File Explorer (F-021)' },
   { to: '/sandbox-browser', label: 'Sandbox Browser (F-035)' },
   { to: '/neko-lab', label: 'Neko 輸入實驗室 (F-035, 需本機容器)' },
