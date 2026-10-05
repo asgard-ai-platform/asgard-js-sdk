@@ -664,7 +664,7 @@ export function FileExplorerContextMenu(): ReactNode {
  * assembly whose source always exists never renders this.
  */
 export function FileExplorerEmptyState(): ReactNode {
-  const { onNudge, nudging, nudgeDisabled, locale, handleNudge } = useFileExplorer();
+  const { onNudge, nudging, wakeFailed, nudgeDisabled, locale, handleNudge } = useFileExplorer();
 
   return (
     <>
@@ -675,6 +675,11 @@ export function FileExplorerEmptyState(): ReactNode {
         <PackageOpenIcon size={30} className={styles.emptyIcon} />
         <div className={styles.emptyTitle}>{t(locale, 'fileExplorer.noSandboxTitle')}</div>
         <div className={styles.emptyDesc}>{t(locale, 'fileExplorer.noSandboxDesc')}</div>
+        {onNudge && wakeFailed && !nudging && (
+          <div className={styles.wakeFailed} role="status">
+            {t(locale, 'fileExplorer.wakeFailed')}
+          </div>
+        )}
         {onNudge && (
           <button type="button" className={styles.nudgeBtn} onClick={handleNudge} disabled={nudging || nudgeDisabled}>
             {nudging ? (

@@ -34,6 +34,7 @@ vi.mock('../../context/asgard-service-context', () => ({
 
 vi.mock('../../hooks/use-derived-state', () => ({
   useLaunchedSandboxes: (): unknown[] => [],
+  useSandboxWakeState: (): { phase: 'idle' } => ({ phase: 'idle' }),
 }));
 
 const { ChatbotFileExplorerAside } = await import('./chatbot-file-explorer');

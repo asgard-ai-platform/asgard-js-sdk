@@ -84,6 +84,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.noSandboxDesc':
       'The sandbox may have been reclaimed after idling. Send a message to wake one and carry on.',
     'fileExplorer.waking': 'Waking…',
+    'fileExplorer.wakeFailed': 'The last wake failed. Try again.',
     'fileExplorer.wakeSandbox': 'Wake a sandbox',
     'fileExplorer.close': 'Close File Explorer',
     'fileExplorer.selectSandbox': 'Select sandbox',
@@ -373,6 +374,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.noSandboxDesc':
       'アイドル状態のため回収された可能性があります。メッセージを送るとサンドボックスが起動し、作業を続けられます。',
     'fileExplorer.waking': '起動中…',
+    'fileExplorer.wakeFailed': '前回の起動に失敗しました。もう一度お試しください。',
     'fileExplorer.wakeSandbox': 'サンドボックスを起動',
     'fileExplorer.close': 'ファイルエクスプローラーを閉じる',
     'fileExplorer.selectSandbox': 'サンドボックスを選択',
@@ -653,6 +655,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.noSandboxTitle': '目前沒有執行中的 sandbox',
     'fileExplorer.noSandboxDesc': 'sandbox 可能因閒置已被回收。可推一則訊息喚醒一台來繼續作業。',
     'fileExplorer.waking': '喚醒中…',
+    'fileExplorer.wakeFailed': '上次喚醒失敗，請再試一次。',
     'fileExplorer.wakeSandbox': '喚醒 sandbox',
     'fileExplorer.close': '關閉檔案總管',
     'fileExplorer.selectSandbox': '選擇 sandbox',

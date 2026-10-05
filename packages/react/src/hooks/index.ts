@@ -1,6 +1,7 @@
 export * from './use-asgard-service-client';
 export * from './use-channel';
 export * from './use-derived-state';
+export * from './use-sandbox-wake';
 export * from './use-sandbox-launch';
 export * from './use-file-explorer-controller';
 export * from './use-sandbox-browser-controller';

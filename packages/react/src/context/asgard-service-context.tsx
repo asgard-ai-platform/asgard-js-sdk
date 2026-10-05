@@ -118,6 +118,12 @@ export interface AsgardServiceContextValue {
    * `onClick={() => nudge()}`, not `onClick={nudge}` (which would send the event as payload).
    */
   nudge?: UseChannelReturn['nudge'];
+  /**
+   * Wake the sandbox through the channel's one shared wake (F-038) — what the File Explorer's wake button
+   * and the download card call. Payload is collected through `onBeforeSendMessage` exactly like `nudge`.
+   * Read the shared state with `useSandboxWake()`.
+   */
+  wakeSandbox?: UseChannelReturn['wakeSandbox'];
   pendingConsent: ToolCallConsentEventData | null;
   botTypingPlaceholder?: string;
   inputPlaceholder?: string;
@@ -353,6 +359,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     replyToolCallConsents,
     sendMessageFeedback,
     nudge,
+    wakeSandbox,
   } = useChannel({
     client,
     customChannelId,
@@ -434,6 +441,13 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     return async payload => nudge(resolveOutboundPayload(payload));
   }, [nudge, resolveOutboundPayload]);
 
+  // F-038 — a wake is a nudge, so it collects payload the same way (BUG-004).
+  const wrappedWakeSandbox: UseChannelReturn['wakeSandbox'] = useMemo(() => {
+    if (!wakeSandbox) return undefined;
+
+    return async (sandboxName, payload) => wakeSandbox(sandboxName, resolveOutboundPayload(payload));
+  }, [wakeSandbox, resolveOutboundPayload]);
+
   // F-023 — the four questions components actually ask about the run, derived once here so each of
   // them (composer, quick replies, running indicator) does not re-derive the same conditions.
   const { isRunning, canStop, isStopping, canForceStop } = useMemo(
@@ -477,6 +491,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       replyToolCallConsents: wrappedReplyToolCallConsents,
       sendMessageFeedback,
       nudge: wrappedNudge,
+      wakeSandbox: wrappedWakeSandbox,
       pendingConsent: conversation?.pendingConsent ?? null,
       botTypingPlaceholder,
       inputPlaceholder,
@@ -521,6 +536,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       wrappedReplyToolCallConsents,
       sendMessageFeedback,
       wrappedNudge,
+      wrappedWakeSandbox,
       botTypingPlaceholder,
       inputPlaceholder,
       enableUpload,
