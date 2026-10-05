@@ -12,8 +12,9 @@ type FileKind = 'markdown' | 'image' | 'text';
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 
-// A leading YAML frontmatter block: `---` on the first line, through the next line that is exactly `---`.
-const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+// A leading YAML frontmatter block: `---` on the first line, through the next line that is exactly `---`. The body is
+// optional and tried empty first (`??`), so an empty block closes on its own `---` rather than on a later thematic break.
+const FRONTMATTER = /^---\r?\n(?:[\s\S]*?\r?\n)??---(?:\r?\n|$)/;
 
 export interface FileViewProps {
   sandboxName: string;

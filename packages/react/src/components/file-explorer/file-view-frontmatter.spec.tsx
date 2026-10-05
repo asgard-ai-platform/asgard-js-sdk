@@ -62,6 +62,15 @@ describe('#375 — markdown preview skips a leading frontmatter block', () => {
     expect(container.textContent).not.toContain('title:');
   });
 
+  it('skips an empty block without reaching for a later thematic break', async () => {
+    const container = await renderedMarkdown(
+      renderView('notes.md', '---\n---\n\n# Notes\n\nBefore.\n\n---\n\nAfter.\n'),
+    );
+
+    expect(Array.from(container.querySelectorAll('h1')).map(h => h.textContent)).toEqual(['Notes']);
+    expect(container.querySelectorAll('hr')).toHaveLength(1);
+  });
+
   it('keeps the frontmatter in the source shown by edit mode', async () => {
     const container = renderView('article.md', ARTICLE);
 
