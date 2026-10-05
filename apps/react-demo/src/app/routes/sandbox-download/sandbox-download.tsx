@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Channel, SandboxWakeResult } from '@asgard-js/core';
-import { Chatbot, ChatbotRef, useLaunchedSandboxes, useSandboxWakeState } from '@asgard-js/react';
+import { Chatbot, ChatbotRef, Locale, useLaunchedSandboxes, useSandboxWakeState } from '@asgard-js/react';
 import '@asgard-js/react/style';
 import { DemoWrapper } from '../../components/demo-wrapper';
 import styles from './sandbox-download.module.scss';
@@ -40,6 +40,10 @@ const FAULTS: { id: Fault; label: string }[] = [
 
 const WIDE_THEME = { chatbot: { width: '100%', height: '100%' } };
 
+// zh-TW first: the card's state lines are the longest strings this feature adds, and Chinese is where Asgard's
+// users read them.
+const LOCALES: Locale[] = ['zh-TW', 'en-US', 'ja-JP'];
+
 async function postState(patch: Partial<MockState>): Promise<MockState> {
   const res = await fetch(CONTROL_URL, { method: 'POST', body: JSON.stringify(patch) });
 
@@ -71,6 +75,7 @@ export function SandboxDownloadRoute(): ReactNode {
   const [narrowChannel, setNarrowChannel] = useState<Channel | null>(null);
   const [mock, setMock] = useState<MockState | null>(null);
   const [lastWake, setLastWake] = useState<SandboxWakeResult | null>(null);
+  const [locale, setLocale] = useState<Locale>('zh-TW');
 
   // The mock counts nudges server-side; poll it so "three cards = one nudge" can be read off the page.
   useEffect(() => {
@@ -151,6 +156,16 @@ export function SandboxDownloadRoute(): ReactNode {
           <button type="button" onClick={(): void => void wakeFromElsewhere()}>
             從別處喚醒（寬版 channel.wakeSandbox）
           </button>
+          <label>
+            語系
+            <select value={locale} onChange={(e): void => setLocale(e.target.value as Locale)}>
+              {LOCALES.map(l => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className={styles.panels}>
@@ -180,6 +195,7 @@ export function SandboxDownloadRoute(): ReactNode {
                 title="Agent Hub"
                 config={config}
                 customChannelId="sandbox-download-demo"
+                locale={locale}
                 theme={WIDE_THEME}
                 onChannelReady={(): void => setWideChannel(wideRef.current?.serviceContext?.channel ?? null)}
               />
@@ -194,6 +210,7 @@ export function SandboxDownloadRoute(): ReactNode {
                 title="Agent Hub"
                 config={config}
                 customChannelId="sandbox-download-demo-narrow"
+                locale={locale}
                 onChannelReady={(): void => setNarrowChannel(narrowRef.current?.serviceContext?.channel ?? null)}
               />
             </div>

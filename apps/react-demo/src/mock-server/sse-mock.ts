@@ -3272,6 +3272,8 @@ interface SandboxDownloadState {
   wakeMs: number;
   fault: SandboxDownloadFault;
   nudges: number;
+  /** Delay between the 20 body chunks of a download — raise it to watch the progress line. */
+  chunkMs: number;
 }
 
 const SANDBOX_DOWNLOAD_NAME = 'sbx-download-demo';
@@ -3283,7 +3285,7 @@ const SANDBOX_DOWNLOAD_FILES: Record<string, number> = {
   [`${SANDBOX_DOWNLOAD_CWD}/合約範本-v3.pdf`]: 320_000,
 };
 
-const sandboxDownload: SandboxDownloadState = { live: false, wakeMs: 4000, fault: 'none', nudges: 0 };
+const sandboxDownload: SandboxDownloadState = { live: false, wakeMs: 4000, fault: 'none', nudges: 0, chunkMs: 90 };
 
 export function isSandboxDownloadChannel(customChannelId: string): boolean {
   return customChannelId.startsWith('sandbox-download-');
@@ -3538,7 +3540,7 @@ export async function handleSandboxDownloadFs(req: IncomingMessage, res: ServerR
 
   for (let offset = 0; offset < sent; offset += chunkSize) {
     res.write(Buffer.alloc(Math.min(chunkSize, sent - offset), offset === 0 ? 0x25 : 0x20));
-    await sleep(90);
+    await sleep(sandboxDownload.chunkMs);
   }
 
   res.end();
