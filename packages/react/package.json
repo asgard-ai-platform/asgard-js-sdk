@@ -40,6 +40,7 @@
     "@uiw/react-codemirror": "^4.25.11",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.5",
+    "js-yaml": "^4.3.2",
     "react-vega": "^8.0.0",
     "remark-breaks": "^4.0.0",
     "streamdown": "^1.6.8",
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "@types/dom-speech-recognition": "^0.0.4",
+    "@types/js-yaml": "^4.0.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "vite-plugin-svgr": "^4.3.0"

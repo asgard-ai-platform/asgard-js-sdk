@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { dump, FAILSAFE_SCHEMA, load } from 'js-yaml';
 import { useAsgardTemplateContext } from '../../context/asgard-template-context';
 import { t } from '../../i18n';
 import { StreamdownClient } from '../templates/text-template/streamdown-client';
@@ -14,7 +15,7 @@ const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 
 // A leading YAML frontmatter block: `---` on the first line, through the next line that is exactly `---`. The body is
 // optional and tried empty first (`??`), so an empty block closes on its own `---` rather than on a later thematic break.
-const FRONTMATTER = /^---\r?\n(?:[\s\S]*?\r?\n)??---(?:\r?\n|$)/;
+const FRONTMATTER = /^---\r?\n((?:[\s\S]*?\r?\n)??)---(?:\r?\n|$)/;
 
 export interface FileViewProps {
   sandboxName: string;
@@ -55,10 +56,60 @@ function kindOf(ext: string): FileKind {
 
 /**
  * Frontmatter is the file's metadata, not its body: rendered as markdown its fences become `<hr>` and its last line a
- * setext heading (asgard-heimdall-pm#375). Preview only — the source and what gets saved keep it.
+ * setext heading (asgard-heimdall-pm#375). The preview shows it as fields above the body instead — the source and what
+ * gets saved keep it as written.
  */
-function withoutFrontmatter(markdown: string): string {
-  return markdown.replace(FRONTMATTER, '');
+function splitFrontmatter(markdown: string): { frontmatter: string; body: string } {
+  const match = FRONTMATTER.exec(markdown);
+
+  if (!match) return { frontmatter: '', body: markdown };
+
+  return { frontmatter: match[1].replace(/\r?\n$/, ''), body: markdown.slice(match[0].length) };
+}
+
+// FAILSAFE keeps every scalar a string, so `1.0`, `2026-10-05` and `yes` read as written.
+const YAML_TEXT = { schema: FAILSAFE_SCHEMA, noCompatMode: true, lineWidth: -1 };
+
+function fieldText(value: unknown): string {
+  if (value === null) return '';
+
+  if (typeof value === 'string') return value.trimEnd();
+
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) return value.join(', ');
+
+  return dump(value, YAML_TEXT).trimEnd();
+}
+
+/** A table of the block's top-level keys; the raw block when it does not read as one (nothing is dropped). */
+function Frontmatter({ text }: { text: string }): ReactNode {
+  if (!text.trim()) return null;
+
+  let rows: [string, string][] | null = null;
+
+  try {
+    const doc = load(text, YAML_TEXT);
+
+    if (doc !== null && typeof doc === 'object' && !Array.isArray(doc)) {
+      rows = Object.entries(doc).map(([key, value]) => [key, fieldText(value)]);
+    }
+  } catch {
+    // Not valid YAML, or a nested value `dump` cannot write back out: shown raw below.
+  }
+
+  if (!rows) return <pre className={styles.frontmatterRaw}>{text}</pre>;
+
+  return (
+    <table className={styles.frontmatter}>
+      <tbody>
+        {rows.map(([key, value]) => (
+          <tr key={key}>
+            <th scope="row">{key}</th>
+            <td>{value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 /**
@@ -177,9 +228,12 @@ export function FileView(props: FileViewProps): ReactNode {
     }
 
     if (kind === 'markdown' && mode === 'preview') {
+      const { frontmatter, body } = splitFrontmatter(content ?? '');
+
       return (
         <div className={styles.markdown}>
-          <StreamdownClient>{withoutFrontmatter(content ?? '')}</StreamdownClient>
+          <Frontmatter text={frontmatter} />
+          <StreamdownClient>{body}</StreamdownClient>
         </div>
       );
     }

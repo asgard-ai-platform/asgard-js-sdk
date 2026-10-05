@@ -112,6 +112,48 @@
   padding: 0.75rem;
 }
 
+// The file's YAML frontmatter, shown as fields above the rendered body rather than as markdown.
+.frontmatter {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  th,
+  td {
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    // Shrinks the key column to its widest key, leaving the rest to the values.
+    width: 1%;
+    color: var(--asg-color-text-secondary, #6b7280);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  td {
+    color: var(--asg-color-text-primary, inherit);
+    // A literal `|` value keeps its line breaks; a long URL wraps instead of widening the panel.
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+.frontmatterRaw {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  color: var(--asg-color-text-primary, inherit);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 // CodeMirror brings its own theme; this only sizes it and hands over the panel's text colour so the
 // gutter and selection sit on the same surface as the rest of the explorer.
 .codemirror {
