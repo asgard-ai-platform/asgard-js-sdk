@@ -186,6 +186,8 @@ Higher-level abstraction for managing a conversation channel with reactive state
 - **sendMessageFeedback(messageId, feedback)**: `Promise<MessageFeedbackReply>` - Rate one assistant reply (F-033): posts `{ verdict, comment? }` via `client.sendMessageFeedback` and, once accepted, writes it into that reply's `feedback` (no optimistic update — a rejection leaves the conversation untouched). See [Message feedback](#message-feedback)
 - **stopGeneration(options?)**: `Promise<void>` - Ask the backend to stop the in-flight run. See [Stopping generation](#stopping-generation) — resolving means _accepted_, not _stopped_
 - **getTasks() / getSubagents() / getChannelTitle() / getRunStatus()**: `Task[]` / `Subagent[]` / `string | null` / `RunStatus` - Current immutable snapshots of the derived state (for `getSnapshot()`-style bridging; see [Derived State](#derived-state))
+- **wakeSandbox(sandboxName?, payload?, options?)**: `Promise<'live' | 'failed' | 'blocked'>` - Wake the sandbox through the channel's **one** shared wake (F-038). Joins a wake already in flight instead of sending a second nudge; resolves `live` once `/channel/metadata` lists the sandbox (any sandbox when `sandboxName` is omitted), `failed` when the nudge was refused / failed or metadata still does not list it afterwards, and `blocked` without sending anything while another run holds the channel or a consent prompt is pending. No timeout of its own. Every accepted `nudge()` is tracked the same way, so a host calling `nudge()` directly still shows up on `sandboxWake$`
+- **getSandboxWake()**: `{ phase: 'idle' | 'waking' | 'failed' }` - Current shared-wake snapshot (F-038)
 - **setChannelTitle(title)**: `void` - Seed or override the reactive channel title (F-016)
 - **close()**: `void` - Close the channel and cleanup subscriptions
 
@@ -206,6 +208,7 @@ Higher-level abstraction for managing a conversation channel with reactive state
 - **subagents$**: `Observable<Subagent[]>` - Reactive Subagent List store; replays the current snapshot and emits only when the list changes (F-012 / F-013)
 - **channelTitle$**: `Observable<string | null>` - Reactive channel-title store; seeded from metadata, updated by `title.update` (F-016)
 - **runStatus$**: `Observable<RunStatus>` - Which run holds the connection and where it is in the stop lifecycle; see [Stopping generation](#stopping-generation) (F-023)
+- **sandboxWake$**: `Observable<{ phase: 'idle' | 'waking' | 'failed' }>` - The channel's one shared sandbox wake (F-038). `waking` covers both the nudge turn and the metadata re-fetch after it; `failed` stays until the next wake starts. The File Explorer's wake button and the download card both read this one
 
 #### Example Usage
 
