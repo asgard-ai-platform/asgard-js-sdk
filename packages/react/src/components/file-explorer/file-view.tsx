@@ -67,6 +67,13 @@ function splitFrontmatter(markdown: string): { frontmatter: string; body: string
   return { frontmatter: match[1].replace(/\r?\n$/, ''), body: markdown.slice(match[0].length) };
 }
 
+// The body's first level-1 ATX heading (`# Title`), optional closing `#`s aside.
+const FIRST_HEADING = /^ {0,3}#[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/m;
+
+function firstHeading(body: string): string | null {
+  return FIRST_HEADING.exec(body)?.[1].trim() ?? null;
+}
+
 // FAILSAFE keeps every scalar a string, so `1.0`, `2026-10-05` and `yes` read as written.
 const YAML_TEXT = { schema: FAILSAFE_SCHEMA, noCompatMode: true, lineWidth: -1 };
 
@@ -80,8 +87,11 @@ function fieldText(value: unknown): string {
   return dump(value, YAML_TEXT).trimEnd();
 }
 
-/** A table of the block's top-level keys; the raw block when it does not read as one (nothing is dropped). */
-function Frontmatter({ text }: { text: string }): ReactNode {
+/**
+ * A table of the block's top-level keys; the raw block when it does not read as one (nothing is dropped). A `title`
+ * that repeats the body's first `# ` heading is left out, so the title shows once (asgard-heimdall-pm#375).
+ */
+function Frontmatter({ text, heading }: { text: string; heading: string | null }): ReactNode {
   if (!text.trim()) return null;
 
   let rows: [string, string][] | null = null;
@@ -90,13 +100,17 @@ function Frontmatter({ text }: { text: string }): ReactNode {
     const doc = load(text, YAML_TEXT);
 
     if (doc !== null && typeof doc === 'object' && !Array.isArray(doc)) {
-      rows = Object.entries(doc).map(([key, value]) => [key, fieldText(value)]);
+      rows = Object.entries(doc)
+        .filter(([key, value]) => !(key === 'title' && typeof value === 'string' && value.trim() === heading))
+        .map(([key, value]) => [key, fieldText(value)]);
     }
   } catch {
     // Not valid YAML, or a nested value `dump` cannot write back out: shown raw below.
   }
 
   if (!rows) return <pre className={styles.frontmatterRaw}>{text}</pre>;
+
+  if (rows.length === 0) return null;
 
   return (
     <table className={styles.frontmatter}>
@@ -232,7 +246,7 @@ export function FileView(props: FileViewProps): ReactNode {
 
       return (
         <div className={styles.markdown}>
-          <Frontmatter text={frontmatter} />
+          <Frontmatter text={frontmatter} heading={firstHeading(body)} />
           <StreamdownClient>{body}</StreamdownClient>
         </div>
       );

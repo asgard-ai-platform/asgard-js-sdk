@@ -111,9 +111,13 @@ describe('#375 — markdown preview skips a leading frontmatter block', () => {
 
 describe('#375 — the frontmatter shows as fields above the body', () => {
   it('lists each top-level key once, in file order', async () => {
-    const container = await renderedMarkdown(renderView('article.md', ARTICLE));
+    const draft = '---\ntitle: Draft title\nauthor: Jo\n---\n\n# Metro line opens\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', draft));
 
-    expect(fields(container)).toEqual([['title', 'Metro line opens']]);
+    expect(fields(container)).toEqual([
+      ['title', 'Draft title'],
+      ['author', 'Jo'],
+    ]);
   });
 
   it('reads a folded value as one paragraph and a string list comma-joined', async () => {
@@ -188,5 +192,50 @@ describe('#375 — the frontmatter shows as fields above the body', () => {
 
     expect(fields(container)).toBeNull();
     expect(container.querySelector('pre')?.textContent).toBe('- one\n- two');
+  });
+});
+
+describe('#375 Expected ¶2 — the title is shown only once', () => {
+  it('leaves out a title equal to the first # heading, and the table with it when nothing else is left', async () => {
+    const container = await renderedMarkdown(renderView('article.md', ARTICLE));
+
+    expect(fields(container)).toBeNull();
+    expect(container.querySelector('pre')).toBeNull();
+    expect(Array.from(container.querySelectorAll('h1')).map(h => h.textContent)).toEqual(['Metro line opens']);
+  });
+
+  it('keeps the other fields when it leaves out the title', async () => {
+    const withAuthor = '---\ntitle: Metro line opens\nauthor: Jo\n---\n\n# Metro line opens\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', withAuthor));
+
+    expect(fields(container)).toEqual([['author', 'Jo']]);
+  });
+
+  it('compares the title trimmed', async () => {
+    const padded = '---\ntitle: "  Metro line opens "\n---\n\n#   Metro line opens  \n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', padded));
+
+    expect(fields(container)).toBeNull();
+  });
+
+  it('keeps a title that differs from the heading', async () => {
+    const renamed = '---\ntitle: Old title\n---\n\n# Metro line opens\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', renamed));
+
+    expect(fields(container)).toEqual([['title', 'Old title']]);
+  });
+
+  it('only does this for the title key', async () => {
+    const skill = '---\nname: Open PR\n---\n\n# Open PR\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('SKILL.md', skill));
+
+    expect(fields(container)).toEqual([['name', 'Open PR']]);
+  });
+
+  it('only counts a level-1 heading', async () => {
+    const subheading = '---\ntitle: Metro line opens\n---\n\n## Metro line opens\n\nBody text.\n';
+    const container = await renderedMarkdown(renderView('article.md', subheading));
+
+    expect(fields(container)).toEqual([['title', 'Metro line opens']]);
   });
 });
