@@ -125,3 +125,4 @@ None.
 - 2026-10-05: Re-run on the field-table build (`af9b62cd`): §1 — 20 項 ✅、0 違規（`#111827` 後備改 `currentColor`）；§3 — R1／R1a／R1b／R2／R3／R4 全 Pass；1 Important（前一輪已修）、4 Minor 不改 (Status: `draft → in-progress → done`).
 - 2026-10-05: Reset for R1c (hide a `title` row equal to the first `# ` heading); re-run after the build (Status: `done → draft`).
 - 2026-10-05: Re-run on `28f89d49` (R1c): §1 — 20 項 ✅、0 違規；§3 — R1／R1a／R1b／R1c／R2／R3／R4 全 Pass；Important 2（皆已修）、Minor 3 不改 (Status: `draft → in-progress → done`).
+- 2026-10-05: Consumer check in Sindri via `npm pack`（directory Files tab, `SKILL.md`）: R1a passes under Sindri's own theme; see BUILD-088 log.
