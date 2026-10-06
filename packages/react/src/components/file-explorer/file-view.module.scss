@@ -112,46 +112,6 @@
   padding: 0.75rem;
 }
 
-// The file's YAML frontmatter, shown as fields above the rendered body rather than as markdown. A grid, not a table:
-// `fit-content(40%)` sizes the key column to its widest key but caps it, so a long key wraps instead of pushing the
-// panel wider — a table cell ignores `max-width`, and a wrapping key in a `width: 1%` cell collapses to one letter.
-.frontmatter {
-  display: grid;
-  grid-template-columns: fit-content(40%) minmax(0, 1fr);
-  margin: 0 0 0.75rem;
-  font-size: 0.8125rem;
-
-  dt,
-  dd {
-    margin: 0;
-    padding: 0.25rem 0.5rem;
-    border-bottom: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
-    overflow-wrap: anywhere;
-  }
-
-  dt {
-    color: var(--asg-color-text-secondary, #6b7280);
-    font-weight: 500;
-  }
-
-  dd {
-    color: var(--asg-color-text-primary, inherit);
-    // A literal `|` value keeps its line breaks.
-    white-space: pre-wrap;
-  }
-}
-
-.frontmatterRaw {
-  margin: 0 0 0.75rem;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  background: color-mix(in srgb, currentColor 5%, transparent);
-  color: var(--asg-color-text-primary, inherit);
-  font-size: 0.75rem;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 // CodeMirror brings its own theme; this only sizes it and hands over the panel's text colour so the
 // gutter and selection sit on the same surface as the rest of the explorer.
 .codemirror {

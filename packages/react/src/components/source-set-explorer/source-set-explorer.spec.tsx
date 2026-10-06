@@ -1348,3 +1348,129 @@ describe('asgard-sdk-pm#116 — the context menu opens files and folds folders',
     }
   });
 });
+
+describe('asgard-js-sdk#485 — the hook knows what is hidden', () => {
+  const gitLists = (probe: VolumeProbe): number => probe.listedPaths().filter(path => path === '.git').length;
+
+  it('does not list an expanded folder again once it is hidden, and lists it again once it is not', async () => {
+    const probe = installVolume(DOTTED);
+    const { rerender } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+
+    fireEvent.click(await screen.findByText('.git'));
+    await screen.findByText('config');
+    rerender(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hideDotDirs} />);
+    await waitFor(() => expect(screen.queryByText('.git')).toBeNull());
+
+    const before = gitLists(probe);
+    fireEvent.click(requireToolButton('sourceSetExplorer.refresh'));
+    await waitFor(() => expect(probe.listedPaths().filter(path => path === '').length).toBeGreaterThan(1));
+    expect(gitLists(probe)).toBe(before);
+
+    rerender(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    fireEvent.click(requireToolButton('sourceSetExplorer.refresh'));
+    await waitFor(() => expect(gitLists(probe)).toBeGreaterThan(before));
+  });
+
+  it('never lists an autoExpandPaths folder that is hidden, and reports nothing about it', async () => {
+    const probe = installVolume(DOTTED);
+    const onError = vi.fn();
+    render(
+      <SourceSetFileExplorer
+        sourceSetEndpoint={ENDPOINT}
+        apiKey="k"
+        autoExpandPaths={['.git', 'skills']}
+        hideEntry={hideDotDirs}
+        onError={onError}
+      />,
+    );
+
+    await screen.findByText('SKILL.md');
+    fireEvent.click(requireToolButton('sourceSetExplorer.refresh'));
+    await waitFor(() => expect(probe.listedPaths().filter(path => path === 'skills').length).toBeGreaterThan(1));
+
+    expect(gitLists(probe)).toBe(0);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('does not run hideEntry again for a listing when the tree re-renders for something else', async () => {
+    installVolume(DOTTED);
+    const hide = vi.fn(hideDotDirs);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" hideEntry={hide} />);
+
+    fireEvent.click(await screen.findByText('a.txt'));
+    await waitFor(() => expect(requireToolButton('sourceSetExplorer.delete').disabled).toBe(false));
+    const calls = hide.mock.calls.length;
+
+    // Opening and closing the context menu on the entry already selected re-renders the tree without touching
+    // any listing or the selection.
+    fireEvent.contextMenu(screen.getByText('a.txt'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.contextMenu(screen.getByText('a.txt'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(hide.mock.calls.length).toBe(calls);
+  });
+});
+
+describe('asgard-heimdall-pm#375 — a markdown preview shows frontmatter as fields here too', () => {
+  const SKILL = '---\nname: open-pr\ndescription: >-\n  First line\n  second line.\n---\n\n# Open PR\n\nBody.\n';
+  const ARTICLE = '---\ntitle: Metro line opens\n---\n\n# Metro line opens\n\nBody.\n';
+
+  /** Open `name` from the root and wait for its rendered body. */
+  async function preview(name: string, content: string): Promise<HTMLElement> {
+    installVolume({ dirs: { '': [file(name)] }, files: { [name]: content } });
+    const { container } = render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" readOnly />);
+
+    fireEvent.doubleClick(await screen.findByText(name));
+    await waitFor(() => expect(container.querySelector('p')).toBeTruthy(), { timeout: 3000 });
+
+    return container;
+  }
+
+  const fields = (container: HTMLElement): [string, string][] | null => {
+    const list = container.querySelector('dl');
+
+    return list
+      ? Array.from(list.querySelectorAll('dt')).map(dt => [
+          dt.textContent ?? '',
+          dt.nextElementSibling?.textContent ?? '',
+        ])
+      : null;
+  };
+
+  it('lists the fields above the body instead of drawing them as markdown', async () => {
+    const container = await preview('SKILL.md', SKILL);
+
+    expect(fields(container)).toEqual([
+      ['name', 'open-pr'],
+      ['description', 'First line second line.'],
+    ]);
+    expect(container.querySelector('hr')).toBeNull();
+    expect(Array.from(container.querySelectorAll('h1, h2')).map(h => h.textContent)).toEqual(['Open PR']);
+  });
+
+  it('leaves out a title that repeats the first # heading', async () => {
+    const container = await preview('article.md', ARTICLE);
+
+    expect(fields(container)).toBeNull();
+    expect(container.querySelector('hr')).toBeNull();
+    expect(container.textContent).not.toContain('title:');
+    expect(Array.from(container.querySelectorAll('h1, h2')).map(h => h.textContent)).toEqual(['Metro line opens']);
+  });
+
+  it('shows a block that does not parse as it was written', async () => {
+    const container = await preview('broken.md', '---\nname: "never closed\n---\n\nBody.\n');
+
+    expect(fields(container)).toBeNull();
+    expect(container.querySelector('pre')?.textContent).toBe('name: "never closed');
+  });
+
+  it('keeps the frontmatter in the source view', async () => {
+    const container = await preview('SKILL.md', SKILL);
+
+    fireEvent.click(screen.getByLabelText(t('en-US', 'sourceSetExplorer.switchToSource')));
+
+    await waitFor(() => expect(container.querySelector('.cm-content')).toBeTruthy());
+    expect(container.querySelector('.cm-content')?.textContent).toContain('name: open-pr');
+  });
+});
