@@ -37,7 +37,8 @@ function renderView(name: string, content: string, onSaveFile: FsSaveFile = vi.f
 }
 
 async function renderedMarkdown(container: HTMLElement): Promise<HTMLElement> {
-  await waitFor(() => expect(container.querySelector('p')).toBeTruthy());
+  // The first render in a run waits on the markdown renderer's lazy chunk; 1 s was flaky on a cold start.
+  await waitFor(() => expect(container.querySelector('p')).toBeTruthy(), { timeout: 3000 });
 
   return container;
 }

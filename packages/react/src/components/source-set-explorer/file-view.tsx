@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { type Locale, t } from '../../i18n';
 import { StreamdownClient } from '../templates/text-template/streamdown-client';
+import { MarkdownFrontmatter, splitFrontmatter } from '../markdown-frontmatter/frontmatter';
 import type { FsEntry } from '../file-explorer/types';
 import { ArrowLeftIcon, CodeIcon, DownloadIcon, EyeIcon, CircleAlertIcon, RefreshIcon } from './icons';
 import { Spinner } from '../spinner';
@@ -149,9 +150,13 @@ export function SourceSetFileView(props: SourceSetFileViewProps): ReactNode {
     }
 
     if (kind === 'markdown' && mode === 'preview') {
+      // Frontmatter shows as fields above the body, as in the sandbox FileView (asgard-heimdall-pm#375).
+      const { frontmatter, body } = splitFrontmatter(content ?? '');
+
       return (
         <div className={styles.markdown}>
-          <StreamdownClient>{content ?? ''}</StreamdownClient>
+          <MarkdownFrontmatter text={frontmatter} body={body} />
+          <StreamdownClient>{body}</StreamdownClient>
         </div>
       );
     }
