@@ -3,7 +3,7 @@
 ## Meta
 
 - Task ID: `BUILD-092`
-- Status: `draft`
+- Status: `done`
 - Issue: [asgard-js-sdk#485](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/485)（issue 開在本 repo，無 PM tracking spec；issue body 即規格。本 task 做第 1、3、4 項）＋ `SourceSetFileExplorer` 預覽與 [asgard-heimdall-pm#375](https://github.com/asgard-ai-platform/asgard-heimdall-pm/issues/375) 同一個 frontmatter bug（BUILD-090 已在 `FileExplorer` 修掉）
 - Source spec: 無 PM spec。`hideEntry` 的語意以 #483（BUILD-087）的 JSDoc 為準；frontmatter 顯示規則以 BUILD-090 的 R1–R6 為準。
 - Complexity: `M`
@@ -66,23 +66,38 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 
 ## Implementation Tasks
 
-- [ ] T1 (R1–R3): Vitest first in `source-set-explorer.spec.tsx` — hidden expanded dir not re-listed on refresh / invalidate / cascade and no `onError`; un-hide lists it; selection under a newly hidden folder cleared with no component effect; paste de-dupe still sees hidden names; `hideEntry` call count unchanged across an unrelated re-render. Confirm red before T2/T3.
-- [ ] T2 (R1, R2): `use-source-set-explorer.ts` — optional `hideEntry` option; a "hidden path" check (path or an ancestor hidden, via the parent listings); skip hidden paths in cascade / refresh / invalidate; clear a hidden selection; `takenIn` untouched. `source-set-file-explorer.tsx` passes `hideEntry` to the hook and drops `selectionHidden`.
-- [ ] T3 (R3): `tree.tsx` — memoize the filtered entries per listing and `hideEntry`.
-- [ ] T4 (R4, R5): Vitest first — move `file-view-frontmatter.spec.tsx`'s parsing / display cases to the new module; add a SourceSet preview spec (fields, title dedupe, raw box, edit keeps source). Confirm the SourceSet cases red before T5.
-- [ ] T5 (R4, R5): create `components/markdown-frontmatter/` (`splitFrontmatter`, `<Frontmatter>`, scss); `file-explorer/file-view.tsx` and `source-set-explorer/file-view.tsx` import it; remove the moved code and styles from `file-explorer`.
-- [ ] T6-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
-- [ ] T6 (R6): Smoke check in the react-demo at both widths; screenshots go to the local verification handover, not the repo.
+- [x] T1 (R1–R3): Vitest first in `source-set-explorer.spec.tsx` — hidden expanded dir not re-listed on refresh / invalidate / cascade and no `onError`; un-hide lists it; selection under a newly hidden folder cleared with no component effect; paste de-dupe still sees hidden names; `hideEntry` call count unchanged across an unrelated re-render. Confirm red before T2/T3.
+- [x] T2 (R1, R2): `use-source-set-explorer.ts` — optional `hideEntry` option; a "hidden path" check (path or an ancestor hidden, via the parent listings); skip hidden paths in cascade / refresh / invalidate; clear a hidden selection; `takenIn` untouched. `source-set-file-explorer.tsx` passes `hideEntry` to the hook and drops `selectionHidden`.
+- [x] T3 (R3): `tree.tsx` — memoize the filtered entries per listing and `hideEntry`.
+- [x] T4 (R4, R5): Vitest first — move `file-view-frontmatter.spec.tsx`'s parsing / display cases to the new module; add a SourceSet preview spec (fields, title dedupe, raw box, edit keeps source). Confirm the SourceSet cases red before T5.
+- [x] T5 (R4, R5): create `components/markdown-frontmatter/` (`splitFrontmatter`, `<Frontmatter>`, scss); `file-explorer/file-view.tsx` and `source-set-explorer/file-view.tsx` import it; remove the moved code and styles from `file-explorer`.
+- [x] T6-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
+- [x] T6 (R6): Smoke check in the react-demo at both widths; screenshots go to the local verification handover, not the repo.
 
 ---
 
 ## Coverage
 
-Use Cases: [filled during build]
-Files: [filled during build]
+Use Cases: R1, R2, R3, R4, R5, R6
+
+Files:
+
+- `packages/react/src/components/source-set-explorer/use-source-set-explorer.ts`（react）— 選填 `hideEntry` 選項、`isHiddenPath()`；cascade／`refresh`／`invalidate` 略過被隱藏路徑；`selectionHidden`（`useMemo`）與清除選取的 effect 從元件搬進來
+- `packages/react/src/components/source-set-explorer/source-set-file-explorer.tsx`（react）— 把 `hideEntry` 傳給 hook，拿掉自己的 `selectionHidden`
+- `packages/react/src/components/source-set-explorer/tree.tsx`（react）— 每份清單的可見項目以 `WeakMap` 記住，快取與填它的 `hideEntry` 綁在一起
+- `packages/react/src/components/markdown-frontmatter/frontmatter.tsx`、`frontmatter.module.scss`（react，新增）— 從 `file-explorer/file-view.tsx` 原樣搬來的 `splitFrontmatter()`、`MarkdownFrontmatter`（原 `Frontmatter`）與樣式，未從套件入口匯出
+- `packages/react/src/components/file-explorer/file-view.tsx`、`file-view.module.scss`（react）— 改從新模組引用，移除搬走的程式與樣式
+- `packages/react/src/components/source-set-explorer/file-view.tsx`（react）— 預覽分支改用 `splitFrontmatter` ＋ `MarkdownFrontmatter`
+- `packages/react/src/components/source-set-explorer/source-set-explorer.spec.tsx`（react）— #485 3 案、SourceSet frontmatter 4 案
+- `packages/react/src/components/file-explorer/file-view-frontmatter.spec.tsx`（react）— 首次渲染等待放寬到 3 s
 
 ---
 
 ## Execution Log / Change Log
 
 - 2026-10-06: BUILD task created from [asgard-js-sdk#485](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/485) items 1, 3, 4 plus the SourceSet half of the BUG-032 frontmatter preview (Status: `draft`).
+- 2026-10-06: Plan confirmed (Status: `draft → ready → in-progress`).
+- 2026-10-06: T1 specs first: all 3 red (hidden `.git` re-listed on refresh 2× vs 1×; hidden `autoExpandPaths` folder listed 2×; `hideEntry` 22 calls vs 4 across menu open / close). T2/T3 built; the R3 spec was sharpened mid-build to re-render on the already-selected entry (the hook's selection check legitimately runs once per selection change), then re-verified red without the tree memo (25 vs 9) and green with it. The existing #116 selection-dropping specs pass unchanged with the effect moved into the hook (commit `2f54307b`).
+- 2026-10-06: T4/T5 (commit `d8504f03`): frontmatter code and styles moved verbatim into `components/markdown-frontmatter/`; the SourceSet preview uses it. The 4 SourceSet cases were checked red without the SourceSet change (3 red — the source-view case is a preservation check that passes either way) after strengthening the title case (it passed red at first because the old rendering's `title:` was an H2 the assertion did not look at). Deviation from the plan: BUILD-090's 31 FileView specs stay in `file-explorer/` instead of moving — they are end-to-end FileView specs and keep proving R5 there. One cold-start timeout in that file's first case (1 of 7 runs) → its render wait widened to 3 s.
+- 2026-10-06: Gate green (core 448, react 696; lint 0 errors and back to the 5 pre-existing warnings after tying the tree's cache to `hideEntry` — the first cut added a 6th, `useMemo` "unnecessary dependency"). Demo `/source-set-explorer` at 320px and 1012px: `.git` expanded, `hide . directories` on → refresh lists `""`, `skills`, `skills/pdf` only (0× `.git`); off → `.git` listed once per mount and its children return. `skills/pdf/SKILL.md` previews `name = pdf` above the body, no `<hr>`, no overflow at either width (Status: `in-progress → done`).
+- 2026-10-06: Known limitation: an `initialPath` inside a hidden folder still has its ancestors listed once at mount — the root listing that says they are hidden is not loaded yet at that point. The selection it would reveal is still dropped.

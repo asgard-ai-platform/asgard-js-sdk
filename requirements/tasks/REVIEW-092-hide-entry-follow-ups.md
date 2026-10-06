@@ -3,127 +3,65 @@
 ## Meta
 
 - Task ID: `REVIEW-092`
-- Status: `draft`
+- Status: `done`
 - BUILD Task: `BUILD-092`
-- Reviewed commit: `<filled at review time>`
+- Reviewed commit: `d8504f03`
 - Reviewed branch: `fix/485-hide-entry-follow-ups`
 
 ---
 
 ## §1 Static Code Review
 
-Scan BUILD task `## Coverage` files against `FRONTEND_RULE_COMMON.md`. No server needed.
+Scope is `BUILD-092 ## Coverage`. `lint` / `format` / `typecheck` / `build` / `test` run project-wide.
 
 ### §1.1 Checklist
 
-| Check item                                                                                                    | Rule                           | Result  |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------- |
-| SVG path strings inlined into components                                                                      | FRONTEND_RULE_COMMON §1.1      | ✅ / ❌ |
-| Inline style magic numbers (e.g., `minHeight: 'calc(...)'`)                                                   | FRONTEND_RULE_COMMON §1.2      | ✅ / ❌ |
-| Hardcoded color values (hex / rgba / oklch literal)                                                           | FRONTEND_RULE_COMMON §1.3      | ✅ / ❌ |
-| `<style>` tag injected into JSX                                                                               | FRONTEND_RULE_COMMON §1.4      | ✅ / ❌ |
-| Module-level mutable ID counters                                                                              | FRONTEND_RULE_COMMON §1.5      | ✅ / ❌ |
-| Login backdoor outside `NODE_ENV === 'development'` guard                                                     | FRONTEND_RULE_COMMON §1.6      | ✅ / ❌ |
-| Sensitive data passed through URL query strings                                                               | FRONTEND_RULE_COMMON §1.7      | ✅ / ❌ |
-| `page.tsx` is thin (params + navigation only; no main UI JSX)                                                 | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| Feature components in `src/components/{feature}/`; no `screens/` dir                                          | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| TypeScript type (`src/types/`) and API module (`src/api/`) exist before first use                             | FRONTEND_RULE_COMMON §2.2      | ✅ / ❌ |
-| API calls routed through `src/api/` domain module; no direct axios in components                              | FRONTEND_RULE_COMMON §3.2      | ✅ / ❌ |
-| Server state via TanStack Query; `isLoading` / `isError` both handled                                         | FRONTEND_RULE_COMMON §3.3 §3.4 | ✅ / ❌ |
-| Forms use RHF + Zod; no bare `useState` fields; field-level error messages                                    | FRONTEND_RULE_COMMON §3.5      | ✅ / ❌ |
-| Zustand store does not hold server data                                                                       | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| No `as any`; no `eslint-disable` / `@ts-ignore` to bypass type errors                                         | FRONTEND_RULE_COMMON §4.1 §4.2 | ✅ / ❌ |
-| Shared types centralized in `src/types/`; no duplicate interfaces across files                                | FRONTEND_RULE_COMMON §4.3 §4.4 | ✅ / ❌ |
-| Size magic numbers repeated ≥3× extracted to `src/constants/layout.ts`                                        | FRONTEND_RULE_COMMON §5.2      | ✅ / ❌ |
-| Dates use dayjs + `src/constants/formats.ts` constants                                                        | FRONTEND_RULE_COMMON §5.2      | ✅ / ❌ |
-| All user-facing text via `useTranslations()` / `t()`; synced to `messages/zh-TW.json` + `messages/en-US.json` | FRONTEND_RULE_COMMON §5.3      | ✅ / ❌ |
-| Repeated Tailwind class groups (≥3×), JSX fragments (≥3×), logic (≥2×) extracted                              | FRONTEND_RULE_COMMON §6        | ✅ / ❌ |
-| No `setTimeout` mock delays                                                                                   | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
-| No `console.log` (except error boundary logging)                                                              | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
-| No untracked TODO / FIXME                                                                                     | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
+| Check item                                           | Rule                         | Result |
+| ---------------------------------------------------- | ---------------------------- | ------ |
+| `any` / `as any`                                     | FRONTEND_RULE_COMMON §1.1    | ✅ ¹   |
+| `@ts-ignore` / `eslint-disable`                      | FRONTEND_RULE_COMMON §1.2    | ✅     |
+| `console.log`                                        | FRONTEND_RULE_COMMON §1.3 §7 | ✅     |
+| Teardown for subscriptions / listeners / timers      | FRONTEND_RULE_COMMON §1.5    | ✅ n/a |
+| react → core through the public entry only           | FRONTEND_RULE_COMMON §1.6    | ✅     |
+| No breaking public-API change                        | FRONTEND_RULE_COMMON §1.7    | ✅ ²   |
+| Explicit return types on exported functions          | FRONTEND_RULE_COMMON §3.1    | ✅     |
+| No hardcoded colour values                           | FRONTEND_RULE_COMMON §4.2    | ✅ ³   |
+| UI verified at both widths                           | FRONTEND_RULE_COMMON §4.3+   | ✅     |
+| core and react share a version number                | FRONTEND_RULE_COMMON §5      | ✅ ⁴   |
+| Repeated logic extracted (≥2×)                       | FRONTEND_RULE_COMMON §6      | ✅ ⁵   |
+| `setTimeout` mock, dead code, untracked TODO / FIXME | FRONTEND_RULE_COMMON §7      | ✅     |
+| F-025 boundary: no new `../file-explorer/` import    | `module-boundary.spec.ts`    | ✅ ⁶   |
+| New shared module reads no chat context              | F-025 R3                     | ✅ ⁶   |
 
-### §1.2 Mechanical Grep
+¹ 唯一命中是註解裡的英文單字 any。
+² `useSourceSetExplorer` 不從套件入口匯出，`hideEntry` 選項是內部變更；`SourceSetFileExplorer` 的 props 不變。`MarkdownFrontmatter`／`splitFrontmatter` 也不匯出。
+³ 命中 10 處：從 `file-explorer/file-view.module.scss` 原樣搬來的 `var(--asg-color-…, fallback)` 後備值，與票號。
+⁴ 未 bump。
+⁵ 兩個 FileView 原本會各有一份 frontmatter 程式，改為共用 `components/markdown-frontmatter/`；`isHiddenPath` 取代元件裡同樣的判斷，不是新增第二份。
+⁶ 新模組只 import `react`、`js-yaml`、自己的 scss；`module-boundary.spec.ts` 未修改且通過。
 
-Run the commands below against directories listed in BUILD task `## Coverage`. Empty output = ✅, any output = ❌.
+### §1.4 Build / Lint / Format
 
-```bash
-# §1.3 hardcoded color values
-grep -rn --include="*.tsx" --include="*.ts" '#[0-9a-fA-F]\{3,6\}\|rgba(\|oklch(' <coverage-dirs>
-
-# §1.4 <style> tag injection
-grep -rn --include="*.tsx" '<style>' <coverage-dirs>
-
-# §1.7 sensitive data in URL query strings
-grep -rn --include="*.tsx" --include="*.ts" 'router\.push.*email=\|router\.push.*token=\|router\.push.*password=\|searchParams.*token' <coverage-dirs>
-
-# §4.1 as any
-grep -rn --include="*.tsx" --include="*.ts" 'as any' <coverage-dirs>
-
-# §4.2 eslint-disable / ts-ignore
-grep -rn --include="*.tsx" --include="*.ts" 'eslint-disable\|@ts-ignore' <coverage-dirs>
-
-# §5.3 hardcoded Chinese or common UI strings in JSX
-grep -rn --include="*.tsx" '>[^\{<]*[一-鿿][^\{<]*<' <coverage-dirs>
-
-# §7 console.log
-grep -rn --include="*.tsx" --include="*.ts" 'console\.log' <coverage-dirs>
-
-# §7 setTimeout mock
-grep -rn --include="*.tsx" --include="*.ts" 'setTimeout' <coverage-dirs>
+```text
+lint:packages: PASS — 0 errors；5 warnings 皆為既有
+format:check:  PASS
+typecheck:     PASS — core + react + react-demo
+build:         PASS — core, react
+test:          PASS — core 448、react 696（新增 7 案）
 ```
-
-Grep results:
-
-```
-<paste output here>
-```
-
-### §1.3 TypeScript and Lint
-
-```bash
-npx tsc --noEmit
-npm run lint:check （唯讀審查用 lint:check；REVIEW_RULE §1.4 對應的 npm run lint 為含 auto-fix 的變體）
-```
-
-Results:
-
-```
-tsc:  PASS / FAIL — <paste output if any errors>
-lint: PASS / FAIL — <paste output if any errors>
-```
-
-### §1.4 Static Review Acceptance
-
-- [ ] All §1.1 items checked and marked ✅/❌
-- [ ] All ❌ violations listed with file path and line number
-- [ ] All §1.2 grep commands run and output pasted
-- [ ] `npx tsc --noEmit` run — no TypeScript errors
-- [ ] `npm run lint:check` run — no ESLint errors
-
-Any ❌ violation → report BLOCKER to BUILD task; re-run §1 after fix.
 
 ---
 
 ## §3 Functional Validation
 
-Validate each R# from BUILD task against the running app (`npm run dev -- -p <本地 dev port，見 CLAUDE.local.md>`).
-
-### R# Result Matrix
-
-| R#  | Description                           | Result                | Note                               |
-| --- | ------------------------------------- | --------------------- | ---------------------------------- |
-| R1  | `<criterion summary from BUILD task>` | Pass / Fail / Blocked | `<actual vs expected if not Pass>` |
-| R2  | `<criterion summary>`                 | Pass / Fail / Blocked |                                    |
-| RN  | (Browser smoke test) `<summary>`      | Pass / Fail / Blocked |                                    |
-
-### §3.1 Acceptance
-
-- [ ] All R# in BUILD task `## Coverage` executed (Step 1 static read + Step 2 browser operation + Step 3 boundary conditions)
-- [ ] Each R# marked Pass / Fail / Blocked with explanation
-- [ ] If e2e spec exists for changed routes: `npm run test:e2e` run and passed
-- [ ] Loading, error, and empty-state boundary conditions confirmed
-
-Any Fail → BLOCKER to BUILD task; describe [actual behavior] vs [expected behavior].
+| R#   | Result | Evidence                                                                                                                                                         |
+| ---- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `R1` | ✅     | spec 2 案（改前皆紅）。demo 320px／1012px：展開 `.git` → 打開隱藏 → 重新整理只 list `""`、`skills`、`skills/pdf`；關掉隱藏再整理，每個 mount 各 list `.git` 一次 |
+| `R2` | ✅     | #116 既有的「選取變隱藏就清掉」「initialPath 指進隱藏處選不到」兩案在 effect 搬進 hook 後不改即通過；貼上去重案照常                                              |
+| `R3` | ✅     | spec：對已選取的項目開關右鍵選單兩次，`hideEntry` 呼叫次數不變；拿掉 tree 記憶化時 25 對 9                                                                       |
+| `R4` | ✅     | spec 4 案（拿掉 SourceSet 改動時 3 紅）。demo 兩種寬度：`skills/pdf/SKILL.md` 上方 `name = pdf`、無 `<hr>`、無溢出                                               |
+| `R5` | ✅     | `FileExplorer` 的 31 個 frontmatter 案例（改從新模組引用後）全過；邊界測試不改即過                                                                               |
+| `R6` | ✅     | 閘門全綠；demo 走查見 BUILD-092 Execution Log                                                                                                                    |
 
 ---
 
@@ -139,10 +77,13 @@ None.
 
 ### Minor (nice to have)
 
-None.
+- `initialPath` 位在被隱藏的目錄裡時，掛載當下它的祖先目錄仍會被 list 一次（那時還沒有根目錄清單可判斷），之後不再 list；選取照樣被清掉。
+- `hideEntry` 若每次 render 都是新函式，tree 的快取每次重建、hook 每次重算選取是否隱藏；JSDoc 已寫明要傳穩定的函式。Sindri、Mimir、demo 都是固定函式。
+- #485 第 2 項（可寫模式新建隱藏名稱時是否提示）不在本 task，仍開著。
 
 ---
 
 ## Execution Log
 
 - 2026-10-06: REVIEW task created, paired with BUILD-092 (Status: `draft`).
+- 2026-10-06: §1 — 14 項 ✅、0 違規；§3 — R1–R6 全 Pass；3 Minor 不改 (Status: `ready → in-progress → done`).
