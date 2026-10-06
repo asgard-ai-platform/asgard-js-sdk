@@ -77,12 +77,23 @@ export function DirChildren({ dirPath, depth }: { dirPath: string; depth: number
 
 /** A tree row: single-click selects (a dir also toggles); double-click opens a file; right-click → menu. */
 function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }): ReactNode {
-  const { expanded, selectedPath, clipboard, activeSourceId, toggleExpand, onSelect, setOpenFile, openContext } =
-    useFileExplorer();
+  const {
+    expanded,
+    selectedPath,
+    clipboard,
+    activeSourceId,
+    canCut,
+    toggleExpand,
+    onSelect,
+    setOpenFile,
+    openContext,
+  } = useFileExplorer();
   const isOpen = entry.isDir && expanded.has(entry.path);
   const selected = selectedPath === entry.path;
-  // The same path can exist in another source; only the one the entry was cut from waits to be moved.
-  const isCut = clipboard?.op === 'cut' && clipboard.sourceId === activeSourceId && clipboard.entry.path === entry.path;
+  // The same path can exist in another source; only the one the entry was cut from waits to be moved — and only
+  // while that source can still move it (issue #482).
+  const isCut =
+    canCut && clipboard?.op === 'cut' && clipboard.sourceId === activeSourceId && clipboard.entry.path === entry.path;
 
   const onClick = (): void => {
     onSelect(entry);

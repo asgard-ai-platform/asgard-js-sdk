@@ -9,6 +9,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -41,7 +42,9 @@ import { FsEntry, FsProviders, FsSource } from './types';
  * active, because every provider call carries one `sourceId` and the entry's path means nothing in another
  * (issue #476). The match is by id alone, so a source that reuses an id counts as the same one. It is
  * optional so a host calling `setClipboard({ op, entry })` keeps compiling: the context fills in the
- * active source.
+ * source active when that set is committed — after the render, so a handler that switches source and then
+ * sets credits the source it switched to (issue #482). A clipboard that carries its own `sourceId` is kept
+ * as the same object.
  */
 export type Clipboard = { op: 'copy' | 'cut'; entry: FsEntry; sourceId?: string } | null;
 export type MenuTarget = { kind: 'file' | 'dir'; entry: FsEntry } | { kind: 'background' };
@@ -462,11 +465,17 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     },
     [activeSourceId, remove, run, requestConfirm, locale],
   );
-  const setClipboard = useCallback(
-    (next: Clipboard): void =>
-      setClipboardState(next && { ...next, sourceId: next.sourceId ?? activeSourceId ?? undefined }),
-    [activeSourceId],
-  );
+  // Stored as given, so `setClipboard` depends on nothing and keeps one identity across source switches.
+  const setClipboard = useCallback((next: Clipboard): void => setClipboardState(next), []);
+
+  // A missing `sourceId` is the source active when the set lands. `controller.selectSource` belongs to the
+  // host, not to this context, so a switch in the same handler is only visible here once it commits.
+  useLayoutEffect(() => {
+    if (clipboard && clipboard.sourceId === undefined && activeSourceId) {
+      setClipboardState({ ...clipboard, sourceId: activeSourceId });
+    }
+  }, [clipboard, activeSourceId]);
+
   const canCopy = !!copy;
   const canCut = !!move;
   const canPaste = !!clipboard && clipboard.sourceId === activeSourceId && (clipboard.op === 'copy' ? canCopy : canCut);
