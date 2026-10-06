@@ -3,127 +3,77 @@
 ## Meta
 
 - Task ID: `REVIEW-091`
-- Status: `draft`
+- Status: `done`
 - BUILD Task: `BUILD-091`
-- Reviewed commit: `<filled at review time>`
+- Reviewed commit: `128cff37`
 - Reviewed branch: `fix/482-clipboard-follow-ups`
 
 ---
 
 ## §1 Static Code Review
 
-Scan BUILD task `## Coverage` files against `FRONTEND_RULE_COMMON.md`. No server needed.
+Scope is `BUILD-091 ## Coverage`（`file-explorer-context.tsx`、`file-explorer-tree.tsx`、新增的 `clipboard-follow-ups.spec.tsx`）。
+`lint` / `format` / `typecheck` / `build` / `test` run project-wide.
 
 ### §1.1 Checklist
 
-| Check item                                                                                                    | Rule                           | Result  |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------- |
-| SVG path strings inlined into components                                                                      | FRONTEND_RULE_COMMON §1.1      | ✅ / ❌ |
-| Inline style magic numbers (e.g., `minHeight: 'calc(...)'`)                                                   | FRONTEND_RULE_COMMON §1.2      | ✅ / ❌ |
-| Hardcoded color values (hex / rgba / oklch literal)                                                           | FRONTEND_RULE_COMMON §1.3      | ✅ / ❌ |
-| `<style>` tag injected into JSX                                                                               | FRONTEND_RULE_COMMON §1.4      | ✅ / ❌ |
-| Module-level mutable ID counters                                                                              | FRONTEND_RULE_COMMON §1.5      | ✅ / ❌ |
-| Login backdoor outside `NODE_ENV === 'development'` guard                                                     | FRONTEND_RULE_COMMON §1.6      | ✅ / ❌ |
-| Sensitive data passed through URL query strings                                                               | FRONTEND_RULE_COMMON §1.7      | ✅ / ❌ |
-| `page.tsx` is thin (params + navigation only; no main UI JSX)                                                 | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| Feature components in `src/components/{feature}/`; no `screens/` dir                                          | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| TypeScript type (`src/types/`) and API module (`src/api/`) exist before first use                             | FRONTEND_RULE_COMMON §2.2      | ✅ / ❌ |
-| API calls routed through `src/api/` domain module; no direct axios in components                              | FRONTEND_RULE_COMMON §3.2      | ✅ / ❌ |
-| Server state via TanStack Query; `isLoading` / `isError` both handled                                         | FRONTEND_RULE_COMMON §3.3 §3.4 | ✅ / ❌ |
-| Forms use RHF + Zod; no bare `useState` fields; field-level error messages                                    | FRONTEND_RULE_COMMON §3.5      | ✅ / ❌ |
-| Zustand store does not hold server data                                                                       | FRONTEND_RULE_COMMON §2.1      | ✅ / ❌ |
-| No `as any`; no `eslint-disable` / `@ts-ignore` to bypass type errors                                         | FRONTEND_RULE_COMMON §4.1 §4.2 | ✅ / ❌ |
-| Shared types centralized in `src/types/`; no duplicate interfaces across files                                | FRONTEND_RULE_COMMON §4.3 §4.4 | ✅ / ❌ |
-| Size magic numbers repeated ≥3× extracted to `src/constants/layout.ts`                                        | FRONTEND_RULE_COMMON §5.2      | ✅ / ❌ |
-| Dates use dayjs + `src/constants/formats.ts` constants                                                        | FRONTEND_RULE_COMMON §5.2      | ✅ / ❌ |
-| All user-facing text via `useTranslations()` / `t()`; synced to `messages/zh-TW.json` + `messages/en-US.json` | FRONTEND_RULE_COMMON §5.3      | ✅ / ❌ |
-| Repeated Tailwind class groups (≥3×), JSX fragments (≥3×), logic (≥2×) extracted                              | FRONTEND_RULE_COMMON §6        | ✅ / ❌ |
-| No `setTimeout` mock delays                                                                                   | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
-| No `console.log` (except error boundary logging)                                                              | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
-| No untracked TODO / FIXME                                                                                     | FRONTEND_RULE_COMMON §7        | ✅ / ❌ |
+| Check item                                           | Rule                         | Result |
+| ---------------------------------------------------- | ---------------------------- | ------ |
+| `any` / `as any`                                     | FRONTEND_RULE_COMMON §1.1    | ✅     |
+| `@ts-ignore` / `eslint-disable`                      | FRONTEND_RULE_COMMON §1.2    | ✅     |
+| `console.log`                                        | FRONTEND_RULE_COMMON §1.3 §7 | ✅     |
+| Hardcoded key / endpoint / namespace                 | FRONTEND_RULE_COMMON §1.4    | ✅ n/a |
+| Teardown for subscriptions / listeners / timers      | FRONTEND_RULE_COMMON §1.5    | ✅ n/a |
+| react → core through the public entry only           | FRONTEND_RULE_COMMON §1.6    | ✅     |
+| No breaking public-API change                        | FRONTEND_RULE_COMMON §1.7    | ✅ ¹   |
+| Explicit return types on exported functions          | FRONTEND_RULE_COMMON §3.1    | ✅     |
+| Component props fully typed                          | FRONTEND_RULE_COMMON §4.1    | ✅     |
+| No hardcoded colour values                           | FRONTEND_RULE_COMMON §4.2    | ✅ ²   |
+| UI verified at both widths                           | FRONTEND_RULE_COMMON §4.3+   | ✅     |
+| core and react share a version number                | FRONTEND_RULE_COMMON §5      | ✅ ³   |
+| `setTimeout` mock, dead code, untracked TODO / FIXME | FRONTEND_RULE_COMMON §7      | ✅     |
+| No render loop from the fill effect                  | —                            | ✅ ⁴   |
 
-### §1.2 Mechanical Grep
+¹ `Clipboard`、`setClipboard` 的型別不變；`setClipboard` 變成穩定參照、帶 `sourceId` 的物件不再被複製，都是消費端只會受益的變更。
+² 命中 6 處，皆為測試檔的票號 `#482`／`#480`。
+³ 未 bump。
+⁴ 補完 `sourceId` 後條件 `clipboard.sourceId === undefined` 不再成立，effect 只多跑一次。
 
-Run the commands below against directories listed in BUILD task `## Coverage`. Empty output = ✅, any output = ❌.
+### §1.2 Mechanical grep（`main..HEAD` 新增行）
 
-```bash
-# §1.3 hardcoded color values
-grep -rn --include="*.tsx" --include="*.ts" '#[0-9a-fA-F]\{3,6\}\|rgba(\|oklch(' <coverage-dirs>
-
-# §1.4 <style> tag injection
-grep -rn --include="*.tsx" '<style>' <coverage-dirs>
-
-# §1.7 sensitive data in URL query strings
-grep -rn --include="*.tsx" --include="*.ts" 'router\.push.*email=\|router\.push.*token=\|router\.push.*password=\|searchParams.*token' <coverage-dirs>
-
-# §4.1 as any
-grep -rn --include="*.tsx" --include="*.ts" 'as any' <coverage-dirs>
-
-# §4.2 eslint-disable / ts-ignore
-grep -rn --include="*.tsx" --include="*.ts" 'eslint-disable\|@ts-ignore' <coverage-dirs>
-
-# §5.3 hardcoded Chinese or common UI strings in JSX
-grep -rn --include="*.tsx" '>[^\{<]*[一-鿿][^\{<]*<' <coverage-dirs>
-
-# §7 console.log
-grep -rn --include="*.tsx" --include="*.ts" 'console\.log' <coverage-dirs>
-
-# §7 setTimeout mock
-grep -rn --include="*.tsx" --include="*.ts" 'setTimeout' <coverage-dirs>
+```text
+[any]              0
+[ignore]           0
+[console]          0
+[setTimeout]       0
+[TODO/FIXME]       0
+[color]            6 — 全為票號
+[react → core/src] 0
 ```
 
-Grep results:
+### §1.4 Build / Lint / Format
 
+```text
+lint:packages: PASS — 0 errors；5 warnings 皆為既有
+format:check:  PASS
+typecheck:     PASS — core + react + react-demo
+build:         PASS — core, react
+test:          PASS — core 448、react 695（新增 6 案）
 ```
-<paste output here>
-```
-
-### §1.3 TypeScript and Lint
-
-```bash
-npx tsc --noEmit
-npm run lint:check （唯讀審查用 lint:check；REVIEW_RULE §1.4 對應的 npm run lint 為含 auto-fix 的變體）
-```
-
-Results:
-
-```
-tsc:  PASS / FAIL — <paste output if any errors>
-lint: PASS / FAIL — <paste output if any errors>
-```
-
-### §1.4 Static Review Acceptance
-
-- [ ] All §1.1 items checked and marked ✅/❌
-- [ ] All ❌ violations listed with file path and line number
-- [ ] All §1.2 grep commands run and output pasted
-- [ ] `npx tsc --noEmit` run — no TypeScript errors
-- [ ] `npm run lint:check` run — no ESLint errors
-
-Any ❌ violation → report BLOCKER to BUILD task; re-run §1 after fix.
 
 ---
 
 ## §3 Functional Validation
 
-Validate each R# from BUILD task against the running app (`npm run dev -- -p <本地 dev port，見 CLAUDE.local.md>`).
+| R#   | Result | Evidence                                                                                                                      |
+| ---- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `R1` | ✅     | spec：切 B、切回 A 後 `setClipboard` 只有一個參照，依賴它的 effect 只跑一次；修正前跑了 3 次                                  |
+| `R2` | ✅     | spec：帶 `sourceId` 的物件 `===` 原樣回傳；修正前是展開後的新物件                                                             |
+| `R3` | ✅     | spec：同一個 handler `selectSource('b')` + `setClipboard` 記到 `b`（修正前記到 `a`）；分開的「在 a 設、之後切到 b」仍記在 `a` |
+| `R4` | ✅     | spec：同一來源拿掉 `move` 後不再淡化、也不能貼；有 `move` 時照常淡化                                                          |
+| `R5` | ✅     | 閘門全綠；demo #476 雙來源在 987px／343px 各自走過剪下 → 切唯讀 → 切回 → 貼進 `src`，行為與 #476 一致，無水平溢出             |
 
-### R# Result Matrix
-
-| R#  | Description                           | Result                | Note                               |
-| --- | ------------------------------------- | --------------------- | ---------------------------------- |
-| R1  | `<criterion summary from BUILD task>` | Pass / Fail / Blocked | `<actual vs expected if not Pass>` |
-| R2  | `<criterion summary>`                 | Pass / Fail / Blocked |                                    |
-| RN  | (Browser smoke test) `<summary>`      | Pass / Fail / Blocked |                                    |
-
-### §3.1 Acceptance
-
-- [ ] All R# in BUILD task `## Coverage` executed (Step 1 static read + Step 2 browser operation + Step 3 boundary conditions)
-- [ ] Each R# marked Pass / Fail / Blocked with explanation
-- [ ] If e2e spec exists for changed routes: `npm run test:e2e` run and passed
-- [ ] Loading, error, and empty-state boundary conditions confirmed
-
-Any Fail → BLOCKER to BUILD task; describe [actual behavior] vs [expected behavior].
+消費端：Heimdall 的 `new-chat-assets-panel.tsx` 只讀 `clipboard.entry.path`、effect 依賴 `setClipboard`，參照穩定後切來源不再重跑；Sindri 沒有用到剪貼簿。
 
 ---
 
@@ -139,10 +89,13 @@ None.
 
 ### Minor (nice to have)
 
-None.
+- 剪貼簿剛設好的那一次 commit，`sourceId` 還是 `undefined`，要等 layout effect 補上。這段期間 `canPaste` 為 false，畫面在 paint 之前就補好；但 host 對 `clipboard` 下的 `useEffect` 可能先看到一次未補的值。現有消費端不看 `sourceId`。
+- 設定剪貼簿時若沒有任何 active source，`sourceId` 會留空，等之後第一個 active source 出現才補上。沒有來源時拿不到可剪下的項目，實務上碰不到。
+- #482 第 1 項（來源 id 重複使用／來源被移除時清空）不在本 task，仍開著。
 
 ---
 
 ## Execution Log
 
 - 2026-10-06: REVIEW task created, paired with BUILD-091 (Status: `draft`).
+- 2026-10-06: §1 — 14 項 ✅、0 違規；§3 — R1–R5 全 Pass；3 Minor 不改 (Status: `ready → in-progress → done`).

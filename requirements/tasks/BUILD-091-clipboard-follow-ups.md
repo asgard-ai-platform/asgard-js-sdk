@@ -3,7 +3,7 @@
 ## Meta
 
 - Task ID: `BUILD-091`
-- Status: `draft`
+- Status: `done`
 - Issue: [asgard-js-sdk#482](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482)（issue 開在本 repo，無 PM tracking spec；issue body 即規格。本 task 只做第 2、3、4 項）
 - Source spec: 無 PM spec。契約來源是 `Clipboard` 型別註解（`packages/react/src/components/file-explorer/file-explorer-context.tsx`）：「It is optional so a host calling `setClipboard({ op, entry })` keeps compiling: the context fills in the active source.」
 - Complexity: `S`
@@ -67,21 +67,29 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 
 ## Implementation Tasks
 
-- [ ] T1 (R1–R4): Vitest first — `setClipboard` identity across a source switch; stored object identity when `sourceId` is given; same-handler switch + set attributes to the new source, separate handlers keep the old one; cut entry without `move` not dimmed. Confirm the R1–R4 cases fail before T2/T3.
-- [ ] T2 (R1–R3): `file-explorer-context.tsx` — `setClipboard` stores `next` as given; a `useLayoutEffect` fills a missing `sourceId` with the committed `activeSourceId`; update the `Clipboard` JSDoc to say when the fill happens.
-- [ ] T3 (R4): `file-explorer-tree.tsx` — `isCut` also requires the context's `canCut`.
-- [ ] T4-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
-- [ ] T4 (R5): Smoke check in the react-demo at both widths; screenshots go to the local verification handover, not the repo.
+- [x] T1 (R1–R4): Vitest first — `setClipboard` identity across a source switch; stored object identity when `sourceId` is given; same-handler switch + set attributes to the new source, separate handlers keep the old one; cut entry without `move` not dimmed. Confirm the R1–R4 cases fail before T2/T3.
+- [x] T2 (R1–R3): `file-explorer-context.tsx` — `setClipboard` stores `next` as given; a `useLayoutEffect` fills a missing `sourceId` with the committed `activeSourceId`; update the `Clipboard` JSDoc to say when the fill happens.
+- [x] T3 (R4): `file-explorer-tree.tsx` — `isCut` also requires the context's `canCut`.
+- [x] T4-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
+- [x] T4 (R5): Smoke check in the react-demo at both widths; screenshots go to the local verification handover, not the repo.
 
 ---
 
 ## Coverage
 
-Use Cases: [filled during build]
-Files: [filled during build]
+Use Cases: R1, R2, R3, R4, R5
+
+Files:
+
+- `packages/react/src/components/file-explorer/file-explorer-context.tsx`（react）— `setClipboard` 原樣存入、不依賴任何 state；`useLayoutEffect` 在 commit 後補缺少的 `sourceId`；`Clipboard` JSDoc 寫明補的時機
+- `packages/react/src/components/file-explorer/file-explorer-tree.tsx`（react）— `isCut` 另外要求 `canCut`
+- `packages/react/src/components/file-explorer/clipboard-follow-ups.spec.tsx`（react，新增）— R1–R4 6 案
 
 ---
 
 ## Execution Log / Change Log
 
 - 2026-10-06: BUILD task created from [asgard-js-sdk#482](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482) items 2–4 (Status: `draft`).
+- 2026-10-06: Plan confirmed (Status: `draft → ready → in-progress`).
+- 2026-10-06: T1 specs first: 4 red (setClipboard identity, own-object identity, same-handler switch + set, cut dim without move), 2 already green and now pinned (set in A then switch keeps A, dim with move). After T2/T3 the file-explorer suite is 21 files / 192 tests, including #476's and paste de-dupe's; full gate green (core 448, react 695; lint 0 errors, same 5 pre-existing warnings). Note: a host effect on `clipboard` can see one committed render where `sourceId` is still undefined before the layout effect fills it; `canPaste` is false for that render (Status: `in-progress → done`).
+- 2026-10-06: Demo `/file-explorer` #476 pair (writable + read-only source, shared in-memory fs), walked at 987px and 343px separately: cut dims `notes.txt`, paste enabled in the writable source, disabled with cut disabled in the read-only one, enabled again and still dimmed back in the writable one; paste into `src` moved the file (depth 1.35rem) and cleared the clipboard; no horizontal overflow.
