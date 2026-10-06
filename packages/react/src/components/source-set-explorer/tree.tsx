@@ -57,16 +57,22 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
   } = props;
 
   // Each listing's visible entries, computed once per listing and `hideEntry` rather than on every render: a
-  // directory can hold 10,000 entries, and opening a menu or a busy toggle re-renders the whole tree (#485).
-  const shownCache = useMemo(() => new WeakMap<readonly FsEntry[], FsEntry[]>(), [hideEntry]);
+  // directory can hold 10,000 entries, and opening a menu or a busy toggle re-renders the whole tree (#485). The
+  // cache lives with the function it was filled by, so a new `hideEntry` starts a new one.
+  const visible = useMemo(
+    () => ({ hide: hideEntry, cache: new WeakMap<readonly FsEntry[], FsEntry[]>() }),
+    [hideEntry],
+  );
   const shownOf = (entries: FsEntry[]): FsEntry[] => {
-    if (!hideEntry) return entries;
+    const { hide, cache } = visible;
 
-    let shown = shownCache.get(entries);
+    if (!hide) return entries;
+
+    let shown = cache.get(entries);
 
     if (!shown) {
-      shown = entries.filter(entry => !hideEntry(entry));
-      shownCache.set(entries, shown);
+      shown = entries.filter(entry => !hide(entry));
+      cache.set(entries, shown);
     }
 
     return shown;
