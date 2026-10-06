@@ -1,4 +1,4 @@
-import { MouseEvent, ReactNode } from 'react';
+import { MouseEvent, ReactNode, useMemo } from 'react';
 import type { FsEntry } from '../file-explorer/types';
 import { type Locale, t } from '../../i18n';
 import { Spinner } from '../spinner';
@@ -56,6 +56,22 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
     highlightAncestors,
   } = props;
 
+  // Each listing's visible entries, computed once per listing and `hideEntry` rather than on every render: a
+  // directory can hold 10,000 entries, and opening a menu or a busy toggle re-renders the whole tree (#485).
+  const shownCache = useMemo(() => new WeakMap<readonly FsEntry[], FsEntry[]>(), [hideEntry]);
+  const shownOf = (entries: FsEntry[]): FsEntry[] => {
+    if (!hideEntry) return entries;
+
+    let shown = shownCache.get(entries);
+
+    if (!shown) {
+      shown = entries.filter(entry => !hideEntry(entry));
+      shownCache.set(entries, shown);
+    }
+
+    return shown;
+  };
+
   function renderDirBody(path: string, depth: number): ReactNode {
     const listing = listings[path];
 
@@ -82,7 +98,7 @@ export function SourceSetTree(props: SourceSetTreeProps): ReactNode {
     // Hidden here, at the drawing, rather than in the listing: a hidden entry is still on the volume, and the
     // name deduplication that paste relies on reads the listing — filtering it there would let a paste land on
     // top of the very entry the user cannot see (asgard-sdk-pm#116).
-    const shown = hideEntry ? listing.entries.filter(entry => !hideEntry(entry)) : listing.entries;
+    const shown = shownOf(listing.entries);
 
     // Empty only when there is nothing more to come: a short listing whose loaded entries are all hidden
     // still owes the count of what it did not load (F-026), which the early return would swallow.

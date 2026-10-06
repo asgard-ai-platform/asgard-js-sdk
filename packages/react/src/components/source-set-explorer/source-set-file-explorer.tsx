@@ -47,7 +47,7 @@ import {
   UploadIcon,
   XIcon,
 } from './icons';
-import { isWithin, normalizeRefPath, parentDir, pathChain } from './paths';
+import { normalizeRefPath, pathChain } from './paths';
 import { useSourceSetExplorer } from './use-source-set-explorer';
 import styles from './source-set-explorer.module.scss';
 
@@ -285,6 +285,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     uploadConcurrency,
     readOnly,
     onError,
+    hideEntry,
     requestInput,
     requestConfirm,
   });
@@ -306,26 +307,6 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
   // falls `targetDir` back to `rootPath`; only the callers were missing.
   const { select } = explorer;
   const clearSelection = useCallback((): void => select(null), [select]);
-
-  // A selection the tree no longer draws — the entry or a folder above it hidden by `hideEntry` — would leave
-  // the toolbar deleting, renaming and uploading into something the user cannot see. Drop it instead. Only
-  // reachable when `hideEntry` changes while mounted, or an `initialPath` points into what it hides.
-  const { listings } = explorer;
-  const selectionHidden = useMemo((): boolean => {
-    if (!hideEntry || !selected) return false;
-
-    return pathChain(selected.path)
-      .filter(path => path !== rootPath && isWithin(rootPath, path))
-      .some(path => {
-        const entry = listings[parentDir(path)]?.entries.find(it => it.path === path);
-
-        return entry != null && hideEntry(entry);
-      });
-  }, [hideEntry, selected, listings, rootPath]);
-
-  useEffect(() => {
-    if (selectionHidden) clearSelection();
-  }, [selectionHidden, clearSelection]);
 
   // Esc sits on the root rather than the tree so it still answers after a background click, which lands
   // focus here — that is what `tabIndex={-1}` on the root is for.

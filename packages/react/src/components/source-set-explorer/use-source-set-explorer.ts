@@ -48,6 +48,13 @@ export interface SourceSetExplorerOptions {
   uploadConcurrency?: number;
   readOnly: boolean;
   onError?: (error: unknown) => void;
+  /**
+   * Entries the tree does not draw (asgard-sdk-pm#116). The hook needs to know too: a hidden folder — or anything
+   * under one — is never listed by the cascade, `refresh` or `invalidate`, and a selection that becomes hidden is
+   * dropped (asgard-js-sdk#485). Name de-duplication still reads every entry, so a paste never lands on a hidden
+   * one. Pass a stable function; a new one each render re-checks every listing.
+   */
+  hideEntry?: (entry: FsEntry) => boolean;
   /** Ask the user for a name; resolves `null` when dismissed. */
   requestInput: (options: { title: string; defaultValue?: string }) => Promise<string | null>;
   /** Ask the user to confirm; resolves `true` only on explicit confirmation. */
@@ -167,6 +174,27 @@ function isKnownDir(listings: Readonly<Record<string, DirListing>>, root: string
 }
 
 /**
+ * Whether `path`, or a folder above it inside the tree, is hidden by `hideEntry`. Judged from the parent listings
+ * already loaded: a path whose parent has not been listed yet is not known to be hidden.
+ */
+function isHiddenPath(
+  listings: Readonly<Record<string, DirListing>>,
+  root: string,
+  path: string,
+  hideEntry: ((entry: FsEntry) => boolean) | undefined,
+): boolean {
+  if (!hideEntry) return false;
+
+  return pathChain(path)
+    .filter(p => p !== root && isWithin(root, p))
+    .some(p => {
+      const entry = listings[parentDir(p)]?.entries.find(it => it.path === p);
+
+      return entry != null && hideEntry(entry);
+    });
+}
+
+/**
  * The SourceSet explorer's whole state machine: which directories are listed, what is expanded and
  * selected, the clipboard, and every mutation.
  *
@@ -186,6 +214,7 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     uploadConcurrency,
     readOnly,
     onError,
+    hideEntry,
     requestInput,
     requestConfirm,
   } = options;
@@ -314,9 +343,21 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     for (const path of expanded) {
       if (path === rootPath || listings[path]) continue;
 
-      if (isKnownDir(listings, rootPath, path)) void listDir(path);
+      if (isKnownDir(listings, rootPath, path) && !isHiddenPath(listings, rootPath, path, hideEntry)) {
+        void listDir(path);
+      }
     }
-  }, [expanded, listings, rootPath, listDir]);
+  }, [expanded, listings, rootPath, listDir, hideEntry]);
+
+  // A selection the tree no longer draws — the entry or a folder above it hidden — would leave the toolbar
+  // deleting, renaming and uploading into something the user cannot see. Drop it instead.
+  const selectionHidden = useMemo(
+    (): boolean => selected != null && isHiddenPath(listings, rootPath, selected.path, hideEntry),
+    [selected, listings, rootPath, hideEntry],
+  );
+  useEffect(() => {
+    if (selectionHidden) setSelected(null);
+  }, [selectionHidden]);
 
   // Reports selection changes to the host (R6).
   //
@@ -355,7 +396,7 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
   /** Re-list a directory that is on screen; a collapsed one just drops its cache and re-lists on expand. */
   const invalidate = useCallback(
     (path: string): void => {
-      if (expanded.has(path) || path === rootPath) {
+      if ((expanded.has(path) && !isHiddenPath(listings, rootPath, path, hideEntry)) || path === rootPath) {
         void listDir(path);
 
         return;
@@ -370,7 +411,7 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
         return next;
       });
     },
-    [expanded, rootPath, listDir],
+    [expanded, listings, rootPath, listDir, hideEntry],
   );
 
   /** Run a mutation, then re-list what it touched and surface any failure. */
@@ -439,8 +480,10 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
   const refresh = useCallback((): void => {
     setError(null);
     setRefreshToken(n => n + 1);
-    [...expanded].filter(dir => isKnownDir(listings, rootPath, dir)).forEach(dir => void listDir(dir));
-  }, [expanded, listings, rootPath, listDir]);
+    [...expanded]
+      .filter(dir => isKnownDir(listings, rootPath, dir) && !isHiddenPath(listings, rootPath, dir, hideEntry))
+      .forEach(dir => void listDir(dir));
+  }, [expanded, listings, rootPath, listDir, hideEntry]);
 
   const newFile = useCallback(async (): Promise<void> => {
     const name = await requestInput({ title: t(locale, 'sourceSetExplorer.newFilePrompt') });
