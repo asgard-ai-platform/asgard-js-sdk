@@ -78,6 +78,7 @@
 - asgard-heimdall-pm#375 Heimdall BUG-032 預覽那一半：`.md` 預覽把開頭的 YAML frontmatter 改以欄位表顯示在正文上方 → BUILD-090 / REVIEW-090 (done)。Issue [`asgard-heimdall-pm#375`](https://github.com/asgard-ai-platform/asgard-heimdall-pm/issues/375)，issue body 即規格；列表摘要那一半由 Heimdall 自修。**react only、新增依賴 `js-yaml`**：只改預覽，編輯／存檔維持完整原文；Sindri 也掛 `FileExplorer`，所以不能只剝不顯示；`title` 與第一個 `# ` 標題相同時不顯示那一列（Expected ¶2）。
 - asgard-js-sdk#482 第 2、3、4 項：FileExplorer 剪貼簿 `setClipboard` 回到穩定參照、同一個 handler 切來源時記到新來源、剪下淡化要看 `move` → BUILD-091 / REVIEW-091 (done)。Issue [`asgard-js-sdk#482`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482)，issue body 即規格；第 1 項（來源 id 重複使用時清空）是行為變更、另議。**react only、不改公開 API**。
 - asgard-js-sdk#485 第 1、3、4 項：`hideEntry` 交給 `useSourceSetExplorer`（被隱藏的已展開目錄不再被 list、選取變隱藏由 hook 清掉、過濾結果記住）＋ `SourceSetFileExplorer` 預覽的 frontmatter（同 BUILD-090，邏輯搬到中立模組 `components/markdown-frontmatter/` 兩邊共用）→ BUILD-092 / REVIEW-092 (done)。Issue [`asgard-js-sdk#485`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/485)；第 2 項（新建隱藏名稱是否提示）需產品決定、另議。**react only、hook 加選填參數**。
+- `F-038` PM 驗收回報（[asgard-sdk-pm#118 留言](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/118#issuecomment-6022279521)）：下載卡右側的下載圖示點了沒反應 → BUILD-093 / REVIEW-093 (done)。idle 的圖示是按鈕外的裝飾 span，卡片外框 padding 與 gap 也點不到；改成整張 idle 卡都是下載按鈕，取消／重試維持獨立按鈕。**react only、不改公開 API**。
 
 ## ▶ Next Task
 
@@ -354,3 +355,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-091` | Review: FileExplorer clipboard follow-ups                   | —        | done   | [REVIEW-091-clipboard-follow-ups.md](./REVIEW-091-clipboard-follow-ups.md)                               |
 | `BUILD-092`  | SourceSet hideEntry in the hook and frontmatter fields      | M        | done   | [BUILD-092-hide-entry-follow-ups.md](./BUILD-092-hide-entry-follow-ups.md)                               |
 | `REVIEW-092` | Review: SourceSet hideEntry and frontmatter                 | —        | done   | [REVIEW-092-hide-entry-follow-ups.md](./REVIEW-092-hide-entry-follow-ups.md)                             |
+| `BUILD-093`  | Make the whole idle download card its click target          | S        | done   | [BUILD-093-download-card-click-target.md](./BUILD-093-download-card-click-target.md)                     |
+| `REVIEW-093` | Review: whole idle download card as its click target        | —        | done   | [REVIEW-093-download-card-click-target.md](./REVIEW-093-download-card-click-target.md)                   |
