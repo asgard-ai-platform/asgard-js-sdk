@@ -131,9 +131,11 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
             </span>
           )}
         </span>
+        {/* Inside the button, not in `.side`: the glyph reads as "click to download", so it has to be part of
+            what the click lands on. `.side` only holds the actions that are not the download. */}
+        {state.phase === 'idle' && <DownloadIcon className={styles.sideIcon} />}
       </button>
       <span className={styles.side}>
-        {state.phase === 'idle' && <DownloadIcon className={styles.sideIcon} />}
         {state.phase === 'waiting' && (
           <button
             type="button"
