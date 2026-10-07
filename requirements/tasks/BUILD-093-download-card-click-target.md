@@ -16,7 +16,9 @@ BUILD-089 的下載卡在 idle 時，右側的下載圖示是放在 `.main` 按�
 
 做法：idle 的下載圖示移進 `.main` 按鈕裡（放在 body 後面），卡片外框的 padding / gap 改由 `.main` 承擔，讓按鈕撐滿整張卡；`.side` 只留給 waiting 的「取消」與 error 的「重試」兩顆獨立按鈕（按鈕不能巢狀，這兩顆維持在 `.main` 外面）。`.main` 的 focus outline 改成內縮，因為卡片 `overflow: hidden` 會把外擴的 outline 裁掉。
 
-**不在範圍**：卡片 hover 底色（目前沒有，PM 沒提）；原型本身的同一個死區（原型 repo 非本 repo）。
+**hover（2026-10-07 計畫確認後追加）**：卡片原本沒有 hover，同家族的 open-file / open-folder chip 有 `.chip--interactive:hover`，原型則是整張卡染色、下載圖示變主色。可點擊時（idle、可重試的 error）卡片套 `chip--interactive`（沿用家族 hover 底色，不新增顏色），idle 圖示 hover 時變主色；waiting / downloading / not-found 不套。
+
+**不在範圍**：原型本身的同一個死區（原型 repo 非本 repo）。
 
 **Already exists:** `sandbox-download-card.tsx`、`sandbox-download-card.module.scss`（BUILD-089）、`sandbox-download.spec.tsx`、react-demo `/sandbox-download`（寬窄並排）。
 
@@ -57,7 +59,8 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 - `R2` When the user clicks anywhere inside an idle card's border — including its edges and the space between the text and the glyph — the system shall start the download; the pointer cursor shall show over that whole area. → T1, T2, T4
 - `R3` While a card is waiting or failed, the system shall keep Cancel / Retry as separate buttons that do only their own action (Cancel never starts a download; Retry downloads once), and the main area shall stay disabled exactly as in BUILD-089 (busy / not-found). → T1, T3
 - `R4` When the card is reached by keyboard, the system shall offer one tab stop for the download (the glyph adds none), and its focus ring shall be fully visible inside the card. → T1, T2, T4
-- `R5` When rendered, the card shall look the same as before in every phase (same size, padding, glyph position, colors) at both the narrow (375) and full-bleed widths. → T2, T4
+- `R5` When rendered and not hovered, the card shall look the same as before in every phase (same size, padding, glyph position, colors) at both the narrow (375) and full-bleed widths. → T2, T4
+- `R7` While a click on the card would download (idle, or an error that offers Retry), the system shall show the attachment chip family's hover background on hover and, when idle, turn the download glyph primary; while it would not (waiting, downloading, not-found) hovering shall change nothing and show no pointer, and the strip beside Cancel / Retry shall not show a pointer. → T7
 - `R6` (Smoke check) When the developer runs `npm run build:core && npm run build:react`, `npm run typecheck`, the Vitest suites, and the react-demo route `/sandbox-download` (`npm run serve:react-demo -- -- --port 5100`, wide + narrow side by side), the system shall show R1–R5 with real pointer clicks on the glyph and on the card edge, with no build or type errors. → T5, T6
 
 ---
@@ -69,17 +72,18 @@ EARS form: `When <event/condition>[, while <state>], the system shall <observabl
 - [x] T3 (R1, R3): `sandbox-download.spec.tsx` — regression: a click on the idle glyph downloads; the glyph is inside the download button; Cancel / Retry still do only their own action.
 - [x] T4 (R2, R4, R5): Before / after screenshots of every phase at both widths in the demo; measure that the `.main` button's box equals the card's box.
 - [x] T5: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`.
+- [x] T7 (R7): `sandbox-download-card.tsx` adds `chipStyles['chip--interactive']` to the card while clickable (one `clickable` flag also drives `disabled`); scss turns `.sideIcon` primary on `.main:hover` and gives `.side` a default cursor. Demo hover probe in every phase.
 - [x] T6 (R6): Smoke check in the react-demo `/sandbox-download` with real pointer clicks on the glyph and the card corner (live and cold sandbox).
 
 ---
 
 ## Coverage
 
-Use Cases: R1, R2, R3, R4, R5, R6
+Use Cases: R1, R2, R3, R4, R5, R6, R7
 Files:
 
-- `packages/react/src/components/sandbox-download/sandbox-download-card.tsx`（react）— idle 下載圖示移進 `.main` 按鈕
-- `packages/react/src/components/sandbox-download/sandbox-download-card.module.scss`（react）— padding / gap 從 `.card` 移到 `.main`、`.side` 只在有按鈕時佔位、focus ring 內縮
+- `packages/react/src/components/sandbox-download/sandbox-download-card.tsx`（react）— idle 下載圖示移進 `.main` 按鈕；可點擊時套家族 hover class
+- `packages/react/src/components/sandbox-download/sandbox-download-card.module.scss`（react）— padding / gap 從 `.card` 移到 `.main`、`.side` 只在有按鈕時佔位、focus ring 內縮、hover 時圖示變主色、`.side` 游標
 - `packages/react/src/components/sandbox-download/sandbox-download.spec.tsx`（react）— 回歸測試：點右側圖示會下載
 
 ---
@@ -90,3 +94,4 @@ Files:
 - 2026-10-07: Implementation started (Status: `draft → in-progress`). 先看原型：`SandboxCards.tsx` 的 `.sbc-dl` 已把 padding 移到 `.sbc-dl-main`（邊緣點得到），但 `.sbc-dl-side` 的下載圖示同樣在按鈕外（實測點了停在 idle），所以原型也有 PM 回報的這個死區；BUILD-089 沒照原型搬 padding，SDK 另外多了邊緣與 gap 的死區。原型另有整張卡的 hover 底色與圖示變主色，SDK 卡片沒有，本 task 未加（不在 PM 回報範圍）。
 - 2026-10-07: 回歸測試先在未修正的程式上跑出 FAIL（圖示不在下載按鈕內），修正後 17/17 通過。
 - 2026-10-07: lint / format / typecheck（exit 0）、build core + react、`test:packages`（core 448、react 703）全綠。demo `/sandbox-download` 以 Playwright 真實滑鼠驗證：8 張卡（寬窄兩個 shell）下載按鈕的 box 與卡片 box 完全相同，網格 hit-test 全卡皆落在按鈕上（只剩圓角外的四個角點）；點圖示：冷 sandbox → waiting → 取消回 idle 無下載、再點 → 喚醒 → 下載 1 次；live 點卡片左下角直接下載（修正前同一點停在 idle、無下載）；404 只剩一顆按鈕；喚醒失敗出現重試、按重試下載恰 1 次；鍵盤一個 tab stop、focus ring 框住整張卡。修正前後六個狀態截圖逐像素比對：idle / done / 兩種 error 0 像素差異，waiting 只差 spinner 動畫格，focus 為預期的整卡框線。兩個 shell 的卡片寬度皆為 320（chip `.root` 固定），版面相同。非 idle 且右側無按鈕的狀態（downloading / done / not-found），描述文字可用寬度比修正前多 12px（原本 gap 12 + padding 12，現在只剩 padding 12）；截圖中無可見差異。 (Status: `in-progress → done`).
+- 2026-10-07: 使用者確認加 hover，追加 R7 / T7（Status: `done → in-progress`）。demo 實測（滑鼠真實移動）：idle 移到圖示或右緣 → 卡片底色 rgb(51,51,51) → rgb(64,64,64)、圖示 rgb(71,103,235)、pointer；waiting 與 not-found → 底色不變、default；喚醒失敗 → 卡片變亮，「重試」右側空白為 default。未 hover 的 idle 截圖與修正前 0 像素差異。踩到一個 demo 假象：react-demo 同時載入 src 的 CSS modules 與 `packages/react/dist/index.css`，dist 比較晚載入、class 名相同，舊的 dist 讓 `.chip` 的 padding 蓋過 src 的 `.card { padding: 0 }`；重 build 後恢復。消費端只載入 dist 一份，其中 `.card` 排在 `.chip` 之後（card.tsx 先 import chip 樣式），已在 dist/index.css 確認順序。lint / format / typecheck / build / test 全綠 (Status: `in-progress → done`).
