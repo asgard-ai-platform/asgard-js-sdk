@@ -232,6 +232,25 @@ describe('download card — sandbox live (UC-062)', () => {
     expect(h.nudges()).toBe(0);
   });
 
+  // asgard-sdk-pm#118 (PM acceptance): the download glyph on the right looked clickable but sat outside the button.
+  it('downloads from a click on the download glyph on the right, the same as a click on the title', async () => {
+    const h = start({ live: [SBX] });
+    await act(flush);
+
+    const glyphs = card('a1').querySelectorAll('svg');
+    const sideGlyph = glyphs[glyphs.length - 1];
+    expect(mainButton('a1').contains(sideGlyph)).toBe(true);
+    expect(within(card('a1')).getAllByRole('button')).toHaveLength(1);
+
+    await act(async () => {
+      fireEvent.click(sideGlyph);
+      await flush();
+    });
+
+    expect(h.reads).toHaveLength(1);
+    expect(h.reads[0].path).toBe(FILE_A);
+  });
+
   it('shares one state between two cards for the same file, and ignores repeat clicks', async () => {
     const h = start({ live: [SBX] });
     await act(flush);

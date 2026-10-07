@@ -62,6 +62,7 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
   const busy = state.phase === 'waiting' || state.phase === 'downloading';
   const canRetry = state.phase === 'error' && state.error !== 'not-found';
   const notFound = state.phase === 'error' && state.error === 'not-found';
+  const clickable = !!controller && !busy && !notFound;
 
   let icon: ReactNode = <DownloadIcon />;
   let description: ReactNode = text || fileName;
@@ -93,7 +94,8 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
 
   return (
     <div
-      className={clsx(chipStyles.chip, styles.card)}
+      // The family's hover, only while a click would do something (the button fills the card).
+      className={clsx(chipStyles.chip, clickable && chipStyles['chip--interactive'], styles.card)}
       data-phase={state.phase}
       data-tone={tone}
       title={absolutePath}
@@ -103,7 +105,7 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
         type="button"
         className={styles.main}
         onClick={(): void => controller?.download(sandboxName, absolutePath)}
-        disabled={!controller || busy || notFound}
+        disabled={!clickable}
         aria-label={t(locale, 'sandboxDownload.download', { name: fileName })}
       >
         <span className={chipStyles.icon_box} style={customStyle?.iconBox?.style}>
@@ -131,9 +133,11 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
             </span>
           )}
         </span>
+        {/* Inside the button, not in `.side`: the glyph reads as "click to download", so it has to be part of
+            what the click lands on. `.side` only holds the actions that are not the download. */}
+        {state.phase === 'idle' && <DownloadIcon className={styles.sideIcon} />}
       </button>
       <span className={styles.side}>
-        {state.phase === 'idle' && <DownloadIcon className={styles.sideIcon} />}
         {state.phase === 'waiting' && (
           <button
             type="button"

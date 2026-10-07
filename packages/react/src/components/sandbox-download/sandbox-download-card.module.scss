@@ -5,17 +5,22 @@
 .card {
   position: relative;
   overflow: hidden;
+  // The chip's padding moves onto `.main`, so the button reaches the card's border: a click anywhere on an idle
+  // card downloads, not just on its text (asgard-sdk-pm#118).
+  padding: 0;
+  gap: 0;
 }
 
 // The chip is a `div`, the clickable part a `button` inside it: waiting / error put a second button (Cancel /
 // Retry) next to it, and buttons cannot nest.
 .main {
   flex: 1 1 auto;
+  align-self: stretch;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0;
+  padding: 10px 12px;
   border: none;
   background: transparent;
   color: inherit;
@@ -27,10 +32,11 @@
     cursor: default;
   }
 
+  // Inset: the button now fills the card, and the card's `overflow: hidden` would clip an outset ring.
   &:focus-visible {
     outline: 2px solid var(--asg-color-primary, #4767eb);
-    outline-offset: 4px;
-    border-radius: 8px;
+    outline-offset: -2px;
+    border-radius: inherit;
   }
 }
 
@@ -51,6 +57,14 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
+  padding-right: 12px;
+  // The card wears the family's pointer; the strip beside Cancel / Retry does nothing, so it must not look clickable.
+  cursor: default;
+
+  // Idle: nothing but the download, which lives in `.main`.
+  &:empty {
+    display: none;
+  }
 }
 
 .sideIcon {
@@ -58,6 +72,11 @@
   height: 18px;
   margin: 0 7px;
   color: var(--asg-color-text-secondary, #8c8c8c);
+  transition: color 140ms ease;
+}
+
+.main:hover .sideIcon {
+  color: var(--asg-color-primary, #4767eb);
 }
 
 .textButton {
