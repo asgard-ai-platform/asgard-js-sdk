@@ -58,6 +58,8 @@
   display: flex;
   align-items: center;
   padding-right: 12px;
+  // The card wears the family's pointer; the strip beside Cancel / Retry does nothing, so it must not look clickable.
+  cursor: default;
 
   // Idle: nothing but the download, which lives in `.main`.
   &:empty {
@@ -70,6 +72,11 @@
   height: 18px;
   margin: 0 7px;
   color: var(--asg-color-text-secondary, #8c8c8c);
+  transition: color 140ms ease;
+}
+
+.main:hover .sideIcon {
+  color: var(--asg-color-primary, #4767eb);
 }
 
 .textButton {
