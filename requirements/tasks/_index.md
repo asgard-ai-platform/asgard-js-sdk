@@ -79,6 +79,7 @@
 - asgard-js-sdk#482 第 2、3、4 項：FileExplorer 剪貼簿 `setClipboard` 回到穩定參照、同一個 handler 切來源時記到新來源、剪下淡化要看 `move` → BUILD-091 / REVIEW-091 (done)。Issue [`asgard-js-sdk#482`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482)，issue body 即規格；第 1 項（來源 id 重複使用時清空）是行為變更、另議。**react only、不改公開 API**。
 - asgard-js-sdk#485 第 1、3、4 項：`hideEntry` 交給 `useSourceSetExplorer`（被隱藏的已展開目錄不再被 list、選取變隱藏由 hook 清掉、過濾結果記住）＋ `SourceSetFileExplorer` 預覽的 frontmatter（同 BUILD-090，邏輯搬到中立模組 `components/markdown-frontmatter/` 兩邊共用）→ BUILD-092 / REVIEW-092 (done)。Issue [`asgard-js-sdk#485`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/485)；第 2 項（新建隱藏名稱是否提示）需產品決定、另議。**react only、hook 加選填參數**。
 - `F-038` PM 驗收回報（[asgard-sdk-pm#118 留言](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/118#issuecomment-6022279521)）：下載卡右側的下載圖示點了沒反應 → BUILD-093 / REVIEW-093 (done)。idle 的圖示是按鈕外的裝飾 span，卡片外框 padding 與 gap 也點不到；改成整張 idle 卡都是下載按鈕，取消／重試維持獨立按鈕。**react only、不改公開 API**。
+- `F-039` 清除對話保留檔案：`clearChannel` 與 reset 鈕 `resetMode` (UC-041) → BUILD-094 / REVIEW-094 (done, §1 18/18、§3 R1–R12 全 Pass、0 BLOCKERs)。Issue [`asgard-sdk-pm#121`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/121)，規格為 `docs/spec/asgard-js-sdk/channel-clear.md`，UI 參考 prototype @ `86db8d5`。後端 `POST {base}/channel/clear` 清對話、保留 Channel Home 檔案；`<Chatbot resetMode>` 預設 `'delete'` 向下相容。**動 core + react + demo，公開 API 只增不改**。
 
 ## ▶ Next Task
 
@@ -357,3 +358,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-092` | Review: SourceSet hideEntry and frontmatter                 | —        | done   | [REVIEW-092-hide-entry-follow-ups.md](./REVIEW-092-hide-entry-follow-ups.md)                             |
 | `BUILD-093`  | Make the whole idle download card its click target          | S        | done   | [BUILD-093-download-card-click-target.md](./BUILD-093-download-card-click-target.md)                     |
 | `REVIEW-093` | Review: whole idle download card as its click target        | —        | done   | [REVIEW-093-download-card-click-target.md](./REVIEW-093-download-card-click-target.md)                   |
+| `BUILD-094`  | Clear the conversation but keep the files (resetMode)       | M        | done   | [BUILD-094-channel-clear-reset-mode.md](./BUILD-094-channel-clear-reset-mode.md)                         |
+| `REVIEW-094` | Review: clearChannel and resetMode                          | —        | done   | [REVIEW-094-channel-clear-reset-mode.md](./REVIEW-094-channel-clear-reset-mode.md)                       |
