@@ -13,6 +13,7 @@ import {
   LaunchedSandbox,
   MessageFeedbackReply,
   MessageFeedbackState,
+  ResetMode,
   RunStatus,
   SandboxPhase,
   SandboxWakeResult,
@@ -51,6 +52,13 @@ export interface UseChannelProps {
   /** Seed for the channel title store (F-016) — e.g. from `GET /channel/metadata` (wired by F-015). */
   channelTitle?: string | null;
   autoResetChannel?: boolean;
+  /**
+   * What `resetChannel()` releases before its opening turn (F-039). Default `'delete'`, the pre-F-039
+   * behavior: `DELETE /channel` takes the conversation and the channel's files. `'clear'` sends
+   * `POST /channel/clear` instead, which clears the conversation but keeps the Channel Home files and
+   * uploaded blobs. The rest of the flow — `isResetting`, local clear, opening turn — is identical.
+   */
+  resetMode?: ResetMode;
   onSseMessage?: (
     response: SseResponse<EventType>,
     context: {
@@ -144,6 +152,18 @@ export interface UseChannelReturn {
    * show a fresh welcome in one call, use `resetChannel`.
    */
   deleteChannel?: () => Promise<void>;
+  /**
+   * Clear the conversation on the backend but keep the channel's files (F-039) — the transcript, agent
+   * session, title and pending tool consent go; the Channel Home files, uploaded blobs and tool-call
+   * allow-list stay, and the Sandbox restarts onto them. Clears **only**: no opening turn, the local
+   * conversation and `isResetting` are left as they are, so the host controls what the screen does next
+   * (the counterpart of {@link deleteChannel}). Independent of `resetMode`.
+   *
+   * Resolves once the backend confirms the clear (up to about 45 seconds when a Sandbox has to stop);
+   * rejects if it fails, in which case the old conversation is still there. To clear and show a fresh
+   * welcome in one call, use `resetChannel` with `resetMode: 'clear'`.
+   */
+  clearChannel?: () => Promise<void>;
   closeChannel?: () => void;
   /**
    * User-initiated stop-generation (F-023). Asks the backend to suspend the background run and keeps
@@ -203,6 +223,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     initMessages,
     channelTitle: channelTitleSeed,
     autoResetChannel,
+    resetMode,
     onSseMessage,
     onAuthError,
     onSseError,
@@ -334,7 +355,12 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
           ? onBeforeSendMessage({ text: payload?.text ?? '', payload: payload?.payload })
           : payload;
 
-        const start = mode === 'reset' ? Channel.reset : Channel.open;
+        // F-039 — the reset's first step (delete or clear) follows `resetMode`; everything after is shared.
+        const start: typeof Channel.open =
+          mode === 'reset'
+            ? (config, sse, options, onCreated): Promise<Channel> =>
+                Channel.reset(config, sse, options, onCreated, resetMode)
+            : Channel.open;
 
         const channel = await start(
           {
@@ -432,6 +458,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       delayTime,
       initMessages,
       channelTitleSeed,
+      resetMode,
       onSseMessage,
       onAuthError,
       onSseError,
@@ -592,6 +619,18 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
     if (isPreviewMode || !client) return;
 
     await client.deleteChannel(customChannelId);
+  }, [isPreviewMode, client, customChannelId]);
+
+  /**
+   * Clear the conversation and nothing else (F-039) — the counterpart of `deleteChannel`, but the
+   * Channel Home files and uploaded blobs survive. No opening turn, no change to the local conversation:
+   * a host with its own reset flow (confirm dialog, remount, starter overlay) sequences the rest itself.
+   * Rejects if the clear fails. Independent of `resetMode`, which only steers `resetChannel`.
+   */
+  const clearChannel = useCallback(async (): Promise<void> => {
+    if (isPreviewMode || !client) return;
+
+    await client.clearChannel(customChannelId);
   }, [isPreviewMode, client, customChannelId]);
 
   // A reset deletes the channel before it opens a new one, and that delete can take up to a minute. The
@@ -900,6 +939,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
             sendMessage,
             resetChannel,
             deleteChannel,
+            clearChannel,
             closeChannel,
             stopGeneration,
             replyToolCallConsents,
@@ -924,6 +964,7 @@ export function useChannel(props: UseChannelProps): UseChannelReturn {
       sendMessage,
       resetChannel,
       deleteChannel,
+      clearChannel,
       closeChannel,
       stopGeneration,
       replyToolCallConsents,

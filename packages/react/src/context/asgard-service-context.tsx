@@ -91,6 +91,12 @@ export interface AsgardServiceContextValue {
    * call.
    */
   deleteChannel?: UseChannelReturn['deleteChannel'];
+  /**
+   * Clear the conversation on the backend but keep the channel's files (F-039) — the counterpart of
+   * {@link deleteChannel}: clears only, no opening turn, the on-screen conversation is left as it is.
+   * For a host with its own reset flow; the built-in button uses {@link resetChannel} with `resetMode`.
+   */
+  clearChannel?: UseChannelReturn['clearChannel'];
   closeChannel?: UseChannelReturn['closeChannel'];
   /**
    * User-initiated stop-generation (F-023): asks the backend to suspend the background run, then waits
@@ -257,6 +263,8 @@ export interface AsgardServiceContextProviderProps {
   onMessageSent?: () => void;
   /** Whether to automatically reset channel on mount. Defaults to true. */
   autoResetChannel?: boolean;
+  /** What `resetChannel()` releases first — see `UseChannelProps.resetMode` (F-039). Defaults to `'delete'`. */
+  resetMode?: UseChannelProps['resetMode'];
   /**
    * When true, the in-flight SSE run is kept alive on unmount instead of being
    * aborted, so it can finish on the backend. Defaults to false.
@@ -294,6 +302,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     onBeforeSendMessage,
     onMessageSent,
     autoResetChannel,
+    resetMode,
     keepConnectionOnUnmount,
     onChannelReady,
   } = props;
@@ -354,6 +363,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     sendMessage,
     resetChannel,
     deleteChannel,
+    clearChannel,
     closeChannel,
     stopGeneration,
     replyToolCallConsents,
@@ -367,6 +377,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
     initMessages,
     channelTitle: channelTitleSeed,
     autoResetChannel,
+    resetMode,
     onSseMessage,
     onAuthError,
     onSseError,
@@ -486,6 +497,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       sendMessage: wrappedSendMessage,
       resetChannel,
       deleteChannel,
+      clearChannel,
       closeChannel,
       stopGeneration,
       replyToolCallConsents: wrappedReplyToolCallConsents,
@@ -531,6 +543,7 @@ export function AsgardServiceContextProvider(props: AsgardServiceContextProvider
       wrappedSendMessage,
       resetChannel,
       deleteChannel,
+      clearChannel,
       closeChannel,
       stopGeneration,
       wrappedReplyToolCallConsents,

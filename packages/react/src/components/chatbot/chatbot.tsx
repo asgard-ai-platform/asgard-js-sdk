@@ -8,7 +8,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { ClientConfig, ConversationMessage } from '@asgard-js/core';
+import { ClientConfig, ConversationMessage, ResetMode } from '@asgard-js/core';
 import { AsgardThemeContextProvider, AsgardThemeContextValue } from '../../context/asgard-theme-context';
 import {
   AsgardServiceContextProvider,
@@ -94,6 +94,27 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   maintainConnectionWhenClosed?: boolean;
   asyncInitializers?: Record<string, () => Promise<unknown>>;
   onReset?: () => void;
+  /**
+   * What the header's reset button (and `resetChannel()`) does before the opening turn (F-039). Defaults
+   * to `'delete'` — the behavior before this prop existed.
+   *
+   * - `'delete'` — `DELETE {base}/channel`: deletes the conversation **and** the channel's files (Channel
+   *   Home `/work`, uploaded attachments) and tears the Sandbox down. The next turn is a brand-new channel.
+   * - `'clear'` — `POST {base}/channel/clear`: clears the conversation only; the Channel Home files and
+   *   uploaded attachments are **kept** and the Sandbox restarts onto the same files. The button reads
+   *   "Clear conversation (keep files)".
+   *
+   * Both modes look the same on screen: the button is busy (`isResetting`) for the whole wait (up to
+   * about a minute while a Sandbox stops), then the conversation clears and the agent greets first. On
+   * failure no opening turn is sent and the conversation stays as it was. Neither asks for confirmation.
+   * This picks the meaning only; use `showResetButton` to hide the button.
+   */
+  resetMode?: ResetMode;
+  /**
+   * Whether the header shows the reset button. Defaults to `true`. Affects the button only — a
+   * programmatic `resetChannel()` still works (and still follows `resetMode`) when it is hidden.
+   */
+  showResetButton?: boolean;
   onClose?: () => void;
   loadingComponent?: ReactNode;
   defaultLinkTarget?: '_blank' | '_self' | '_parent' | '_top';
@@ -348,6 +369,8 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     asyncInitializers = {},
     loadingComponent,
     onReset,
+    resetMode,
+    showResetButton,
     onClose,
     locale,
     enableFeedback,
@@ -661,6 +684,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
             allowedImageMimeTypes={allowedImageMimeTypes}
             allowedDocumentMimeTypes={allowedDocumentMimeTypes}
             autoResetChannel={autoResetChannel}
+            resetMode={resetMode}
             keepConnectionOnUnmount={keepConnectionOnUnmount}
           >
             {/* The template context wraps the whole container, not just the chat column. The File Explorer
@@ -717,6 +741,8 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
                       <ChatHeaderHost
                         title={title}
                         onReset={onReset}
+                        resetMode={resetMode}
+                        showResetButton={showResetButton}
                         onClose={onClose}
                         customActions={customActions}
                         headerActions={headerActions}
@@ -771,6 +797,8 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
           <ChatHeaderHost
             title={title}
             onReset={onReset}
+            resetMode={resetMode}
+            showResetButton={showResetButton}
             onClose={onClose}
             customActions={customActions}
             headerActions={headerActions}

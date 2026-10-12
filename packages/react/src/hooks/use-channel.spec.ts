@@ -136,6 +136,7 @@ interface DeleteAwareClient {
   client: AsgardServiceClient;
   sent: FetchSsePayload[];
   deleted: string[];
+  cleared: string[];
   metadataCalls: number[];
   finishRun(): void;
   failRun(error: unknown): void;
@@ -157,9 +158,11 @@ function textEvent(text: string): SseResponse<EventType> {
 function deleteAwareClient(options: {
   metadata: ChannelMetadata | null;
   onDelete?: () => Promise<void>;
+  onClear?: () => Promise<void>;
 }): DeleteAwareClient {
   const sent: FetchSsePayload[] = [];
   const deleted: string[] = [];
+  const cleared: string[] = [];
   const metadataCalls: number[] = [];
   let runOptions: FetchSseOptions | undefined;
   let replayOptions: FetchSseOptions | undefined;
@@ -174,6 +177,11 @@ function deleteAwareClient(options: {
       deleted.push(customChannelId);
 
       if (options.onDelete) await options.onDelete();
+    },
+    async clearChannel(customChannelId: string): Promise<void> {
+      cleared.push(customChannelId);
+
+      if (options.onClear) await options.onClear();
     },
     fetchSse(payload: FetchSsePayload, sseOptions?: FetchSseOptions): void {
       sent.push(payload);
@@ -190,6 +198,7 @@ function deleteAwareClient(options: {
     client,
     sent,
     deleted,
+    cleared,
     metadataCalls,
     finishRun: () => runOptions?.onSseCompleted?.(),
     failRun: (error: unknown) => runOptions?.onSseError?.(error),
@@ -485,5 +494,144 @@ describe('useChannel — deleteChannel and the two-step reset (F-032)', () => {
     act(() => scripted.finishReplay());
 
     await expect(result.current.deleteChannel?.()).rejects.toThrow('teardown failed');
+  });
+});
+
+// F-039 — `resetMode: 'clear'` swaps the reset's first step for `POST /channel/clear` (conversation gone,
+// Channel Home files kept); the flow around it — busy, local clear, opening turn — is the same as delete.
+describe("useChannel — resetMode 'clear' and the raw clearChannel (F-039)", () => {
+  const existing: ChannelMetadata = { title: 'x', runState: 'IDLE', launchedSandboxes: [] };
+
+  it("R7: resetChannel under 'clear' clears (never deletes), holds isResetting through it, then opens", async () => {
+    let releaseClear: (() => void) | undefined;
+    const scripted = deleteAwareClient({
+      metadata: existing,
+      onClear: () => new Promise<void>(resolve => (releaseClear = resolve)),
+    });
+    const { result } = renderHook(() =>
+      useChannel({ client: scripted.client, customChannelId: 'ch', resetMode: 'clear' }),
+    );
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    act(() => {
+      result.current.resetChannel?.();
+    });
+
+    // Mid-clear: the button must read busy, and nothing has been sent yet.
+    await waitFor(() => expect(scripted.cleared).toEqual(['ch']));
+    expect(result.current.isResetting).toBe(true);
+    expect(scripted.sent).toEqual([]);
+
+    await act(async () => {
+      releaseClear?.();
+      await waitFor(() => expect(scripted.sent).toHaveLength(1));
+    });
+
+    expect(scripted.deleted).toEqual([]);
+    expect(scripted.sent[0].action).toBe('NONE');
+    expect(scripted.sent[0].text).toBe('');
+
+    act(() => scripted.finishRun());
+    await waitFor(() => expect(result.current.isResetting).toBe(false));
+  });
+
+  it('R4: without resetMode the reset still deletes and never clears', async () => {
+    const scripted = deleteAwareClient({ metadata: existing });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(scripted.sent).toHaveLength(1));
+    });
+
+    expect(scripted.deleted).toEqual(['ch']);
+    expect(scripted.cleared).toEqual([]);
+
+    act(() => scripted.finishRun());
+  });
+
+  it('R9: a failed clear keeps the channel and conversation, resets the flags, and reports once', async () => {
+    const errors: unknown[] = [];
+    const scripted = deleteAwareClient({
+      metadata: existing,
+      onClear: async () => {
+        throw new Error('clear failed');
+      },
+    });
+    const { result } = renderHook(() =>
+      useChannel({
+        client: scripted.client,
+        customChannelId: 'ch',
+        resetMode: 'clear',
+        onSseError: e => errors.push(e),
+      }),
+    );
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => {
+      scripted.replayMessage('先前的對話');
+      scripted.finishReplay();
+    });
+    await waitFor(() => expect(result.current.conversation?.messages?.size).toBe(1));
+
+    const channelBefore = result.current.channel;
+    const conversationBefore = result.current.conversation;
+
+    await act(async () => {
+      result.current.resetChannel?.();
+      await waitFor(() => expect(errors).toHaveLength(1));
+    });
+
+    expect(result.current.channel).toBe(channelBefore);
+    expect(result.current.conversation).toBe(conversationBefore);
+    expect(scripted.sent).toEqual([]);
+    expect(result.current.isResetting).toBe(false);
+    expect(result.current.isConnecting).toBe(false);
+    expect((errors[0] as Error).message).toBe('clear failed');
+  });
+
+  it('R8: the exposed clearChannel clears only — no opening turn, conversation and isResetting untouched', async () => {
+    // resetMode is deliberately left at its default: the raw call is independent of the button's mode.
+    const scripted = deleteAwareClient({ metadata: existing });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => {
+      scripted.replayMessage('先前的對話');
+      scripted.finishReplay();
+    });
+    await waitFor(() => expect(result.current.conversation?.messages?.size).toBe(1));
+
+    const conversationBefore = result.current.conversation;
+
+    await act(async () => {
+      await result.current.clearChannel?.();
+    });
+
+    expect(scripted.cleared).toEqual(['ch']);
+    expect(scripted.deleted).toEqual([]);
+    expect(scripted.sent).toEqual([]);
+    expect(result.current.conversation).toBe(conversationBefore);
+    expect(result.current.isResetting).toBe(false);
+  });
+
+  it('R8: a failed clear surfaces to the caller of the exposed clearChannel', async () => {
+    const scripted = deleteAwareClient({
+      metadata: existing,
+      onClear: async () => {
+        throw new Error('clear failed');
+      },
+    });
+    const { result } = renderHook(() => useChannel({ client: scripted.client, customChannelId: 'ch' }));
+
+    await waitFor(() => expect(result.current.channel).not.toBeNull());
+    act(() => scripted.finishReplay());
+
+    await expect(result.current.clearChannel?.()).rejects.toThrow('clear failed');
   });
 });

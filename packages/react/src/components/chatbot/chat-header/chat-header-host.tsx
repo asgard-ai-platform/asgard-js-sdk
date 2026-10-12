@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useMemo } from 'react';
+import { ResetMode } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardAppInitializationContext } from '../../../context/asgard-app-initialization-context';
 import { Locale, t } from '../../../i18n';
@@ -22,6 +23,10 @@ export interface ChatHeaderHostProps {
   headerActions?: ChatHeaderAction[];
   maintainConnectionWhenClosed?: boolean;
   onReset?: () => void;
+  /** Picks the reset button's label: `header.reset` (`'delete'`, default) or `header.clear` (F-039). */
+  resetMode?: ResetMode;
+  /** `false` leaves the reset action out of the bar (F-039). Defaults to `true`. */
+  showResetButton?: boolean;
   onClose?: () => void;
   locale?: Locale;
   untitledLabel?: string;
@@ -48,6 +53,8 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
     headerActions,
     maintainConnectionWhenClosed,
     onReset,
+    resetMode = 'delete',
+    showResetButton = true,
     onClose,
     locale = 'en-US',
     untitledLabel,
@@ -134,22 +141,26 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
 
     if (headerActions) list.push(...headerActions);
 
-    // F-032 — unchanged on the surface, but `isResetting` now also spans the `DELETE /channel` that
-    // precedes the opening turn, which can take up to about a minute while a Sandbox terminates. The
-    // button must stay busy for all of it: a second reset mid-teardown would delete the channel the
-    // first one is already re-opening.
-    list.push({
-      id: 'reset',
-      icon: <RefreshIcon size={18} />,
-      label: t(locale, 'header.reset'),
-      busy: isResetting,
-      onClick: () => {
-        if (isResetting) return;
+    // F-032 — `isResetting` also spans the `DELETE /channel` (or, under F-039's 'clear', the
+    // `POST /channel/clear`) that precedes the opening turn, which can take up to about a minute while a
+    // Sandbox stops. The button must stay busy for all of it: a second reset mid-teardown would release
+    // the channel the first one is already re-opening.
+    // F-039 — one button for both modes, same icon: the label is what says whether the files survive.
+    // `resetChannel` applies the mode itself, so the click handler does not branch on it.
+    if (showResetButton) {
+      list.push({
+        id: 'reset',
+        icon: <RefreshIcon size={18} />,
+        label: t(locale, resetMode === 'clear' ? 'header.clear' : 'header.reset'),
+        busy: isResetting,
+        onClick: () => {
+          if (isResetting) return;
 
-        onReset?.();
-        resetChannel?.();
-      },
-    });
+          onReset?.();
+          resetChannel?.();
+        },
+      });
+    }
 
     list.push({
       id: 'close',
@@ -179,6 +190,8 @@ export function ChatHeaderHost(props: ChatHeaderHostProps): ReactNode {
     locale,
     isResetting,
     onReset,
+    resetMode,
+    showResetButton,
     resetChannel,
     onClose,
     closeChannel,
