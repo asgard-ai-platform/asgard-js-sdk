@@ -314,6 +314,14 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     return;
   }
 
+  // F-039 — the clear-channel demo channels: same read-back as delete, plus the Channel Home file list
+  // that a clear must leave alone and a delete must empty.
+  if (customChannelId.startsWith('clear-channel-')) {
+    await handleClearChannelMock(res, payload, customChannelId);
+
+    return;
+  }
+
   // F-038 — the download-card channels own their NUDGE (shared server-side wake state, fault injection).
   if (isSandboxDownloadChannel(customChannelId)) {
     await handleSandboxDownloadSse(res, payload, customChannelId);
@@ -1412,6 +1420,10 @@ interface MockChannelState {
   turns: string[];
   /** How many times this id has been deleted — proof the DELETE reached the server. */
   deletes: number;
+  /** How many times this id has been cleared (F-039) — proof the POST /channel/clear reached the server. */
+  clears: number;
+  /** The Channel Home (`/work`) files (F-039): a clear keeps them, a delete empties them. */
+  files: string[];
 }
 
 const deleteDemoChannels = new Map<string, MockChannelState>();
@@ -1421,11 +1433,14 @@ function channelState(customChannelId: string): MockChannelState {
 
   if (existing) return existing;
 
-  const fresh: MockChannelState = { turns: [], deletes: 0 };
+  const fresh: MockChannelState = { turns: [], deletes: 0, clears: 0, files: [...SEED_CHANNEL_HOME_FILES] };
   deleteDemoChannels.set(customChannelId, fresh);
 
   return fresh;
 }
+
+/** What a fresh channel's Channel Home holds in the mock — only the F-039 clear demo reports it. */
+const SEED_CHANNEL_HOME_FILES = ['AGENTS.md', 'q3-orders.csv'];
 
 /** A slow teardown, standing in for the backend waiting on a live Sandbox pod (up to ~60s for real). */
 const SLOW_TEARDOWN_MS = 6_000;
@@ -1451,24 +1466,112 @@ export async function handleMockChannelDelete(req: IncomingMessage, res: ServerR
 
   // A teardown that fails. The SDK must NOT open a new conversation on top of it — the old one is still
   // there on the server, and a cleared screen would be a lie.
-  if (customChannelId.startsWith('delete-channel-fail')) {
+  if (customChannelId.startsWith('delete-channel-fail') || customChannelId.startsWith('clear-channel-fail')) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'mock teardown failure' }));
 
     return;
   }
 
-  if (customChannelId.startsWith('delete-channel-slow')) {
+  if (customChannelId.startsWith('delete-channel-slow') || customChannelId.startsWith('clear-channel-slow')) {
     await sleep(SLOW_TEARDOWN_MS);
   }
 
   const state = channelState(customChannelId);
   state.turns = [];
   state.deletes += 1;
+  state.files = [];
 
   // 204, and only once the teardown is done — never a scheduled "we'll get to it". Deleting a channel
   // that never existed is a success too, which is why there is no 404 branch here.
   res.statusCode = 204;
+  res.end();
+}
+
+// ---------------------------------------------------------------------------------------------------
+// F-039 — `POST /channel/clear?custom_channel_id=…`: the conversation goes, the Channel Home files stay.
+// Shares the per-channel state with the delete mock above, so the /clear-channel route can put the two
+// side by side — the reply reads back both counters and the file list.
+// ---------------------------------------------------------------------------------------------------
+
+export async function handleMockChannelClear(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== 'POST') {
+    res.statusCode = 405;
+    res.end();
+
+    return;
+  }
+
+  const url = new URL(req.url ?? '', 'http://localhost');
+  const customChannelId = url.searchParams.get('custom_channel_id');
+
+  if (!customChannelId) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'custom_channel_id query parameter is required', errorCode: 'INVALID_ARGUMENT' }));
+
+    return;
+  }
+
+  // A clear that fails. The SDK must keep the conversation on screen and send no opening turn.
+  if (customChannelId.startsWith('clear-channel-fail')) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'mock clear failure' }));
+
+    return;
+  }
+
+  // The real backend holds the answer until a live Sandbox has stopped (up to ~45s).
+  if (customChannelId.startsWith('clear-channel-slow')) {
+    await sleep(SLOW_TEARDOWN_MS);
+  }
+
+  const state = channelState(customChannelId);
+  state.turns = [];
+  state.clears += 1;
+
+  res.statusCode = 204;
+  res.end();
+}
+
+async function handleClearChannelMock(
+  res: ServerResponse,
+  payload: ParsedPayload,
+  customChannelId: string,
+): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+  const replyTo = payload.customMessageId ?? '';
+  const state = channelState(customChannelId);
+  const text = (payload.text ?? '').trim();
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+
+  state.turns.push(text || '(開場)');
+
+  // Every user turn leaves a file behind, the way an agent writes its work into `/work`.
+  if (!isOpeningTurn(payload)) {
+    state.files.push(`note-${state.files.filter(name => name.startsWith('note-')).length + 1}.md`);
+  }
+
+  const files = state.files.length > 0 ? state.files.join('、') : '（空的）';
+  const counters = `伺服器端：對話 ${state.turns.length} 輪 · 被清除 ${state.clears} 次 · 被刪除 ${state.deletes} 次`;
+  const reply = isOpeningTurn(payload)
+    ? `新對話已開始。${counters}\n\nChannel Home（/work）：${files}`
+    : `收到「${text}」，已寫入一個檔案。${counters}\n\nChannel Home（/work）：${files}`;
+
+  const mid = randomUUID();
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+  await sleep(120);
+  writeEvent(res, messageFrame(header, 'asgard.message.complete', mid, replyTo, reply, TEXT_TEMPLATE(reply)));
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
   res.end();
 }
 

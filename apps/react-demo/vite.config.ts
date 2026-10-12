@@ -56,6 +56,18 @@ function asgardSseMockPlugin(): Plugin {
         }
       });
 
+      // F-039 — `POST /channel/clear`. Like metadata, it has to be registered before the `/channel`
+      // middleware below, which would otherwise swallow it and answer 405.
+      server.middlewares.use('/mock-asgard/channel/clear', async (req, res, next) => {
+        try {
+          const { handleMockChannelClear } = await import('./src/mock-server/sse-mock');
+
+          await handleMockChannelClear(req, res);
+        } catch (err) {
+          next(err as Error);
+        }
+      });
+
       // F-032 — `DELETE /channel`. Registered AFTER the metadata middleware above so `/channel/metadata`
       // still reaches that one: connect runs middlewares in registration order and `/channel` would
       // otherwise swallow it.
