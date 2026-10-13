@@ -347,16 +347,38 @@ export default class AsgardServiceClient implements IAsgardServiceClient {
    * about a minute), on purpose: the next turn must not race a dying pod.
    */
   async deleteChannel(customChannelId: string): Promise<void> {
+    await this.releaseChannel('DELETE', '', customChannelId);
+  }
+
+  /**
+   * Reset the conversation but keep the channel's files (F-039): `POST {base}/channel/clear?custom_channel_id=…`.
+   * The backend stops the run and clears the transcript, agent session, title and pending tool consent,
+   * but keeps the Channel Home (`/work`) files, uploaded blobs, the tool-call allow-list and the channel
+   * itself; the Sandbox restarts onto the same files. It answers only once the clear is done.
+   *
+   * Same success rule as {@link deleteChannel}: **any 2xx**, body never read — the edge answers `204`, a
+   * BFF relay may answer `200` with a body. There is no `404` special case either: an absent channel
+   * answers 2xx, so a `404` means the relay route does not exist, and reading it as "cleared" would hide
+   * a clear that never happened. Everything else throws {@link HttpError}.
+   *
+   * **No timeout is imposed** — a live Sandbox can hold the answer for up to about 45 seconds.
+   */
+  async clearChannel(customChannelId: string): Promise<void> {
+    await this.releaseChannel('POST', '/clear', customChannelId);
+  }
+
+  /** The shared request behind {@link deleteChannel} and {@link clearChannel}: any 2xx resolves, else throws. */
+  private async releaseChannel(method: 'DELETE' | 'POST', path: string, customChannelId: string): Promise<void> {
     const endpoint = this.deriveChannelEndpoint();
 
     if (!endpoint) {
       throw new Error('Unable to derive channel endpoint. Please provide botProviderEndpoint in config.');
     }
 
-    const url = new URL(endpoint);
+    const url = new URL(`${endpoint}${path}`);
     url.searchParams.set('custom_channel_id', customChannelId);
 
-    const response = await fetch(url.toString(), { method: 'DELETE', headers: this.apiHeaders() });
+    const response = await fetch(url.toString(), { method, headers: this.apiHeaders() });
 
     if (response.ok) {
       return;

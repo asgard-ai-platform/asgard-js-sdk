@@ -34,6 +34,16 @@ export interface MessageFeedbackReply {
   seq: number;
 }
 
+/**
+ * What a channel reset releases on the backend before the opening turn (F-039).
+ *
+ * - `'delete'` — `DELETE {base}/channel`: the conversation **and** the channel's files (Channel Home,
+ *   uploaded blobs) are deleted and the Sandbox torn down. The next turn starts a brand-new channel.
+ * - `'clear'` — `POST {base}/channel/clear`: only the conversation is cleared; the Channel Home files and
+ *   uploaded blobs are kept and the Sandbox restarts onto them.
+ */
+export type ResetMode = 'delete' | 'clear';
+
 export interface IAsgardServiceClient {
   /**
    * Start an SSE run. Returns the run's `Subscription`; unsubscribing it aborts the in-flight
@@ -70,6 +80,18 @@ export interface IAsgardServiceClient {
    * conversation).
    */
   deleteChannel?(customChannelId: string): Promise<void>;
+  /**
+   * Reset the conversation but keep the channel's files (F-039) via
+   * `POST {base}/channel/clear?custom_channel_id=…`: the in-flight run, transcript, agent session, title
+   * and pending tool consent are cleared, while the Channel Home (`/work`) files, uploaded blobs, the
+   * tool-call allow-list and the channel itself stay. The Sandbox restarts onto the same files. Resolving
+   * means the clear is **done**; clearing a channel that does not exist is a success, not an error.
+   *
+   * May take up to about 45 seconds while a live Sandbox stops — callers must not impose a shorter
+   * timeout. Optional for backward compatibility, like {@link deleteChannel}: a client without it cannot
+   * run a `'clear'` reset ({@link ResetMode}).
+   */
+  clearChannel?(customChannelId: string): Promise<void>;
   /**
    * Rate one assistant reply Good or Bad (F-033) via `POST {base}/message/feedback`. Resolves to the
    * persisted entry on 2xx; rejects with `HttpError` on `404` (not a ratable reply), `400` (bad verdict

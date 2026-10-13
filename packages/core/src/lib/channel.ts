@@ -11,6 +11,7 @@ import {
   MessageFeedbackReply,
   MessageFeedbackState,
   ObserverOrNext,
+  ResetMode,
   RunKind,
   RunStatus,
   SandboxPhase,
@@ -303,8 +304,11 @@ export default class Channel {
    * Clear an **existing** conversation and start over on the same id (F-032) — what the header's reset
    * button does. Two steps, in this order and never bundled:
    *
-   * 1. `client.deleteChannel()` — the backend releases the run, transcript, blobs, consent allow-list,
-   *    Sandbox and Channel Home, and answers only once that teardown is done.
+   * 1. Release the old conversation, per `mode` (F-039, default `'delete'`):
+   *    - `'delete'` — `client.deleteChannel()`: the backend releases the run, transcript, blobs, consent
+   *      allow-list, Sandbox and Channel Home, and answers only once that teardown is done.
+   *    - `'clear'` — `client.clearChannel()`: the conversation is cleared but the Channel Home files,
+   *      blobs and allow-list are kept; the Sandbox restarts onto the same files.
    * 2. {@link Channel.open} — a plain `action=NONE` opening turn on the now-empty id.
    *
    * This replaces the single `RESET_CHANNEL` turn, which bundled both into one request and therefore
@@ -312,8 +316,8 @@ export default class Channel {
    * the delete stripped them and the `blobIds` resolved to nothing without an error. A host that needs
    * "clear, then send with attachments" sequences it itself: `deleteChannel` → upload → `sendMessage`.
    *
-   * **Nothing local changes until the delete succeeds** — no channel is constructed, so no state
-   * observer fires. A failed delete therefore leaves the caller's current channel and conversation
+   * **Nothing local changes until step 1 succeeds** — no channel is constructed, so no state
+   * observer fires. A failed delete or clear therefore leaves the caller's current channel and conversation
    * exactly as they were, which is the point: the screen must never be cleared while the server still
    * holds the old conversation.
    */
@@ -322,19 +326,33 @@ export default class Channel {
     payload?: Pick<FetchSsePayload, 'text' | 'payload'>,
     options?: FetchSseOptions,
     onChannelCreated?: (channel: Channel) => void,
+    mode: ResetMode = 'delete',
   ): Promise<Channel> {
-    if (!config.client.deleteChannel) {
-      // A hand-rolled IAsgardServiceClient that predates F-032. Refuse loudly rather than skipping the
-      // delete (the screen would clear while the backend keeps the old conversation) or falling back to
-      // the retired RESET_CHANNEL turn. `AsgardServiceClient` always has the method, so only a custom
-      // client can land here.
-      throw new Error(
-        'This client cannot reset a channel: IAsgardServiceClient.deleteChannel is not implemented. ' +
-          'Implement it (DELETE {base}/channel?custom_channel_id=…) or use AsgardServiceClient.',
-      );
-    }
+    const { client, customChannelId } = config;
 
-    await config.client.deleteChannel(config.customChannelId);
+    // A hand-rolled IAsgardServiceClient that predates F-032 / F-039. Refuse loudly rather than skipping
+    // the first step (the screen would clear while the backend keeps the old conversation), falling back
+    // to the other mode (a 'clear' host must never lose its files to a delete), or reviving the retired
+    // RESET_CHANNEL turn. `AsgardServiceClient` always has both methods, so only a custom client lands here.
+    if (mode === 'clear') {
+      if (!client.clearChannel) {
+        throw new Error(
+          'This client cannot clear a channel: IAsgardServiceClient.clearChannel is not implemented. ' +
+            'Implement it (POST {base}/channel/clear?custom_channel_id=…) or use AsgardServiceClient.',
+        );
+      }
+
+      await client.clearChannel(customChannelId);
+    } else {
+      if (!client.deleteChannel) {
+        throw new Error(
+          'This client cannot reset a channel: IAsgardServiceClient.deleteChannel is not implemented. ' +
+            'Implement it (DELETE {base}/channel?custom_channel_id=…) or use AsgardServiceClient.',
+        );
+      }
+
+      await client.deleteChannel(customChannelId);
+    }
 
     return Channel.open(config, payload, options, onChannelCreated);
   }

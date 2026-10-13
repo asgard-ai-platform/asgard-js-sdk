@@ -172,6 +172,75 @@ describe('AsgardServiceClient.deleteChannel (F-032)', () => {
   });
 });
 
+// F-039 — clearChannel resets the conversation but keeps the Channel Home files, blobs and allow-list:
+// POST /channel/clear?custom_channel_id=… Same success rule as deleteChannel: any 2xx (the edge answers
+// 204, a BFF relay may answer 200 with a body), and no 404 special case — a 404 means the relay route is
+// missing (an absent channel answers 2xx), so swallowing it would report a clear that never happened.
+describe('AsgardServiceClient.clearChannel (F-039)', () => {
+  it('R1: POSTs {base}/channel/clear with the custom_channel_id query and the api key header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(204, ''));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(makeClient().clearChannel('ch-1')).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.example.com/ns/x/bot-provider/y/channel/clear?custom_channel_id=ch-1');
+    expect(init.method).toBe('POST');
+    expect(init.headers['X-API-KEY']).toBe('test-key');
+  });
+
+  it('R1: the channel id is url-encoded into the query, not concatenated raw', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse(204, ''));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await makeClient().clearChannel('tenant a/ch#1');
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.example.com/ns/x/bot-provider/y/channel/clear?custom_channel_id=tenant+a%2Fch%231',
+    );
+  });
+
+  it('R1: a relay answering 200 with a body resolves without the body being read', async () => {
+    const response = fakeResponse(200, { data: { cleared: true } });
+    const json = vi.spyOn(response, 'json');
+    const text = vi.spyOn(response, 'text');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+
+    await expect(makeClient().clearChannel('ch-2')).resolves.toBeUndefined();
+
+    expect(json).not.toHaveBeenCalled();
+    expect(text).not.toHaveBeenCalled();
+  });
+
+  it('R2: a 404 (relay route missing) rejects with an HttpError instead of passing for "cleared"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(404, 'not found')));
+
+    const error = await makeClient()
+      .clearChannel('ch-3')
+      .catch((e: unknown) => e);
+
+    expect(isHttpError(error)).toBe(true);
+    expect(isHttpError(error) && error.status).toBe(404);
+  });
+
+  it('R1: a non-2xx rejects with an HttpError carrying the status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(500, 'clear failed')));
+
+    const error = await makeClient()
+      .clearChannel('ch-4')
+      .catch((e: unknown) => e);
+
+    expect(isHttpError(error)).toBe(true);
+    expect(isHttpError(error) && error.status).toBe(500);
+  });
+
+  it('R1: a network failure rejects rather than resolving as "cleared"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+
+    await expect(makeClient().clearChannel('ch-5')).rejects.toThrow('network down');
+  });
+});
+
 // F-020 / UC-034 — generateSandboxBrowserOpenUrl POSTs to the sandbox browser open-url endpoint and returns
 // the one-time openURL. Contract confirmed against asgard-core edgeserver GenerateSandboxBrowserOpenUrl:
 // POST {botProviderEndpoint}/sandbox/{sandbox_name}/browser/open-url, path params only, { data: { openURL } }.

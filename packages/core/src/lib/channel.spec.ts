@@ -5,6 +5,7 @@ import Conversation from './conversation';
 import { EventType, FetchSseAction } from '../constants/enum';
 import { ChannelAwaitingConsentError } from '../types/channel-awaiting-consent-error';
 import type {
+  ChannelConfig,
   ChannelMetadata,
   ChannelStates,
   FetchSseOptions,
@@ -1151,5 +1152,95 @@ describe('Channel.reset / Channel.open (F-032)', () => {
 
     expect(states.length).toBeGreaterThan(0);
     channel.close();
+  });
+});
+
+// F-039 — the same two-step reset, but `mode: 'clear'` swaps the first step for `POST /channel/clear`, which
+// resets the conversation and keeps the Channel Home files. Everything after it is identical to `'delete'`.
+describe('Channel.reset modes (F-039)', () => {
+  function harness(clearImpl?: () => Promise<void>): {
+    client: IAsgardServiceClient;
+    calls: string[];
+    sent: FetchSsePayload[];
+  } {
+    const calls: string[] = [];
+    const sent: FetchSsePayload[] = [];
+    const client = {
+      fetchSse(payload: FetchSsePayload, options?: FetchSseOptions): void {
+        calls.push('open');
+        sent.push(payload);
+        options?.onSseStart?.();
+        options?.onSseCompleted?.();
+      },
+      async deleteChannel(customChannelId: string): Promise<void> {
+        calls.push(`delete:${customChannelId}`);
+      },
+      async clearChannel(customChannelId: string): Promise<void> {
+        calls.push(`clear:${customChannelId}`);
+
+        if (clearImpl) await clearImpl();
+      },
+    } as unknown as IAsgardServiceClient;
+
+    return { client, calls, sent };
+  }
+
+  const config = (client: IAsgardServiceClient): ChannelConfig => ({
+    client,
+    customChannelId: 'ch',
+    conversation: new Conversation({ messages: new Map() }),
+  });
+
+  it("R3: 'clear' clears (never deletes), then dispatches the NONE opening turn", async () => {
+    const { client, calls, sent } = harness();
+
+    const channel = await Channel.reset(config(client), undefined, undefined, undefined, 'clear');
+
+    expect(calls).toEqual(['clear:ch', 'open']);
+    expect(sent[0].action).toBe(FetchSseAction.NONE);
+    expect(sent[0].text).toBe('');
+    channel.close();
+  });
+
+  it("R3: 'delete' and no mode at all both keep deleting, exactly as before", async () => {
+    for (const mode of ['delete', undefined] as const) {
+      const { client, calls } = harness();
+
+      const channel = await Channel.reset(config(client), undefined, undefined, undefined, mode);
+
+      expect(calls).toEqual(['delete:ch', 'open']);
+      channel.close();
+    }
+  });
+
+  it("R3: a client without clearChannel refuses a 'clear' reset instead of falling back to delete", async () => {
+    const { client, calls } = harness();
+    delete (client as { clearChannel?: unknown }).clearChannel;
+
+    await expect(Channel.reset(config(client), undefined, undefined, undefined, 'clear')).rejects.toThrow(
+      /clearChannel is not implemented/,
+    );
+
+    expect(calls).toEqual([]);
+  });
+
+  it('R9: a failed clear dispatches nothing and never reaches the states observer', async () => {
+    const { client, sent } = harness(async () => {
+      throw new Error('clear failed');
+    });
+    const states: ChannelStates[] = [];
+
+    await expect(
+      Channel.reset(
+        { ...config(client), statesObserver: s => states.push(s) },
+        undefined,
+        undefined,
+        undefined,
+        'clear',
+      ),
+    ).rejects.toThrow('clear failed');
+
+    expect(sent).toEqual([]);
+    expect(states).toEqual([]);
   });
 });
