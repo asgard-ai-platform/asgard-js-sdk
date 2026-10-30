@@ -398,6 +398,45 @@
   font-family: var(--asg-font-family-mono, ui-monospace, monospace);
 }
 
+// The download offered for an out-of-root file. Its own line under the path, so it never wraps into it.
+.noticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  margin-top: 0.3rem;
+}
+
+.noticeAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--asg-color-primary, #4f46e5);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  &:disabled {
+    color: var(--asg-color-text-secondary, #6b7280);
+    text-decoration: none;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    border-radius: 0.2rem;
+    outline: 2px solid color-mix(in srgb, var(--asg-color-primary, #4f46e5) 65%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+.noticeError {
+  color: var(--asg-color-error, #ef4444);
+}
+
 .noticeClose {
   display: grid;
   flex: none;
