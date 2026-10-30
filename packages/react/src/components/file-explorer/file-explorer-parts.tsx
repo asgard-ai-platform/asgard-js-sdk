@@ -1,4 +1,4 @@
-import { KeyboardEvent, ReactNode, useEffect } from 'react';
+import { KeyboardEvent, ReactNode, useEffect, useState } from 'react';
 import { t } from '../../i18n';
 import { Spinner } from '../spinner';
 import { ContextMenu, ContextMenuItem } from './context-menu';
@@ -187,16 +187,61 @@ export function FileExplorerCwd({ children }: { children?: ReactNode }): ReactNo
  *
  * Renders nothing when there is no such request. The path is shown verbatim, because identifying *which*
  * location is the whole point of the message.
+ *
+ * For a file it also offers the download the card could not give: the explorer cannot show that path, but
+ * the sandbox can still read it (see `downloadOutOfRoot`). This is the safety net for an agent that wrote a
+ * deliverable outside the working directory — the 2026-10-29 Agent Hub case was a Word file under the
+ * Channel Home while the tree was rooted at the Directory, and the user had no way to get the file at all.
+ * A folder gets no link: `fs/file` refuses a directory.
  */
 export function FileExplorerNotice(): ReactNode {
-  const { outOfRoot, dismissOutOfRoot, locale } = useFileExplorer();
+  const { outOfRoot, downloadOutOfRoot, dismissOutOfRoot, locale } = useFileExplorer();
+  // Keyed by the request's own `downloadOutOfRoot`, not the path: every request gets a new one, so a notice
+  // pushed again for the same path starts from idle, and a download from an earlier request cannot settle
+  // this one's state.
+  const [download, setDownload] = useState<{
+    request: () => Promise<void>;
+    phase: 'downloading' | 'failed';
+  } | null>(null);
   if (!outOfRoot) return null;
+
+  const phase = downloadOutOfRoot && download?.request === downloadOutOfRoot ? download.phase : 'idle';
+
+  const startDownload = (): void => {
+    if (!downloadOutOfRoot || phase === 'downloading') return;
+
+    const request = downloadOutOfRoot;
+    setDownload({ request, phase: 'downloading' });
+    request().then(
+      () => setDownload(prev => (prev?.request === request ? null : prev)),
+      () => setDownload(prev => (prev?.request === request ? { request, phase: 'failed' } : prev)),
+    );
+  };
 
   return (
     <div className={styles.notice} role="status">
       <CircleAlertIcon className={styles.noticeIcon} size={15} />
       <span className={styles.noticeText}>
         {t(locale, 'fileExplorer.outOfRoot')} <code className={styles.noticePath}>{outOfRoot}</code>
+        {downloadOutOfRoot && (
+          <span className={styles.noticeActions}>
+            <button
+              type="button"
+              className={styles.noticeAction}
+              onClick={startDownload}
+              disabled={phase === 'downloading'}
+            >
+              <DownloadIcon size={13} />
+              {t(
+                locale,
+                phase === 'downloading' ? 'fileExplorer.outOfRootDownloading' : 'fileExplorer.outOfRootDownload',
+              )}
+            </button>
+            {phase === 'failed' && (
+              <span className={styles.noticeError}>{t(locale, 'fileExplorer.outOfRootDownloadFailed')}</span>
+            )}
+          </span>
+        )}
       </span>
       <button
         type="button"
