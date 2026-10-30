@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ReactNode } from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { useFileExplorerController } from '../../hooks/use-file-explorer-controller';
 import { FileExplorerProvider, useFileExplorer } from './file-explorer-context';
@@ -163,6 +163,47 @@ describe('out-of-root notice download', () => {
     fireEvent.click(screen.getByText('request-outside-file'));
     await screen.findByRole('button', { name: 'Download it instead' });
     expect(screen.queryByText('Download failed. Try again.')).toBeNull();
+  });
+
+  it('does not carry a failure over when the same card is pushed again', async () => {
+    const download = downloadMock().mockRejectedValue(new Error('412'));
+    render(<Harness providers={makeProviders(download)} />);
+
+    fireEvent.click(screen.getByText('request-outside-file'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Download it instead' }));
+    await screen.findByText('Download failed. Try again.');
+
+    // No dismiss: the agent pushes the same card while the failed notice is still up.
+    fireEvent.click(screen.getByText('request-outside-file'));
+    await waitFor(() => expect(screen.queryByText('Download failed. Try again.')).toBeNull());
+  });
+
+  it('does not let an earlier download settle the state of a later one for the same path', async () => {
+    const first = deferred();
+    const second = deferred();
+    const download = downloadMock().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    render(<Harness providers={makeProviders(download)} />);
+
+    fireEvent.click(screen.getByText('request-outside-file'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Download it instead' }));
+    await screen.findByRole('button', { name: 'Downloading…' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
+    fireEvent.click(screen.getByText('request-outside-file'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Download it instead' }));
+    await screen.findByRole('button', { name: 'Downloading…' });
+
+    await act(async () => {
+      first.reject(new Error('412'));
+      await first.promise.catch(() => undefined);
+    });
+
+    // The second download is still running: it stays in flight, with no failure from the first.
+    expect(screen.getByRole('button', { name: 'Downloading…' })).toBeTruthy();
+    expect(screen.queryByText('Download failed. Try again.')).toBeNull();
+
+    second.resolve();
+    expect(await screen.findByRole('button', { name: 'Download it instead' })).toBeTruthy();
   });
 
   it('offers no download for a folder', async () => {

@@ -196,26 +196,25 @@ export function FileExplorerCwd({ children }: { children?: ReactNode }): ReactNo
  */
 export function FileExplorerNotice(): ReactNode {
   const { outOfRoot, downloadOutOfRoot, dismissOutOfRoot, locale } = useFileExplorer();
-  // Keyed by path, so a notice for another path starts from idle rather than inheriting this one's result.
-  const [download, setDownload] = useState<{ path: string; phase: 'downloading' | 'failed' } | null>(null);
-  if (!outOfRoot) {
-    // This component stays mounted while the notice is gone, so drop the result with it: otherwise a
-    // dismissed failure greets the next notice for the same path before anything has been tried.
-    if (download) setDownload(null);
+  // Keyed by the request's own `downloadOutOfRoot`, not the path: every request gets a new one, so a notice
+  // pushed again for the same path starts from idle, and a download from an earlier request cannot settle
+  // this one's state.
+  const [download, setDownload] = useState<{
+    request: () => Promise<void>;
+    phase: 'downloading' | 'failed';
+  } | null>(null);
+  if (!outOfRoot) return null;
 
-    return null;
-  }
-
-  const phase = download?.path === outOfRoot ? download.phase : 'idle';
+  const phase = downloadOutOfRoot && download?.request === downloadOutOfRoot ? download.phase : 'idle';
 
   const startDownload = (): void => {
     if (!downloadOutOfRoot || phase === 'downloading') return;
 
-    const path = outOfRoot;
-    setDownload({ path, phase: 'downloading' });
-    downloadOutOfRoot().then(
-      () => setDownload(prev => (prev?.path === path ? null : prev)),
-      () => setDownload(prev => (prev?.path === path ? { path, phase: 'failed' } : prev)),
+    const request = downloadOutOfRoot;
+    setDownload({ request, phase: 'downloading' });
+    request().then(
+      () => setDownload(prev => (prev?.request === request ? null : prev)),
+      () => setDownload(prev => (prev?.request === request ? { request, phase: 'failed' } : prev)),
     );
   };
 
