@@ -149,6 +149,22 @@ describe('out-of-root notice download', () => {
     await waitFor(() => expect(screen.queryByText('Download failed. Try again.')).toBeNull());
   });
 
+  it('does not carry a failure over to the next notice for the same path', async () => {
+    const download = downloadMock().mockRejectedValue(new Error('412'));
+    render(<Harness providers={makeProviders(download)} />);
+
+    fireEvent.click(screen.getByText('request-outside-file'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Download it instead' }));
+    await screen.findByText('Download failed. Try again.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+
+    fireEvent.click(screen.getByText('request-outside-file'));
+    await screen.findByRole('button', { name: 'Download it instead' });
+    expect(screen.queryByText('Download failed. Try again.')).toBeNull();
+  });
+
   it('offers no download for a folder', async () => {
     const download = downloadMock().mockResolvedValue(undefined);
     render(<Harness providers={makeProviders(download)} />);

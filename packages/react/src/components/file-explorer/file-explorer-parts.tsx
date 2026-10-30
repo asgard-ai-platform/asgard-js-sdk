@@ -198,7 +198,13 @@ export function FileExplorerNotice(): ReactNode {
   const { outOfRoot, downloadOutOfRoot, dismissOutOfRoot, locale } = useFileExplorer();
   // Keyed by path, so a notice for another path starts from idle rather than inheriting this one's result.
   const [download, setDownload] = useState<{ path: string; phase: 'downloading' | 'failed' } | null>(null);
-  if (!outOfRoot) return null;
+  if (!outOfRoot) {
+    // This component stays mounted while the notice is gone, so drop the result with it: otherwise a
+    // dismissed failure greets the next notice for the same path before anything has been tried.
+    if (download) setDownload(null);
+
+    return null;
+  }
 
   const phase = download?.path === outOfRoot ? download.phase : 'idle';
 
