@@ -132,6 +132,14 @@ export interface ChatbotProps extends AsgardTemplateContextValue {
   /** Where the default open-browser handler opens the one-time URL (F-020). Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
   /**
+   * Tooltip on the action cards that cannot work in preview mode (F-040). With `botProviderEndpoint: 'skip'` there
+   * is no channel, so `sandbox://` open-browser / open-file / open-folder / download-file cards and old
+   * `channel-home://` download cards still render, but disabled, with this line on hover / focus. Defaults to the
+   * localized "This item can't be opened", which deliberately gives no reason; pass your own sentence to say why
+   * (e.g. that this is a shared, read-only conversation). Used as-is for every `locale` — translate it yourself.
+   */
+  disabledActionTooltip?: string;
+  /**
    * Replace the "save" step of a `sandbox://<name>/download-file` card (F-038) — by default the blob is handed
    * to the browser through `<a download>`, named after the path's basename. Pass this where that does nothing
    * (e.g. some WebViews). Only the save step: waking the sandbox, waiting for it and reading the file stay with
@@ -406,6 +414,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
     onSandboxOpenFile,
     onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
+    disabledActionTooltip,
     saveDownloadedFile,
     fileExplorer = 'builtin',
     toolCallConsent = 'builtin',
@@ -718,6 +727,7 @@ export const Chatbot = forwardRef(function Chatbot(props: ChatbotProps, ref: For
               onSandboxOpenFile={handleSandboxOpenFile}
               onSandboxOpenFolder={handleSandboxOpenFolder}
               sandboxBrowserOpenTarget={sandboxBrowserOpenTarget}
+              disabledActionTooltip={disabledActionTooltip}
             >
               <SandboxDownloadProvider saveDownloadedFile={saveDownloadedFile}>
                 <FileDropContextProvider>

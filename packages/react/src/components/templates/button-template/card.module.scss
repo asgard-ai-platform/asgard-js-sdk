@@ -54,4 +54,22 @@
     font-size: 15px;
     cursor: pointer;
   }
+
+  // F-040 — preview mode: a button whose action needs the channel. Same place and label, secondary colors, a lock
+  // before the label, `not-allowed`; the tooltip comes from `disabled-action`.
+  > .button_locked {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: color-mix(in srgb, var(--asg-color-text-secondary, #8c8c8c) 22%, transparent);
+    color: var(--asg-color-text-secondary, #8c8c8c);
+    cursor: not-allowed;
+  }
+}
+
+.button_lock {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
 }

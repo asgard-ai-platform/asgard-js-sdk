@@ -40,6 +40,16 @@
   }
 }
 
+// F-040 — preview mode. The tooltip sits above the card, so the card must not clip it; nothing inside overflows in
+// this state (no progress bar, idle text only). The chip family's `.chip--locked` supplies the colors.
+.locked {
+  overflow: visible;
+
+  .main {
+    cursor: not-allowed;
+  }
+}
+
 .hint {
   display: inline-flex;
   align-items: center;

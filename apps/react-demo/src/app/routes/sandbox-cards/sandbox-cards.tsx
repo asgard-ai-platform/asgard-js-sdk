@@ -34,13 +34,16 @@ function attachmentCard(title: string, text: string, uri: string): ConversationM
   });
 }
 
+const CONNECTED = {
+  botProviderEndpoint: `${typeof window !== 'undefined' ? window.location.origin : ''}/mock-asgard`,
+};
+
 export function SandboxCards(): ReactNode {
   const [log, setLog] = useState<string[]>([]);
   const append = (entry: string): void => setLog(prev => [...prev, entry]);
 
-  // Memoized, and this is load-bearing rather than tidiness. `botProviderEndpoint: 'skip'` puts the Chatbot in
-  // preview mode, where the conversation is rebuilt whenever `initMessages` changes identity — and these cards
-  // mint a fresh `nanoid()` message id each time they are built. Unmemoized, every logged intent re-rendered
+  // Memoized, and this is load-bearing rather than tidiness. The conversation is rebuilt whenever `initMessages`
+  // changes identity — and these cards mint a fresh `nanoid()` message id each time they are built. Unmemoized, every logged intent re-rendered
   // this component, which produced new ids, which the arrival scan (keyed on message id + uri) saw as new
   // cards: the log grew without bound. The cards have to keep their identity for "fires once" to mean anything.
   const initMessages = useMemo(
@@ -70,7 +73,9 @@ export function SandboxCards(): ReactNode {
         <div style={{ flex: '1 1 24rem', minWidth: '20rem', height: '520px' }}>
           <Chatbot
             title="Sandbox Cards Demo"
-            config={{ botProviderEndpoint: 'skip' }}
+            // Connected, not preview mode: since F-040 a preview-mode (`'skip'`) shell renders these cards disabled,
+            // and this route is about what a click does. The dev server's mock is the channel.
+            config={CONNECTED}
             customChannelId="sandbox-cards-demo"
             initMessages={initMessages}
             // The intents still fire on arrival (that is what fills the log); they just do not pull the

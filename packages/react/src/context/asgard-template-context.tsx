@@ -108,6 +108,8 @@ export interface AsgardTemplateContextValue {
   onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   /** Where the default open-browser handler opens the one-time URL (F-020). Defaults to `_blank`. */
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
+  /** Host sentence for a connection-gated card in preview mode (F-040); unset → `sandboxCard.unavailable`. */
+  disabledActionTooltip?: string;
 }
 
 export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
@@ -128,6 +130,7 @@ export const AsgardTemplateContext = createContext<AsgardTemplateContextValue>({
   onSandboxOpenFile: undefined,
   onSandboxOpenFolder: undefined,
   sandboxBrowserOpenTarget: undefined,
+  disabledActionTooltip: undefined,
 });
 
 interface AsgardTemplateContextProviderProps extends PropsWithChildren {
@@ -148,6 +151,7 @@ interface AsgardTemplateContextProviderProps extends PropsWithChildren {
   onSandboxOpenFile?: (sandboxName: string, absolutePath: string) => void;
   onSandboxOpenFolder?: (sandboxName: string, absolutePath: string) => void;
   sandboxBrowserOpenTarget?: '_blank' | '_self' | '_parent' | '_top';
+  disabledActionTooltip?: string;
 }
 
 export function AsgardTemplateContextProvider(props: AsgardTemplateContextProviderProps): ReactNode {
@@ -172,6 +176,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
     onSandboxOpenFile,
     onSandboxOpenFolder,
     sandboxBrowserOpenTarget,
+    disabledActionTooltip,
   } = props;
 
   const contextValue = useMemo(
@@ -193,6 +198,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       onSandboxOpenFile,
       onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
+      disabledActionTooltip,
     }),
     [
       locale,
@@ -212,6 +218,7 @@ export function AsgardTemplateContextProvider(props: AsgardTemplateContextProvid
       onSandboxOpenFile,
       onSandboxOpenFolder,
       sandboxBrowserOpenTarget,
+      disabledActionTooltip,
     ],
   );
 

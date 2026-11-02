@@ -1,0 +1,49 @@
+// F-040 — the tooltip on a connection-gated card in preview mode. Shown by CSS while its host is hovered or holds
+// keyboard focus, so there is no state to keep and nothing to clean up; the only script is the above / below choice.
+// Inverted colors (foreground as background) so it reads on both the dark and the light theme. Every text property is
+// set here, not inherited — the host may be a 32px-line-height card button or a one-line, ellipsized chip.
+
+.host {
+  position: relative;
+}
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(18rem, 100%);
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  color: var(--asg-color-bg, #141414);
+  background: var(--asg-color-text-primary, #fff);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+// No room above (the card is at the top of the thread) — `placeDisabledActionTooltip` flips it below.
+.host[data-tooltip-placement='bottom'] > .tooltip {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+.host:hover > .tooltip,
+.host:focus-visible > .tooltip,
+.host:focus-within > .tooltip {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transition: none;
+  }
+}
