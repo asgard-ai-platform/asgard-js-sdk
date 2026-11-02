@@ -1965,9 +1965,20 @@ const readOnlyProviders = { listDir, readFile, watchFile, download };
 ```
 
 The clipboard remembers the source id an entry was copied or cut in, and paste is only offered while a
-source with that id is active. The match is by id alone: a source removed and later added back under the
-same id — such as a sandbox name reused by the next channel — counts as the same source, so clear the
-clipboard (`setClipboard(null)`) when the sources behind the ids change.
+source with that id is active. When that source leaves `sources`, the clipboard empties, so an id added back
+later does not find it waiting.
+
+Sandbox names are per-channel, though, so the next conversation can list a sandbox with the **same** id —
+and a cut from the previous one would paste into it as a move of a path that belongs elsewhere. Pass the
+conversation id as `clipboardScope`; a change empties the clipboard and leaves the open file, the expanded
+folders and any upload in flight alone. `<Chatbot fileExplorer="builtin">` passes `customChannelId` for you.
+Assembling the explorer yourself, add the one line:
+
+```tsx
+<FileExplorer.Provider sources={sources} controller={controller} providers={providers} clipboardScope={conversationId}>
+```
+
+`FileExplorerPanel` takes the same prop.
 
 ## SourceSet File Explorer
 
