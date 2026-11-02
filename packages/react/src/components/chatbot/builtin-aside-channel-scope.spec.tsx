@@ -61,11 +61,4 @@ describe('#470 — the built-in aside scopes its fs calls to the channel', () =>
 
     expect(sandboxFsList).toHaveBeenCalledWith('sb-1', '/work', { customChannelId: 'ch-1' });
   });
-
-  // #482 item 1 — sandbox names repeat across channels, so the channel is also what scopes the clipboard.
-  it('scopes the panel clipboard to the channel', () => {
-    render(<Harness />);
-
-    expect(panelProps[0].clipboardScope).toBe('ch-1');
-  });
 });

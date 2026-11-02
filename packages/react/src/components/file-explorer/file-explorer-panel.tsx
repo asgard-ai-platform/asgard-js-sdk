@@ -75,11 +75,6 @@ export interface FileExplorerPanelProps extends FileExplorerMutations {
   maxUploadBytes?: number;
   /** Uploads in flight at once, as a ceiling the queue backs off from (default 3). */
   uploadConcurrency?: number;
-  /**
-   * The conversation (channel) id. A change empties the clipboard, because sandbox names repeat across
-   * conversations — see `FileExplorerProvider`'s `clipboardScope`.
-   */
-  clipboardScope?: string;
 }
 
 /**
@@ -114,7 +109,6 @@ export function FileExplorerPanel(props: FileExplorerPanelProps): ReactNode {
     chrome = 'card',
     maxUploadBytes,
     uploadConcurrency,
-    clipboardScope,
   } = props;
 
   const sources = useMemo(() => sandboxesAsSources(sandboxes), [sandboxes]);
@@ -141,7 +135,6 @@ export function FileExplorerPanel(props: FileExplorerPanelProps): ReactNode {
       onClose={onClose}
       maxUploadBytes={maxUploadBytes}
       uploadConcurrency={uploadConcurrency}
-      clipboardScope={clipboardScope}
     >
       <FileExplorerRoot chrome={chrome}>
         {hasSource ? (
