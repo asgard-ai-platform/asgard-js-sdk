@@ -1,7 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ButtonAction } from '@asgard-js/core';
-import { AttachmentChip, isDownloadAction } from './chip';
+
+// Connected: these guards are about the chip with a channel. Preview mode (no `sendMessage`) locks the gated cards
+// instead — F-040, covered in `disabled-action.spec.tsx`.
+vi.mock('../../../context/asgard-service-context', () => ({
+  useAsgardContext: (): Record<string, unknown> => ({ sendMessage: (): void => undefined }),
+}));
+
+const { AttachmentChip, isDownloadAction } = await import('./chip');
 
 /**
  * Guards who owns the attachment chip's click.

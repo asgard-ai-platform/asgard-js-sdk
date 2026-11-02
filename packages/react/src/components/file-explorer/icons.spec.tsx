@@ -99,6 +99,7 @@ const EXPECTED: Record<string, string[]> = {
     'path{d=M12 10v6}',
     'path{d=m9 13 3-3 3 3}',
   ], // lucide `folder-up`
+  LockIcon: ['rect{x=3,y=11,width=18,height=11,rx=2,ry=2}', 'path{d=M7 11V7a5 5 0 0 1 10 0v4}'], // lucide `lock`
   PackageOpenIcon: [
     'path{d=M12 22v-9}',
     'path{d=M15.17 2.21a1.67 1.67 0 0 1 1.63 0L21 4.57a1.93 1.93 0 0 1 0 3.36L8.82 14.79a1.655 1.655 0 0 1-1.64 0L3 12.43a1.93 1.93 0 0 1 0-3.36z}',

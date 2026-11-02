@@ -87,6 +87,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.waking': 'Waking…',
     'fileExplorer.wakeFailed': 'The last wake failed. Try again.',
     'sandboxDownload.download': 'Download {name}',
+    // F-040 — a connection-gated card in preview mode. Says only that it cannot be opened, never why: the SDK does
+    // not know why the host is in preview mode, so the reason is the host's to give (`disabledActionTooltip`).
+    'sandboxCard.unavailable': "This item can't be opened",
     'sandboxDownload.coldHint': 'Sandbox not running · will wake it first',
     'sandboxDownload.wakingHint': 'Sandbox waking · downloads once it is up',
     'sandboxDownload.waiting': 'Waking the sandbox, the download starts when it is up…',
@@ -391,6 +394,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.waking': '起動中…',
     'fileExplorer.wakeFailed': '前回の起動に失敗しました。もう一度お試しください。',
     'sandboxDownload.download': '{name} をダウンロード',
+    'sandboxCard.unavailable': 'この項目は開けません',
     'sandboxDownload.coldHint': 'サンドボックス停止中 · クリックすると先に起動します',
     'sandboxDownload.wakingHint': 'サンドボックス起動中 · 起動後にダウンロードします',
     'sandboxDownload.waiting': 'サンドボックスを起動しています。起動後に自動でダウンロードします…',
@@ -686,6 +690,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'fileExplorer.waking': '喚醒中…',
     'fileExplorer.wakeFailed': '上次喚醒失敗，請再試一次。',
     'sandboxDownload.download': '下載 {name}',
+    'sandboxCard.unavailable': '無法開啟這個項目',
     'sandboxDownload.coldHint': 'Sandbox 未啟動 · 點擊後會先喚醒',
     'sandboxDownload.wakingHint': 'Sandbox 喚醒中 · 點擊後醒來即下載',
     'sandboxDownload.waiting': '正在喚醒 sandbox，完成後會自動開始下載…',
