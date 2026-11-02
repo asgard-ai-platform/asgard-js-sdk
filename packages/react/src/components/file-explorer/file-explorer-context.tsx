@@ -40,7 +40,8 @@ import { FsEntry, FsProviders, FsSource } from './types';
 /**
  * `sourceId` is the source the entry was taken from. Paste is only offered while a source with that id is
  * active, because every provider call carries one `sourceId` and the entry's path means nothing in another
- * (issue #476). The match is by id alone, so a source that reuses an id counts as the same one. It is
+ * (issue #476). The match is by id, so the clipboard empties when its source leaves `sources` and when the
+ * provider's `clipboardScope` changes — an id reused later, or in another conversation, starts clean. It is
  * optional so a host calling `setClipboard({ op, entry })` keeps compiling: the context fills in the
  * source active when that set is committed — after the render, so a handler that switches source and then
  * sets credits the source it switched to (issue #482). A clipboard that carries its own `sourceId` is kept
@@ -229,6 +230,14 @@ export interface FileExplorerProviderProps {
    * per-request options a batch needs.
    */
   uploadConcurrency?: number;
+  /**
+   * What the clipboard belongs to beyond its source id — pass the conversation (channel) id. A change empties
+   * the clipboard and touches nothing else. Sandbox names are per-channel and repeat across conversations, so
+   * without it a cut taken in one conversation stays pasteable in the next one whose sandbox has the same
+   * name, and the paste would move a path that belongs to the other sandbox. Omitted, the clipboard only
+   * empties when its source leaves `sources`. The built-in aside passes `customChannelId`.
+   */
+  clipboardScope?: string;
   children: ReactNode;
 }
 
@@ -244,6 +253,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     onClose,
     maxUploadBytes,
     uploadConcurrency,
+    clipboardScope,
     children,
   } = props;
   const { listDir, saveFile, mkdir, remove, copy, move, upload, uploadMany, download } = providers;
@@ -475,6 +485,23 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       setClipboardState({ ...clipboard, sourceId: activeSourceId });
     }
   }, [clipboard, activeSourceId]);
+
+  // Issue #482 item 1 — the source the entry came from is gone, so a source that later reuses the id must not
+  // find it waiting. Only the clipboard is dropped; the open file, expansion and uploads stay.
+  useLayoutEffect(() => {
+    if (clipboard?.sourceId !== undefined && !sources.some(s => s.id === clipboard.sourceId)) {
+      setClipboardState(null);
+    }
+  }, [clipboard, sources]);
+
+  // Same reason across conversations, which `sources` cannot tell apart: the host names the scope.
+  const clipboardScopeRef = useRef(clipboardScope);
+  useLayoutEffect(() => {
+    if (clipboardScopeRef.current === clipboardScope) return;
+
+    clipboardScopeRef.current = clipboardScope;
+    setClipboardState(null);
+  }, [clipboardScope]);
 
   const canCopy = !!copy;
   const canCut = !!move;

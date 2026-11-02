@@ -192,6 +192,8 @@ export function ChatbotFileExplorerAside({
       onClose={controller.closeExplorer}
       chrome="flush"
       basePath={basePath}
+      // #482 — the sandbox names in this dropdown repeat in the next conversation; a cut must not follow.
+      clipboardScope={customChannelId}
     />
   );
 }
