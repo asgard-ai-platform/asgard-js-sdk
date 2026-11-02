@@ -1968,17 +1968,10 @@ The clipboard remembers the source id an entry was copied or cut in, and paste i
 source with that id is active. When that source leaves `sources`, the clipboard empties, so an id added back
 later does not find it waiting.
 
-Sandbox names are per-channel, though, so the next conversation can list a sandbox with the **same** id —
-and a cut from the previous one would paste into it as a move of a path that belongs elsewhere. Pass the
-conversation id as `clipboardScope`; a change empties the clipboard and leaves the open file, the expanded
-folders and any upload in flight alone. `<Chatbot fileExplorer="builtin">` passes `customChannelId` for you.
-Assembling the explorer yourself, add the one line:
-
-```tsx
-<FileExplorer.Provider sources={sources} controller={controller} providers={providers} clipboardScope={conversationId}>
-```
-
-`FileExplorerPanel` takes the same prop.
+Sandbox names are per-channel, so the next conversation can list a sandbox with the **same** id. The
+built-in aside lives inside `<Chatbot>`, which is remounted to change conversation, so its clipboard starts
+empty. If you keep one explorer mounted across conversations, clear the clipboard yourself when the
+conversation changes (`setClipboard(null)`), or remount the explorer.
 
 ## SourceSet File Explorer
 
