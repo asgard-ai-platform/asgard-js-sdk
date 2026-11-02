@@ -1,29 +1,26 @@
-# BUILD-096 Clear the FileExplorer clipboard when its source goes away or the conversation changes
+# BUILD-096 Clear the FileExplorer clipboard when its source leaves the list
 
 ## Meta
 
 - Task ID: `BUILD-096`
 - Status: `done`
 - Issue: [asgard-js-sdk#482](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482)（issue 開在本 repo，無 PM tracking spec；issue body 即規格。本 task 只做第 1 項，第 2、3、4 項已由 BUILD-091 完成）
-- Source spec: 無 PM spec。語意於 2026-11-02 決定：**來源從清單消失、或換對話時，清空剪貼簿**；只清剪貼簿，其他狀態（開檔、展開、上傳佇列）不動。
+- Source spec: 無 PM spec。語意於 2026-11-02 決定：**來源從清單消失時清空剪貼簿**；只清剪貼簿，其他狀態（開檔、展開、上傳佇列）不動。「換對話時清空」同日先納入、實作後撤回，理由見 Brief 與 Execution Log。
 - Complexity: `S`
 
 ---
 
 ## Brief
 
-剪貼簿只以 `sourceId` 字串認來源，而 sandbox 名稱以 channel 為單位、會在不同對話裡重複使用。於是在對話 1 的 `sbx` 剪下 `/work/a.txt`、切到同樣有 `sbx` 的對話 2，貼上仍可按，按下去會在對話 2 的 sandbox 搬一個不屬於它的路徑。來源從 `sources` 被移除後剪貼簿也一直留著，同 id 再出現時貼上又會啟用。
+剪貼簿只以 `sourceId` 字串認來源。來源從 `sources` 被移除後剪貼簿一直留著，同一個 id 再出現時貼上又會啟用；而 sandbox 名稱會被重複使用，「同一個 id」可能已經是另一台機器，貼上會搬一個不屬於它的路徑。
 
-做法分兩半：
+做法：`FileExplorerProvider` 在 `sources` 不再包含 `clipboard.sourceId` 時清空剪貼簿（`useLayoutEffect`，與既有補 `sourceId` 的那段同型）。之後同 id 再出現，剪貼簿已經是空的。
 
-- **來源消失**：`FileExplorerProvider` 在 `sources` 不再包含 `clipboard.sourceId` 時清空剪貼簿。之後同 id 再出現，剪貼簿已經是空的。
-- **換對話**：`sources` 看不出「同名但已是另一個對話」，所以由宿主告訴 Provider。新增選填 prop `clipboardScope?: string`（`FileExplorerProvider` 與 `FileExplorerPanel`），值一變就清空剪貼簿；不傳時行為與現在相同。內建側欄傳 `customChannelId`。不用 `key` 重掛，是因為重掛會一併丟掉上傳佇列與開檔狀態（Sindri 的面板也因為同樣原因刻意不用 `key={conversationId}`）。
+**換對話不另外處理。** issue 也提到「切換 channel 時 sandbox 同名、剪貼簿被帶過去」。查證後沒有任何消費端會在不重掛檔案總管的情況下換對話：`<Chatbot>` 的 channel 建立後，`customChannelId` 改變不會重新初始化（`use-channel.ts` 的 bootstrap effect 在 `channel` 已存在時直接 return），換對話必須重掛整個 Chatbot，內建側欄的剪貼簿隨之清空；Sindri 的 `FileExplorer.Provider` 掛在 `PanelSystemProvider key={conversationId}` 底下；Odin Workbench 以 `key` 重掛 Chatbot。為一個沒有使用者的情境新增公開 prop（原計畫的 `clipboardScope`）不划算，改在 README 寫明：跨對話保留同一個檔案總管的宿主，換對話時自行 `setClipboard(null)` 或重掛。
 
-自己組裝檔案總管的宿主（例：Sindri 的 `FileExplorer.Provider`）傳一行 `clipboardScope={conversationId}` 即可；README 與 JSDoc 寫明。
+**不在範圍**：`SourceSetFileExplorer` 自己的剪貼簿。
 
-**不在範圍**：`SourceSetFileExplorer` 自己的剪貼簿。消費端接上 `clipboardScope` 由各自的 repo 在 SDK 發版後處理。
-
-**Already exists:** `file-explorer-context.tsx`（`Clipboard`、`setClipboardState`、補 `sourceId` 的 `useLayoutEffect`、`canPaste`）、`file-explorer-panel.tsx`（把 props 轉給 Provider）、`chatbot-file-explorer.tsx`（內建側欄，已從 `useAsgardContext()` 取得 `customChannelId`）、`clipboard-follow-ups.spec.tsx`（剪貼簿測試 harness，可沿用）。
+**Already exists:** `file-explorer-context.tsx`（`Clipboard`、`setClipboardState`、補 `sourceId` 的 `useLayoutEffect`、`canPaste`）、`clipboard-follow-ups.spec.tsx`（剪貼簿測試 harness，可沿用）、demo `/file-explorer` 的 #476 唯讀來源組合（`ReadOnlySourcePanel`）。
 
 ---
 
@@ -58,45 +55,41 @@ Distilled from `FRONTEND_RULE_COMMON.md`; builder reads this table instead of th
 
 EARS form: `When <event/condition>[, while <state>], the system shall <observable behavior>`.
 
-- `R1` When `sources` no longer contains the clipboard's `sourceId`, the context shall clear the clipboard; when a source with that id appears again afterwards, paste shall stay disabled. → T1, T2
-- `R2` When `clipboardScope` changes, the context shall clear the clipboard, while the open file, the expanded folders and an upload in flight are unaffected. → T1, T2
-- `R3` When `clipboardScope` stays the same or is omitted and every source stays listed, clipboard behaviour shall be unchanged: switching to another source disables paste, switching back enables it again (#476), and BUILD-091 R1–R4 still hold. → T1, T2
-- `R4` When the built-in aside of `<Chatbot>` moves to another conversation (`customChannelId` changes) whose sandbox reuses the same name, the clipboard shall be empty and paste disabled. → T1, T3
-- `R5` `clipboardScope` shall be documented on `FileExplorerProvider` / `FileExplorerPanel` (JSDoc) and in the react README's File Explorer section, including the one line a host that assembles its own explorer adds. → T4
-- `R6` When the developer runs lint / format / typecheck / build / `test:packages` and walks the react-demo `/file-explorer` at both the narrow and the full-bleed shell (removing a source, changing the scope, plain source switching), the behaviour above shall be observable with no build errors. → T5
+- `R1` When `sources` no longer contains the clipboard's `sourceId`, the context shall clear the clipboard, leaving the open file of the remaining source and the provider itself (no remount) untouched; when a source with that id appears again afterwards, paste shall stay disabled. → T1, T2
+- `R2` When every source stays listed, clipboard behaviour shall be unchanged: another source leaving keeps the clipboard, switching to another source disables paste and switching back enables it again (#476), and BUILD-091 R1–R4 still hold. → T1, T2
+- `R3` The `Clipboard` JSDoc and the react README File Explorer section shall say when the clipboard empties, and that a host keeping one explorer mounted across conversations clears it itself (`setClipboard(null)`) or remounts. → T3
+- `R4` When the developer runs lint / format / typecheck / build / `test:packages` and walks the react-demo `/file-explorer` at both the narrow and the full-bleed width (cut, remove the writable source, add it back; plain source switching), the behaviour above shall be observable with no build errors. → T4
 
 ---
 
 ## Implementation Tasks
 
-- [x] T1 (R1–R4): Vitest first — clipboard cleared when its source leaves `sources` and stays empty when the id returns; cleared when `clipboardScope` changes, with open file / expanded state / upload queue intact; unchanged when the scope is stable or omitted; built-in aside clears across a `customChannelId` change with the same sandbox name. Confirm the new cases fail before T2/T3.
-- [x] T2 (R1–R3): `file-explorer-context.tsx` — clear when the clipboard's source leaves `sources`; add optional `clipboardScope` and clear when it changes. `file-explorer-panel.tsx` — accept and forward `clipboardScope`.
-- [x] T3 (R4): `chatbot-file-explorer.tsx` — pass `customChannelId` as `clipboardScope`.
-- [x] T4 (R5): JSDoc on both props and the `Clipboard` type; react README File Explorer section.
-- [x] T5-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
-- [x] T5 (R6): Demo `/file-explorer` — add controls to remove a source and to change the scope if the route has none; walk at both widths. Screenshots go to the local verification handover, not the repo.
+- [x] T1 (R1–R2): Vitest first — clipboard cleared when its source leaves `sources` and stays empty when the id returns; the remaining source's open file stays and nothing remounts; another source leaving keeps it; source switching unchanged. Confirm the clearing cases fail without the change.
+- [x] T2 (R1–R2): `file-explorer-context.tsx` — a `useLayoutEffect` that clears the clipboard once its source leaves `sources`.
+- [x] T3 (R3): `Clipboard` JSDoc; react README〈Read-only sources〉clipboard paragraph.
+- [x] T4-1: Run `npm run lint:packages` + `npm run format:check` + `npm run typecheck` + `npm run build:core && npm run build:react` + `npm run test:packages`
+- [x] T4 (R4): Demo `/file-explorer` — a #482 pair with a 拿掉／加回可寫來源 toggle; walk at both widths. Screenshots go to the local verification handover, not the repo.
 
 ---
 
 ## Coverage
 
-Use Cases: R1, R2, R3, R4, R5, R6
+Use Cases: R1, R2, R3, R4
 
 Files:
 
-- `packages/react/src/components/file-explorer/file-explorer-context.tsx`（react）— 新增選填 `clipboardScope`；兩個 `useLayoutEffect`：剪貼簿的來源不在 `sources` 時清空、`clipboardScope` 變了就清空；`Clipboard` JSDoc 改寫
-- `packages/react/src/components/file-explorer/file-explorer-panel.tsx`（react）— 接受並轉傳 `clipboardScope`
-- `packages/react/src/components/chatbot/chatbot-file-explorer.tsx`（react）— 內建側欄傳 `customChannelId` 為 `clipboardScope`
-- `packages/react/src/components/file-explorer/clipboard-scope.spec.tsx`（react，新增）— R1–R3 與 Panel 轉傳，7 案
-- `packages/react/src/components/chatbot/builtin-aside-channel-scope.spec.tsx`（react）— R4 1 案
-- `packages/react/README.md`（react）— Read-only sources 一節改寫剪貼簿段落、加 `clipboardScope` 範例
-- `apps/react-demo/src/app/routes/file-explorer/file-explorer.tsx`（demo）— #482 寬窄並排區塊與「換對話」「拿掉可寫來源」兩顆鈕；`ReadOnlySourcePanel` 收 `sources` / `clipboardScope`，並改以實際顯示的來源挑 providers
+- `packages/react/src/components/file-explorer/file-explorer-context.tsx`（react）— `useLayoutEffect`：剪貼簿的來源不在 `sources` 時清空；`Clipboard` JSDoc 改寫
+- `packages/react/src/components/file-explorer/clipboard-source-removed.spec.tsx`（react，新增）— R1–R2 4 案
+- `packages/react/README.md`（react）— Read-only sources 一節改寫剪貼簿段落
+- `apps/react-demo/src/app/routes/file-explorer/file-explorer.tsx`（demo）— #482 寬窄並排區塊與「拿掉／加回可寫來源」鈕；`ReadOnlySourcePanel` 收 `sources`，並改以實際顯示的來源挑 providers
 
 ---
 
 ## Execution Log / Change Log
 
 - 2026-11-02: BUILD task created from [asgard-js-sdk#482](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482) item 1 (Status: `draft`).
-- 2026-11-02: Plan confirmed, including the new optional `clipboardScope` prop (Status: `draft → ready → in-progress`).
-- 2026-11-02: T1 specs first: 5 red (source gone, scope change, scope change keeps open file / no remount, panel forwarding, aside passes `customChannelId`), 4 already green and now pinned (another source leaving, stable scope, no scope + source switch). After T2/T3 all 9 green; full gate green (core 458, react 727 = +8; lint 0 errors, same 5 pre-existing warnings; typecheck incl. demo; build). (Status: `in-progress → done`)
-- 2026-11-02: Demo `/file-explorer` #482 pair walked at 1149px and 343px: cut `notes.txt` → paste enabled and dimmed; 換對話 → paste disabled, dimming gone, `src` still expanded, an open `article.md` stays open; cut again → 拿掉可寫來源 → falls back to the read-only source with paste disabled → 加回 → paste still disabled, not dimmed. No horizontal overflow. Found and fixed a demo-only bug on the way: with the writable source removed, the route handed the full providers to the read-only source because it picked by the controller's remembered id.
+- 2026-11-02: Plan confirmed, including a new optional `clipboardScope` prop for the conversation-switch half (Status: `draft → ready → in-progress`).
+- 2026-11-02: First pass built both halves (`clipboardScope` on `FileExplorerProvider` / `FileExplorerPanel`, the built-in aside passing `customChannelId`); gate green, demo walked. Committed as `02262461`–`f5b295a1`.
+- 2026-11-02: Walking the built-in aside end to end showed the premise did not hold: `<Chatbot>` does not re-initialise its channel when `customChannelId` changes, so the demo's "switch channel" produced a state no consumer reaches; Sindri and Odin remount their explorer per conversation. Decision the same day: drop `clipboardScope`, keep the source-removal half. Rewrote R1–R4 accordingly (Status: `in-progress`).
+- 2026-11-02: Spec renamed `clipboard-source-removed.spec.tsx`, 4 cases; with the clearing line removed, the 2 clearing cases fail and the 2 unchanged-behaviour cases pass. One case first asserted the open file survives the removal of _its own_ source — wrong premise, open files are per source; rewritten to watch the remaining source's file. Full gate green (core 458, react 723 = +4; lint 0 errors; typecheck incl. demo; build) (Status: `in-progress → done`).
+- 2026-11-02: Demo `/file-explorer` #482 pair walked at 1149px and 343px: cut `notes.txt` → paste enabled and dimmed; 拿掉可寫來源 → falls back to the read-only source with paste disabled; 加回 → paste still disabled, not dimmed. No horizontal overflow. Found and fixed a demo-only bug on the way: with the writable source removed, the route handed the full providers to the read-only source because it picked by the controller's remembered id.
