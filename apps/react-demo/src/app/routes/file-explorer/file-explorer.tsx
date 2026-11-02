@@ -63,12 +63,10 @@ function ReadOnlySourcePanel({
   controller,
   providers,
   sources = [WRITABLE_SOURCE, READ_ONLY_SOURCE],
-  clipboardScope,
 }: {
   controller: ReturnType<typeof useFileExplorerController>;
   providers: FsProviders;
   sources?: FsSource[];
-  clipboardScope?: string;
 }): ReactNode {
   const readOnlyProviders = useMemo<FsProviders>(
     () => ({ listDir: providers.listDir, readFile: providers.readFile, download: providers.download }),
@@ -80,12 +78,7 @@ function ReadOnlySourcePanel({
   const active = shown?.id === READ_ONLY_SOURCE.id ? readOnlyProviders : providers;
 
   return (
-    <FileExplorerParts.Provider
-      sources={sources}
-      controller={controller}
-      providers={active}
-      clipboardScope={clipboardScope}
-    >
+    <FileExplorerParts.Provider sources={sources} controller={controller} providers={active}>
       <FileExplorerParts.Root>
         <FileExplorerParts.Header>
           <FileExplorerParts.HeaderRow>
@@ -371,10 +364,9 @@ export function FileExplorer(): ReactNode {
   // Issue #476 pair — one controller each so the two widths can be compared side by side.
   const readOnlyWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
   const readOnlyNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
-  // Issue #482 item 1 pair — the host switches conversation (same source ids) or drops the writable source.
+  // Issue #482 item 1 pair — the host drops the writable source and later lists it again.
   const scopeWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
   const scopeNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
-  const [conversation, setConversation] = useState<'conv-1' | 'conv-2'>('conv-1');
   const [writableListed, setWritableListed] = useState(true);
   const scopeSources = writableListed ? [WRITABLE_SOURCE, READ_ONLY_SOURCE] : [READ_ONLY_SOURCE];
 
@@ -630,21 +622,13 @@ export function FileExplorer(): ReactNode {
           </div>
         </AsgardTemplateContextProvider>
 
-        <h3 style={{ marginTop: '1.5rem' }}>剪貼簿跟著對話與來源走（#482）——寬窄並排</h3>
+        <h3 style={{ marginTop: '1.5rem' }}>來源消失時清空剪貼簿（#482）——寬窄並排</h3>
         <p style={{ fontSize: '0.85rem', color: '#666' }}>
-          同上兩個來源，這次 host 傳 <code>clipboardScope</code>（目前是 <code>{conversation}</code>）。在可寫來源剪下
-          一個檔案，貼上可按；按<strong>換對話</strong>：來源 id 完全沒變，但剪貼簿清空、貼上停用，開著的檔案與展開的
-          資料夾不動。另一條路：剪下後按<strong>拿掉可寫來源</strong>，剪貼簿清空；再按一次把它加回來，貼上仍停用。
+          同上兩個來源。在可寫來源剪下一個檔案，貼上可按；按<strong>拿掉可寫來源</strong>
+          ：面板退回唯讀來源、剪貼簿清空。 再按一次把它加回來（同一個
+          id）：貼上仍停用、檔案不再變淡——剪貼簿不會等著同名的來源回來。
         </p>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <button
-            type="button"
-            data-testid="switch-conversation"
-            onClick={() => setConversation(c => (c === 'conv-1' ? 'conv-2' : 'conv-1'))}
-            style={{ padding: '0.4rem 0.75rem', cursor: 'pointer' }}
-          >
-            換對話（{conversation === 'conv-1' ? 'conv-1 → conv-2' : 'conv-2 → conv-1'}）
-          </button>
           <button
             type="button"
             data-testid="toggle-writable-source"
@@ -661,12 +645,7 @@ export function FileExplorer(): ReactNode {
                 寬（full-bleed，實裝形態）
               </div>
               <div style={{ height: '420px' }} data-testid="scope-wide">
-                <ReadOnlySourcePanel
-                  controller={scopeWideController}
-                  providers={providers}
-                  sources={scopeSources}
-                  clipboardScope={conversation}
-                />
+                <ReadOnlySourcePanel controller={scopeWideController} providers={providers} sources={scopeSources} />
               </div>
             </div>
             <div style={{ flex: '0 0 343px' }}>
@@ -674,12 +653,7 @@ export function FileExplorer(): ReactNode {
                 窄（343px，預設 theme 寬度）
               </div>
               <div style={{ width: '343px', height: '420px' }} data-testid="scope-narrow">
-                <ReadOnlySourcePanel
-                  controller={scopeNarrowController}
-                  providers={providers}
-                  sources={scopeSources}
-                  clipboardScope={conversation}
-                />
+                <ReadOnlySourcePanel controller={scopeNarrowController} providers={providers} sources={scopeSources} />
               </div>
             </div>
           </div>
