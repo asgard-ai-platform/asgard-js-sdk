@@ -80,10 +80,11 @@
 - asgard-js-sdk#485 第 1、3、4 項：`hideEntry` 交給 `useSourceSetExplorer`（被隱藏的已展開目錄不再被 list、選取變隱藏由 hook 清掉、過濾結果記住）＋ `SourceSetFileExplorer` 預覽的 frontmatter（同 BUILD-090，邏輯搬到中立模組 `components/markdown-frontmatter/` 兩邊共用）→ BUILD-092 / REVIEW-092 (done)。Issue [`asgard-js-sdk#485`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/485)；第 2 項（新建隱藏名稱是否提示）需產品決定、另議。**react only、hook 加選填參數**。
 - `F-038` PM 驗收回報（[asgard-sdk-pm#118 留言](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/118#issuecomment-6022279521)）：下載卡右側的下載圖示點了沒反應 → BUILD-093 / REVIEW-093 (done)。idle 的圖示是按鈕外的裝飾 span，卡片外框 padding 與 gap 也點不到；改成整張 idle 卡都是下載按鈕，取消／重試維持獨立按鈕。**react only、不改公開 API**。
 - `F-039` 清除對話保留檔案：`clearChannel` 與 reset 鈕 `resetMode` (UC-041) → BUILD-094 / REVIEW-094 (done, §1 18/18、§3 R1–R12 全 Pass、0 BLOCKERs；2026-10-12 授權完成 cycle，PR [#491](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/491) 已轉 ready)。Issue [`asgard-sdk-pm#121`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/121)，規格為 `docs/spec/asgard-js-sdk/channel-clear.md`，UI 參考 prototype @ `86db8d5`。後端 `POST {base}/channel/clear` 清對話、保留 Channel Home 檔案；`<Chatbot resetMode>` 預設 `'delete'` 向下相容。**動 core + react + demo，公開 API 只增不改**。
+- `F-040` 預覽模式下動作卡照樣顯示、呈現 disabled + tooltip → BUILD-095 / REVIEW-095 (done, §1 18/18、§3 R1–R11 全 Pass、0 BLOCKERs；待授權完成 cycle)。Issue [`asgard-sdk-pm#124`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/124)，規格為 `docs/spec/asgard-js-sdk/preview-mode-cards.md`，決議見 `docs/decisions/2026-10-31-preview-mode-disabled-cards.md`，UI 參考 prototype @ `6541a3f`。五種靠連線的卡（sandbox open-browser／open-file／open-folder／download-file、`channel-home://`）在 `botProviderEndpoint: 'skip'` 時照樣顯示但 disabled + tooltip；`<Chatbot disabledActionTooltip>` 整句覆寫。**react + demo，公開 API 只增不改**。
 
 ## ▶ Next Task
 
-**目前無 ready 的 task — awaiting task selection。**
+**`BUILD-095`（[`asgard-sdk-pm#124`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/124) F-040：預覽模式下動作卡照樣顯示、呈現 disabled + tooltip）皆 `done`，待授權完成 cycle**，分支 `feat/124-preview-mode-disabled-cards`，配對 `REVIEW-095`。
 
 **`BUILD-094` / `REVIEW-094`（[`asgard-sdk-pm#121`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/121) F-039：清除對話保留檔案，`clearChannel` 與 reset 鈕 `resetMode`）皆 `done`，2026-10-12 授權完成 cycle**，分支 `feat/121-channel-clear-reset-mode`，本地驗收通過、PR [#491](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/491) 已轉 ready。下游 Workbench 改用 `clearChannel()` 由 [`asgard-odin-pm#843`](https://github.com/asgard-ai-platform/asgard-odin-pm/issues/843) 在 SDK 發版後處理。
 
@@ -362,3 +363,5 @@ REVIEW-060 留了兩則 Minor 給 Cycle 2：`AbortSignal` 取消（收合大目�
 | `REVIEW-093` | Review: whole idle download card as its click target        | —        | done   | [REVIEW-093-download-card-click-target.md](./REVIEW-093-download-card-click-target.md)                   |
 | `BUILD-094`  | Clear the conversation but keep the files (resetMode)       | M        | done   | [BUILD-094-channel-clear-reset-mode.md](./BUILD-094-channel-clear-reset-mode.md)                         |
 | `REVIEW-094` | Review: clearChannel and resetMode                          | —        | done   | [REVIEW-094-channel-clear-reset-mode.md](./REVIEW-094-channel-clear-reset-mode.md)                       |
+| `BUILD-095`  | Show action cards disabled with a tooltip in preview mode   | M        | done   | [BUILD-095-preview-mode-disabled-cards.md](./BUILD-095-preview-mode-disabled-cards.md)                   |
+| `REVIEW-095` | Review: preview-mode disabled action cards                  | —        | done   | [REVIEW-095-preview-mode-disabled-cards.md](./REVIEW-095-preview-mode-disabled-cards.md)                 |
