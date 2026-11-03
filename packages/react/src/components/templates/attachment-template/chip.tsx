@@ -1,4 +1,4 @@
-import { CSSProperties, KeyboardEvent, MouseEvent, ReactNode, useCallback, useMemo } from 'react';
+import { CSSProperties, KeyboardEvent, MouseEvent, ReactNode, useCallback, useId, useMemo } from 'react';
 import { ButtonAction, resolveSandboxUri } from '@asgard-js/core';
 import clsx from 'clsx';
 import DocumentSvg from '../../../icons/document.svg?react';
@@ -10,6 +10,14 @@ import { useAsgardTemplateContext } from '../../../context/asgard-template-conte
 import { isChannelHomeUri } from '../../../utils/channel-home-download';
 import { dispatchUriAction } from '../../../utils/dispatch-uri-action';
 import { useSandboxDownload } from '../../sandbox-download/sandbox-download-context';
+import {
+  DisabledActionTooltip,
+  disabledActionHostClass,
+  isConnectionGatedAction,
+  placeDisabledActionTooltip,
+  usePreviewModeGate,
+} from '../../disabled-action/disabled-action';
+import { LockIcon } from '../../file-explorer/icons';
 import styles from './attachment-template.module.scss';
 
 /**
@@ -26,6 +34,10 @@ export function isDownloadAction(action: ButtonAction | undefined): boolean {
   }
 
   return false;
+}
+
+function preventActivation(event: KeyboardEvent<HTMLDivElement>): void {
+  if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
 }
 
 interface AttachmentChipProps {
@@ -150,13 +162,31 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
   // chip whose sole action is a download stays clickable; `open-browser` / `open-file` / plain links are untouched.
   const bodyActsAsDownload = showDownloadIcon && isDownloadAction(defaultAction);
 
+  // F-040 — in preview mode a card whose action needs the channel is disabled as a whole. "Its action" is the
+  // download button's when that button owns the card (channel-home), otherwise the body's.
+  const { isPreviewMode, tooltip } = usePreviewModeGate();
+  const tooltipId = useId();
+  const locked = isPreviewMode && isConnectionGatedAction(bodyActsAsDownload ? downloadAction : defaultAction);
+  // A locked card stays a focusable button (the tooltip has to be reachable from the keyboard) but does nothing.
+  const focusable = locked || !bodyActsAsDownload;
+  const interactive = !locked && !bodyActsAsDownload;
+
   return (
     <div
-      role={bodyActsAsDownload ? undefined : 'button'}
-      tabIndex={bodyActsAsDownload ? undefined : 0}
-      className={clsx(styles.chip, !bodyActsAsDownload && styles['chip--interactive'])}
-      onClick={bodyActsAsDownload ? undefined : handleChipClick}
-      onKeyDown={bodyActsAsDownload ? undefined : handleChipKeyDown}
+      role={focusable ? 'button' : undefined}
+      tabIndex={focusable ? 0 : undefined}
+      aria-disabled={locked || undefined}
+      aria-describedby={locked ? tooltipId : undefined}
+      className={clsx(
+        styles.chip,
+        interactive && styles['chip--interactive'],
+        locked && [styles['chip--locked'], disabledActionHostClass],
+      )}
+      onClick={interactive ? handleChipClick : undefined}
+      // Locked: no action, and Space must not scroll the thread either.
+      onKeyDown={locked ? preventActivation : interactive ? handleChipKeyDown : undefined}
+      onPointerEnter={locked ? placeDisabledActionTooltip : undefined}
+      onFocus={locked ? placeDisabledActionTooltip : undefined}
       style={customStyle?.style}
     >
       <span className={styles.icon_box} style={customStyle?.iconBox?.style}>
@@ -176,7 +206,8 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
           {text}
         </span>
       </span>
-      {showDownloadIcon && (
+      {locked && <LockIcon className={styles.lock} />}
+      {!locked && showDownloadIcon && (
         <button
           type="button"
           className={styles.download_button}
@@ -187,6 +218,7 @@ export function AttachmentChip(props: AttachmentChipProps): ReactNode {
           <DownloadSvg />
         </button>
       )}
+      {locked && <DisabledActionTooltip id={tooltipId} text={tooltip} />}
     </div>
   );
 }

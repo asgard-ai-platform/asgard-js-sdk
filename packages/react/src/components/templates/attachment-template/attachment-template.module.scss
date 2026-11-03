@@ -35,6 +35,37 @@
   }
 }
 
+// F-040 — preview mode: a card whose action needs the channel keeps its place but drops every "something will
+// happen" cue — secondary colors, a lock where the download button would be, no hover, `not-allowed`. It stays
+// focusable so the tooltip (`disabled-action`) can be reached from the keyboard.
+.chip--locked {
+  cursor: not-allowed;
+
+  &:focus-visible {
+    outline: 2px solid var(--asg-color-primary, #4767eb);
+    outline-offset: 2px;
+  }
+
+  .icon_box {
+    background: color-mix(in srgb, var(--asg-color-text-secondary, #8c8c8c) 18%, transparent);
+    color: var(--asg-color-text-secondary, #8c8c8c);
+  }
+
+  .title,
+  .text {
+    color: var(--asg-color-text-secondary, #8c8c8c);
+  }
+}
+
+// Same 32px slot as `.download_button`, so the lock lines up with the download glyph it replaces.
+.lock {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0 8px;
+  color: var(--asg-color-text-secondary, #8c8c8c);
+}
+
 .icon_box {
   flex: 0 0 auto;
   width: 36px;
