@@ -50,8 +50,24 @@ export const SUPPORTED_DOCUMENT_TYPES = [
   'text/csv', // csv
   'application/vnd.ms-powerpoint', // ppt
   'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
-  // Audio/Video
+  // Audio — the recording formats core's Direct mode accepts for speech-to-text (#496), with the
+  // aliases browsers actually report in `file.type` (e.g. m4a is `audio/x-m4a` on macOS)
   'audio/mpeg', // mp3
+  'audio/mp3', // mp3
+  'audio/wav', // wav
+  'audio/x-wav', // wav
+  'audio/wave', // wav
+  'audio/mp4', // m4a
+  'audio/x-m4a', // m4a
+  'audio/m4a', // m4a
+  'audio/aac', // aac
+  'audio/ogg', // ogg / oga
+  'audio/flac', // flac
+  'audio/x-flac', // flac
+  'audio/aiff', // aif / aiff
+  'audio/x-aiff', // aif / aiff
+  'audio/webm', // weba
+  // Video
   'video/mpeg', // mpeg
   'video/mp4', // mp4
   // Text
@@ -73,6 +89,15 @@ export const SUPPORTED_DOCUMENT_EXTENSIONS = [
   '.ppt',
   '.pptx',
   '.mp3',
+  '.wav',
+  '.m4a',
+  '.aac',
+  '.ogg',
+  '.oga',
+  '.flac',
+  '.aif',
+  '.aiff',
+  '.weba',
   '.mpeg',
   '.mp4',
   '.html',
