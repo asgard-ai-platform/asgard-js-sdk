@@ -71,7 +71,7 @@ test:          PASS — core 458、react 796（+41：file-validation.spec.ts）
 
 ## §3 Functional Validation
 
-驗證手段：Vitest（jsdom；新 spec 先寫，41 案中 34 案在改清單前為紅）＋ ffmpeg 產的真錄音檔，在 react-demo（port 5100）以 Playwright 實際挑檔上傳：`/fullscreen` 連 dev bot provider 拿真的 blobId（Chromium、Playwright WebKit 26.0 各一輪，用路徑挑檔，`file.type` 由瀏覽器自己判定）；`/composer` 看 1600px 與 360px 兩個 shell。
+驗證手段：Vitest（jsdom；新 spec 先寫，41 案中 34 案在改清單前為紅）＋ ffmpeg 產的真錄音檔，在 react-demo（port 5100）以 Playwright 實際挑檔上傳：`/fullscreen` 連 dev bot provider 拿真的 blobId（Chromium、Playwright WebKit 26.0 各一輪，用路徑挑檔，`file.type` 由瀏覽器自己判定）；寬度看 `/fullscreen`（1280px 全寬）與 `/composer` 的 360px 窄版 shell。
 
 | R#   | Result | Evidence                                                                                                                                                                                                                                         |
 | ---- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -79,7 +79,7 @@ test:          PASS — core 458、react 796（+41：file-validation.spec.ts）
 | `R2` | ✅     | spec：10 個副檔名 × MIME `''`／`application/octet-stream` 各一案，另有大寫副檔名一案。瀏覽器：WebKit 對 `.weba` 回報空 MIME，靠副檔名通過並上傳                                                                                                  |
 | `R3` | ✅     | spec：預設 `accept` 含全部 MIME 與副檔名。demo：`/fullscreen` 的 `accept` 屬性實際含 `audio/x-m4a`、`.m4a`、`.weba` 等全部項目                                                                                                                   |
 | `R4` | ✅     | spec：`setup.exe`、`tune.mid`（`audio/midi`）被擋且錯誤訊息不變；`allowedDocumentMimeTypes` 仍只比對 MIME、`accept` 只含傳入值。瀏覽器：WebKit 挑 `tune.mid` 跳出「tune.mid: 不支援的檔案格式。請選擇 PDF、Office 文件、音訊、影片或文字檔案。」 |
-| `R5` | ✅     | 見 §1.4。Chromium：wav／m4a／ogg／flac 各拿到 blobId（HTTP 200）；WebKit：m4a／wav／aac／aiff／weba 各拿到 blobId；同一個 m4a 兩個瀏覽器都通過。`/composer` 兩種寬度四個音檔 chip 都排得下，頁面無水平溢出                                       |
+| `R5` | ✅     | 見 §1.4。Chromium：wav／m4a／ogg／flac 各拿到 blobId（HTTP 200）；WebKit：m4a／wav／aac／aiff／weba 各拿到 blobId；同一個 m4a 兩個瀏覽器都通過。全寬（`/fullscreen`）四個音檔 chip 排一列、窄版（360px）排兩列，檔名都沒截斷，頁面無水平溢出     |
 
 ---
 
