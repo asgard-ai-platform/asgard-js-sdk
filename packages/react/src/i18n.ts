@@ -64,6 +64,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     // key to press. "Tab" is the legend on the keycap, so it stays untranslated in every locale.
     'composer.suggestionHint': '⇥ Tab',
     'composer.suggestionTitle': 'Press Tab to use this suggestion',
+    // BUG-025 — copy button next to a file:// path in a bot message.
+    'fileLink.copy': 'Copy path',
+    'fileLink.copied': 'Copied',
     'fileExplorer.open': 'Open',
     'fileExplorer.download': 'Download',
     'fileExplorer.rename': 'Rename',
@@ -374,6 +377,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'composer.awaitingConsent': '続行するには許可リクエストに応答してください',
     'composer.suggestionHint': '⇥ Tab',
     'composer.suggestionTitle': 'Tab キーで候補を入力',
+    // BUG-025 — copy button next to a file:// path in a bot message.
+    'fileLink.copy': 'パスをコピー',
+    'fileLink.copied': 'コピーしました',
     'fileExplorer.open': '開く',
     'fileExplorer.download': 'ダウンロード',
     'fileExplorer.rename': '名前を変更',
@@ -674,6 +680,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     'composer.awaitingConsent': '請先回應授權請求',
     'composer.suggestionHint': '⇥ Tab',
     'composer.suggestionTitle': '按 Tab 採用這句建議',
+    // BUG-025 — copy button next to a file:// path in a bot message.
+    'fileLink.copy': '複製路徑',
+    'fileLink.copied': '已複製',
     'fileExplorer.open': '開啟',
     'fileExplorer.download': '下載',
     'fileExplorer.rename': '重新命名',

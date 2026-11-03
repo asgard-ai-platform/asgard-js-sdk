@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import remarkBreaks from 'remark-breaks';
+import { withFileLinks } from './rehype-file-links';
 import { streamdownComponents } from './streamdown-components';
 
 // Load KaTeX CSS from CDN for math rendering
@@ -23,6 +24,7 @@ interface StreamdownProps {
   children: string;
   components?: Record<string, unknown>;
   remarkPlugins?: unknown[];
+  rehypePlugins?: unknown[];
 }
 
 interface StreamdownClientProps {
@@ -32,6 +34,7 @@ interface StreamdownClientProps {
 interface LoadedStreamdown {
   Component: React.ComponentType<StreamdownProps>;
   remarkPlugins: unknown[];
+  rehypePlugins: unknown[];
 }
 
 export function StreamdownClient({ children }: StreamdownClientProps): ReactNode {
@@ -45,7 +48,7 @@ export function StreamdownClient({ children }: StreamdownClientProps): ReactNode
 
     const loadStreamdown = async (): Promise<void> => {
       try {
-        const { Streamdown, defaultRemarkPlugins } = await import('streamdown');
+        const { Streamdown, defaultRemarkPlugins, defaultRehypePlugins } = await import('streamdown');
 
         if (cancelled) return;
 
@@ -55,6 +58,8 @@ export function StreamdownClient({ children }: StreamdownClientProps): ReactNode
         setLoaded({
           Component: Streamdown as unknown as React.ComponentType<StreamdownProps>,
           remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
+          // rehypePlugins 同樣整組覆蓋預設；withFileLinks 保留全部預設外掛，只讓 file:// 連結不被擋成 [blocked]。
+          rehypePlugins: withFileLinks(defaultRehypePlugins),
         });
       } catch {
         if (!cancelled) setError(true);
@@ -72,10 +77,10 @@ export function StreamdownClient({ children }: StreamdownClientProps): ReactNode
     return children;
   }
 
-  const { Component: StreamdownComponent, remarkPlugins } = loaded;
+  const { Component: StreamdownComponent, remarkPlugins, rehypePlugins } = loaded;
 
   return (
-    <StreamdownComponent components={streamdownComponents} remarkPlugins={remarkPlugins}>
+    <StreamdownComponent components={streamdownComponents} remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
       {children}
     </StreamdownComponent>
   );

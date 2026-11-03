@@ -150,6 +150,43 @@
 }
 
 // Code
+// BUG-025 — `file:` link: text, then the path (styled as inline code) and a copy button. Stays inline so it
+// sits in a sentence or a list item like any other link; a long path wraps instead of widening the bubble.
+.fileLinkText {
+  font-weight: 500;
+}
+
+.fileLinkPath {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.fileLinkCopy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.25rem;
+  padding: 0.2rem;
+  color: inherit;
+  vertical-align: middle;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+
+  &:hover {
+    background-color: var(--asgard-markdown-code-bg, rgba(255, 255, 255, 0.1));
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+    opacity: 1;
+  }
+}
+
 .code {
   padding: 0.15rem 0.4rem;
   font-size: 0.9em;
