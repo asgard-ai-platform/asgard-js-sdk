@@ -1,10 +1,18 @@
-import { MouseEventHandler, ReactNode, useCallback, useMemo, useState, CSSProperties } from 'react';
+import { MouseEventHandler, ReactNode, useCallback, useId, useMemo, useState, CSSProperties } from 'react';
 import styles from './card.module.scss';
 import { ButtonAction, ButtonMessageTemplate, CarouselMessageTemplate } from '@asgard-js/core';
 import { useAsgardContext } from '../../../context/asgard-service-context';
 import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
 import { dispatchUriAction } from '../../../utils/dispatch-uri-action';
 import { useSandboxDownload } from '../../sandbox-download/sandbox-download-context';
+import {
+  DisabledActionTooltip,
+  disabledActionHostClass,
+  isConnectionGatedAction,
+  placeDisabledActionTooltip,
+  usePreviewModeGate,
+} from '../../disabled-action/disabled-action';
+import { LockIcon } from '../../file-explorer/icons';
 import clsx from 'clsx';
 
 interface CardProps {
@@ -37,6 +45,8 @@ export function Card(props: CardProps): ReactNode {
     sandboxBrowserOpenTarget,
   } = useAsgardTemplateContext();
   const sandboxDownload = useSandboxDownload();
+  const { isPreviewMode, tooltip } = usePreviewModeGate();
+  const tooltipIdPrefix = useId();
 
   const [imageError, setImageError] = useState(false);
 
@@ -131,11 +141,36 @@ export function Card(props: CardProps): ReactNode {
           {template?.text}
         </div>
         <div className={styles.card_actions}>
-          {template?.buttons?.map((btn: { label: string; action: ButtonAction }, index: number) => (
-            <button key={index} onClick={handleClick(btn.action)} style={customStyle?.button?.style}>
-              {btn.label}
-            </button>
-          ))}
+          {template?.buttons?.map((btn: { label: string; action: ButtonAction }, index: number) => {
+            // F-040 — in preview mode a button whose action needs the channel is disabled with a tooltip; plain
+            // links, MESSAGE and EMIT buttons on the same card are left as they are.
+            if (isPreviewMode && isConnectionGatedAction(btn.action)) {
+              const tooltipId = `${tooltipIdPrefix}-${index}`;
+
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  aria-disabled="true"
+                  aria-describedby={tooltipId}
+                  className={clsx(styles.button_locked, disabledActionHostClass)}
+                  onPointerEnter={placeDisabledActionTooltip}
+                  onFocus={placeDisabledActionTooltip}
+                  style={customStyle?.button?.style}
+                >
+                  <LockIcon className={styles.button_lock} />
+                  {btn.label}
+                  <DisabledActionTooltip id={tooltipId} text={tooltip} />
+                </button>
+              );
+            }
+
+            return (
+              <button key={index} onClick={handleClick(btn.action)} style={customStyle?.button?.style}>
+                {btn.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

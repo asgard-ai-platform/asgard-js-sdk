@@ -62,22 +62,23 @@ const READ_ONLY_SOURCE: FsSource = { id: 'ro-demo', label: 'content（唯讀）'
 function ReadOnlySourcePanel({
   controller,
   providers,
+  sources = [WRITABLE_SOURCE, READ_ONLY_SOURCE],
 }: {
   controller: ReturnType<typeof useFileExplorerController>;
   providers: FsProviders;
+  sources?: FsSource[];
 }): ReactNode {
   const readOnlyProviders = useMemo<FsProviders>(
     () => ({ listDir: providers.listDir, readFile: providers.readFile, download: providers.download }),
     [providers],
   );
-  const active = controller.activeSourceId === READ_ONLY_SOURCE.id ? readOnlyProviders : providers;
+  // The explorer falls back to the first source when the selected one is not listed, so pick the providers for
+  // the source it actually shows — not the id the controller still remembers.
+  const shown = sources.find(s => s.id === controller.activeSourceId) ?? sources[0];
+  const active = shown?.id === READ_ONLY_SOURCE.id ? readOnlyProviders : providers;
 
   return (
-    <FileExplorerParts.Provider
-      sources={[WRITABLE_SOURCE, READ_ONLY_SOURCE]}
-      controller={controller}
-      providers={active}
-    >
+    <FileExplorerParts.Provider sources={sources} controller={controller} providers={active}>
       <FileExplorerParts.Root>
         <FileExplorerParts.Header>
           <FileExplorerParts.HeaderRow>
@@ -276,6 +277,8 @@ const FOLDER_TARGET = '/home/user/project/out/archive';
 const FILE_TARGET = '/home/user/project/out/manifest.json';
 /** Outside the tree root — the shape of the 2026-09-09 incident, where the card pointed next to the attachment. */
 const OUT_OF_ROOT_TARGET = '/work/生活市集';
+/** A FILE outside the tree root — the 2026-10-29 Agent Hub incident; the notice offers to download it instead. */
+const OUT_OF_ROOT_FILE_TARGET = '/work/output/報價單_IELTS成績驗證Agent_20261029.docx';
 
 /**
  * Locale picker for the standalone panels. They sit outside any Chatbot, so nothing supplies a locale and
@@ -305,7 +308,7 @@ function LocaleSwitch({ value, onChange }: { value: Locale; onChange: (locale: L
   );
 }
 
-/** The three simulated cards, rendered under each panel of the F-034 pair. */
+/** The simulated cards, rendered under each panel of the F-034 pair. */
 function FolderCardButtons({
   controller,
   idPrefix,
@@ -341,6 +344,14 @@ function FolderCardButtons({
       >
         樹根外 → /work/生活市集
       </button>
+      <button
+        type="button"
+        data-testid={`${idPrefix}-out-of-root-file`}
+        onClick={() => controller.requestFile(FIXED_SOURCE.id, OUT_OF_ROOT_FILE_TARGET)}
+        style={style}
+      >
+        樹根外檔案 → /work/output/報價單….docx
+      </button>
     </div>
   );
 }
@@ -363,6 +374,11 @@ export function FileExplorer(): ReactNode {
   // Issue #476 pair — one controller each so the two widths can be compared side by side.
   const readOnlyWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
   const readOnlyNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  // Issue #482 item 1 pair — the host drops the writable source and later lists it again.
+  const scopeWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  const scopeNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  const [writableListed, setWritableListed] = useState(true);
+  const scopeSources = writableListed ? [WRITABLE_SOURCE, READ_ONLY_SOURCE] : [READ_ONLY_SOURCE];
 
   const providers = useMemo(
     () => ({
@@ -528,12 +544,15 @@ export function FileExplorer(): ReactNode {
 
         <h3 style={{ marginTop: '1.5rem' }}>資料夾卡與樹根外提示（F-034）——寬窄並排</h3>
         <p style={{ fontSize: '0.85rem', color: '#666' }}>
-          三顆按鈕模擬 agent 推來的三種卡片。<strong>開啟資料夾</strong>走 <code>controller.requestFolder</code>：沿路
+          四顆按鈕模擬 agent 推來的卡片。<strong>開啟資料夾</strong>走 <code>controller.requestFolder</code>：沿路
           祖先（<code>out</code>）<strong>與該目錄自己</strong>（<code>archive</code>）都展開、選取它、停在樹上——
           全程不呼叫 <code>fs/file</code>、不掛 <code>fs/watch</code>（DevTools Network 可核對）。
           <strong>開啟檔案</strong>維持舊行為、進檔案檢視器；先開檔再按資料夾卡，檢視器會關掉，否則展開的樹被蓋住、
           看起來像沒反應。<strong>樹根外</strong>那顆指向 <code>/work/生活市集</code>（樹根是{' '}
           <code>/home/user/project</code>）：不展開、不選取、不發任何 fs 請求，改在面板頂端說明並附上那條路徑。
+          <strong>樹根外檔案</strong>是 2026-10-29 Agent Hub 的形狀（Word 檔落在 Channel
+          Home）：提示多一個「改為下載這個檔案」， 走面板自己的 <code>download</code>——樹打不開，但 sandbox
+          讀得到。資料夾沒有這個連結，<code>fs/file</code> 不收目錄。
         </p>
         <LocaleSwitch value={batchLocale} onChange={setBatchLocale} />
         <AsgardTemplateContextProvider locale={batchLocale}>
@@ -611,6 +630,43 @@ export function FileExplorer(): ReactNode {
               </div>
               <div style={{ width: '343px', height: '420px' }} data-testid="read-only-narrow">
                 <ReadOnlySourcePanel controller={readOnlyNarrowController} providers={providers} />
+              </div>
+            </div>
+          </div>
+        </AsgardTemplateContextProvider>
+
+        <h3 style={{ marginTop: '1.5rem' }}>來源消失時清空剪貼簿（#482）——寬窄並排</h3>
+        <p style={{ fontSize: '0.85rem', color: '#666' }}>
+          同上兩個來源。在可寫來源剪下一個檔案，貼上可按；按<strong>拿掉可寫來源</strong>
+          ：面板退回唯讀來源、剪貼簿清空。 再按一次把它加回來（同一個
+          id）：貼上仍停用、檔案不再變淡——剪貼簿不會等著同名的來源回來。
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            data-testid="toggle-writable-source"
+            onClick={() => setWritableListed(v => !v)}
+            style={{ padding: '0.4rem 0.75rem', cursor: 'pointer' }}
+          >
+            {writableListed ? '拿掉可寫來源' : '加回可寫來源'}
+          </button>
+        </div>
+        <AsgardTemplateContextProvider locale={batchLocale}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 28rem', minWidth: 0 }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                寬（full-bleed，實裝形態）
+              </div>
+              <div style={{ height: '420px' }} data-testid="scope-wide">
+                <ReadOnlySourcePanel controller={scopeWideController} providers={providers} sources={scopeSources} />
+              </div>
+            </div>
+            <div style={{ flex: '0 0 343px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                窄（343px，預設 theme 寬度）
+              </div>
+              <div style={{ width: '343px', height: '420px' }} data-testid="scope-narrow">
+                <ReadOnlySourcePanel controller={scopeNarrowController} providers={providers} sources={scopeSources} />
               </div>
             </div>
           </div>

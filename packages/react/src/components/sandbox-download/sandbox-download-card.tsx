@@ -1,8 +1,14 @@
-import { CSSProperties, ReactNode } from 'react';
+import { CSSProperties, ReactNode, useId } from 'react';
 import clsx from 'clsx';
 import { useAsgardTemplateContext } from '../../context/asgard-template-context';
 import { t } from '../../i18n';
-import { CircleAlertIcon, CircleCheckIcon, DownloadIcon, RefreshIcon, ZapIcon } from '../file-explorer/icons';
+import { CircleAlertIcon, CircleCheckIcon, DownloadIcon, LockIcon, RefreshIcon, ZapIcon } from '../file-explorer/icons';
+import {
+  DisabledActionTooltip,
+  disabledActionHostClass,
+  placeDisabledActionTooltip,
+  usePreviewModeGate,
+} from '../disabled-action/disabled-action';
 import { Spinner } from '../spinner/spinner';
 import chipStyles from '../templates/attachment-template/attachment-template.module.scss';
 import {
@@ -55,6 +61,8 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
   const { sandboxName, absolutePath, title, text, customStyle } = props;
   const { locale = 'en-US' } = useAsgardTemplateContext();
   const controller = useSandboxDownload();
+  const { isPreviewMode, tooltip } = usePreviewModeGate();
+  const tooltipId = useId();
 
   const state = controller?.stateOf(sandboxName, absolutePath) ?? IDLE;
   const sandboxStatus = controller?.sandboxStatusOf(sandboxName) ?? 'live';
@@ -91,6 +99,48 @@ export function SandboxDownloadCard(props: SandboxDownloadCardProps): ReactNode 
 
   const percent =
     state.phase === 'downloading' && state.total ? Math.min(100, (state.received / state.total) * 100) : null;
+
+  // F-040 — preview mode has no channel, so neither the sandbox's state nor a download is anything to talk about:
+  // the idle look only, with no hint, no Cancel / Retry and no call into the controller, plus a lock and a tooltip.
+  if (isPreviewMode) {
+    return (
+      <div
+        className={clsx(
+          chipStyles.chip,
+          chipStyles['chip--locked'],
+          styles.card,
+          styles.locked,
+          disabledActionHostClass,
+        )}
+        data-phase="idle"
+        style={customStyle?.style}
+        onPointerEnter={placeDisabledActionTooltip}
+        onFocus={placeDisabledActionTooltip}
+      >
+        <button
+          type="button"
+          className={styles.main}
+          aria-disabled="true"
+          aria-describedby={tooltipId}
+          aria-label={t(locale, 'sandboxDownload.download', { name: fileName })}
+        >
+          <span className={chipStyles.icon_box} style={customStyle?.iconBox?.style}>
+            <DownloadIcon />
+          </span>
+          <span className={chipStyles.body}>
+            <span className={chipStyles.title} style={customStyle?.title?.style}>
+              {title || fileName}
+            </span>
+            <span className={chipStyles.text} style={customStyle?.description?.style}>
+              {text || fileName}
+            </span>
+          </span>
+          <LockIcon className={chipStyles.lock} />
+        </button>
+        <DisabledActionTooltip id={tooltipId} text={tooltip} />
+      </div>
+    );
+  }
 
   return (
     <div

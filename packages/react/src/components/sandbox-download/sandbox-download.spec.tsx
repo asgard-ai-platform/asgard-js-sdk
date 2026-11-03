@@ -71,7 +71,7 @@ function blob(size: number): Blob {
   return new Blob([new Uint8Array(size)]);
 }
 
-function harness(opts: { live?: string[]; consent?: boolean } = {}): Harness {
+function harness(opts: { live?: string[]; consent?: boolean; preview?: boolean } = {}): Harness {
   const sent: FetchSsePayload[] = [];
   let runOptions: FetchSseOptions | undefined;
   const reads: PendingRead[] = [];
@@ -109,6 +109,8 @@ function harness(opts: { live?: string[]; consent?: boolean } = {}): Harness {
     runStatus: { kind: null, stopPhase: 'idle' },
     pendingConsent: opts.consent ? ({ processId: 'p' } as ToolCallConsentEventData) : null,
     wakeSandbox: (name?: string): Promise<SandboxWakeResult> => channel.wakeSandbox(name),
+    // Connected unless asked otherwise: no `sendMessage` is how the cards know they are in preview mode (F-040).
+    sendMessage: opts.preview ? undefined : vi.fn(),
   };
 
   const tree = (): ReactNode => (
@@ -188,7 +190,7 @@ async function settleRead(index: number, result: SandboxFsReadResult | Error): P
 
 let harnessReads: PendingRead[] = [];
 
-function start(opts?: { live?: string[]; consent?: boolean }): Harness {
+function start(opts?: { live?: string[]; consent?: boolean; preview?: boolean }): Harness {
   const h = harness(opts);
   harnessReads = h.reads;
 
@@ -498,5 +500,51 @@ describe('download card — failures (UC-064)', () => {
     expect(within(card('a1')).getByText(L('sandboxDownload.error.wakeFailed'))).toBeTruthy();
     expect(h.channel.getSandboxWake().phase).toBe('failed');
     expect(within(card('a1')).getByRole('button', { name: new RegExp(L('sandboxDownload.retry')) })).toBeTruthy();
+  });
+});
+
+describe('download card — preview mode (F-040)', () => {
+  it('stays in the thread but locked: no hint, no download glyph, a tooltip, and the click does nothing', async () => {
+    // A cold sandbox: connected, this card would say it will wake it first.
+    const h = start({ preview: true });
+    await act(flush);
+
+    const main = mainButton('a1');
+
+    expect(within(card('a1')).getByText('q3.pdf')).toBeTruthy();
+    expect(within(card('a1')).getByText('1.7 MB · PDF')).toBeTruthy();
+    expect(within(card('a1')).queryByText(L('sandboxDownload.coldHint'))).toBeNull();
+    expect(main.getAttribute('aria-disabled')).toBe('true');
+    // Not native `disabled`: that would take the card out of the Tab order and the tooltip with it.
+    expect(main.hasAttribute('disabled')).toBe(false);
+
+    const tooltip = within(card('a1')).getByRole('tooltip');
+
+    expect(tooltip.textContent).toBe(L('sandboxCard.unavailable'));
+    expect(main.getAttribute('aria-describedby')).toBe(tooltip.id);
+
+    await click('a1');
+    await act(async () => {
+      fireEvent.keyDown(main, { key: 'Enter' });
+      await flush();
+    });
+
+    expect(h.nudges()).toBe(0);
+    expect(h.reads).toHaveLength(0);
+    expect(within(card('a1')).queryByText(L('sandboxDownload.waiting'))).toBeNull();
+    expect(within(card('a1')).queryByRole('button', { name: L('sandboxDownload.cancel') })).toBeNull();
+  });
+
+  it('does not show the waking hint either, even while a wake is under way', async () => {
+    const h = start({ preview: true });
+    await act(flush);
+
+    await act(async () => {
+      void h.channel.wakeSandbox(SBX);
+      await flush();
+    });
+
+    expect(within(card('a1')).queryByText(L('sandboxDownload.wakingHint'))).toBeNull();
+    expect(within(card('a1')).queryByRole('button', { name: L('sandboxDownload.retry') })).toBeNull();
   });
 });
