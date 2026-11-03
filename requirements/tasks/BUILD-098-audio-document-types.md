@@ -1,4 +1,4 @@
-# BUILD-098 Accept common recording formats in the default document list
+# BUILD-098 Accept recording formats in the default document list
 
 ## Meta
 
