@@ -40,7 +40,9 @@ import { FsEntry, FsProviders, FsSource } from './types';
 /**
  * `sourceId` is the source the entry was taken from. Paste is only offered while a source with that id is
  * active, because every provider call carries one `sourceId` and the entry's path means nothing in another
- * (issue #476). The match is by id alone, so a source that reuses an id counts as the same one. It is
+ * (issue #476). The match is by id, so the clipboard empties when its source leaves `sources`: an id reused
+ * later starts clean. A host that keeps one explorer mounted across conversations (sandbox names repeat per
+ * channel) clears it itself with `setClipboard(null)`, or remounts the explorer. It is
  * optional so a host calling `setClipboard({ op, entry })` keeps compiling: the context fills in the
  * source active when that set is committed — after the render, so a handler that switches source and then
  * sets credits the source it switched to (issue #482). A clipboard that carries its own `sourceId` is kept
@@ -504,6 +506,14 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       setClipboardState({ ...clipboard, sourceId: activeSourceId });
     }
   }, [clipboard, activeSourceId]);
+
+  // Issue #482 item 1 — the source the entry came from is gone, so a source that later reuses the id must not
+  // find it waiting. Only the clipboard is dropped; the open file, expansion and uploads stay.
+  useLayoutEffect(() => {
+    if (clipboard?.sourceId !== undefined && !sources.some(s => s.id === clipboard.sourceId)) {
+      setClipboardState(null);
+    }
+  }, [clipboard, sources]);
 
   const canCopy = !!copy;
   const canCut = !!move;

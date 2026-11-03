@@ -62,22 +62,23 @@ const READ_ONLY_SOURCE: FsSource = { id: 'ro-demo', label: 'content（唯讀）'
 function ReadOnlySourcePanel({
   controller,
   providers,
+  sources = [WRITABLE_SOURCE, READ_ONLY_SOURCE],
 }: {
   controller: ReturnType<typeof useFileExplorerController>;
   providers: FsProviders;
+  sources?: FsSource[];
 }): ReactNode {
   const readOnlyProviders = useMemo<FsProviders>(
     () => ({ listDir: providers.listDir, readFile: providers.readFile, download: providers.download }),
     [providers],
   );
-  const active = controller.activeSourceId === READ_ONLY_SOURCE.id ? readOnlyProviders : providers;
+  // The explorer falls back to the first source when the selected one is not listed, so pick the providers for
+  // the source it actually shows — not the id the controller still remembers.
+  const shown = sources.find(s => s.id === controller.activeSourceId) ?? sources[0];
+  const active = shown?.id === READ_ONLY_SOURCE.id ? readOnlyProviders : providers;
 
   return (
-    <FileExplorerParts.Provider
-      sources={[WRITABLE_SOURCE, READ_ONLY_SOURCE]}
-      controller={controller}
-      providers={active}
-    >
+    <FileExplorerParts.Provider sources={sources} controller={controller} providers={active}>
       <FileExplorerParts.Root>
         <FileExplorerParts.Header>
           <FileExplorerParts.HeaderRow>
@@ -373,6 +374,11 @@ export function FileExplorer(): ReactNode {
   // Issue #476 pair — one controller each so the two widths can be compared side by side.
   const readOnlyWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
   const readOnlyNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  // Issue #482 item 1 pair — the host drops the writable source and later lists it again.
+  const scopeWideController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  const scopeNarrowController = useFileExplorerController({ activeSourceId: WRITABLE_SOURCE.id });
+  const [writableListed, setWritableListed] = useState(true);
+  const scopeSources = writableListed ? [WRITABLE_SOURCE, READ_ONLY_SOURCE] : [READ_ONLY_SOURCE];
 
   const providers = useMemo(
     () => ({
@@ -624,6 +630,43 @@ export function FileExplorer(): ReactNode {
               </div>
               <div style={{ width: '343px', height: '420px' }} data-testid="read-only-narrow">
                 <ReadOnlySourcePanel controller={readOnlyNarrowController} providers={providers} />
+              </div>
+            </div>
+          </div>
+        </AsgardTemplateContextProvider>
+
+        <h3 style={{ marginTop: '1.5rem' }}>來源消失時清空剪貼簿（#482）——寬窄並排</h3>
+        <p style={{ fontSize: '0.85rem', color: '#666' }}>
+          同上兩個來源。在可寫來源剪下一個檔案，貼上可按；按<strong>拿掉可寫來源</strong>
+          ：面板退回唯讀來源、剪貼簿清空。 再按一次把它加回來（同一個
+          id）：貼上仍停用、檔案不再變淡——剪貼簿不會等著同名的來源回來。
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            data-testid="toggle-writable-source"
+            onClick={() => setWritableListed(v => !v)}
+            style={{ padding: '0.4rem 0.75rem', cursor: 'pointer' }}
+          >
+            {writableListed ? '拿掉可寫來源' : '加回可寫來源'}
+          </button>
+        </div>
+        <AsgardTemplateContextProvider locale={batchLocale}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 28rem', minWidth: 0 }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                寬（full-bleed，實裝形態）
+              </div>
+              <div style={{ height: '420px' }} data-testid="scope-wide">
+                <ReadOnlySourcePanel controller={scopeWideController} providers={providers} sources={scopeSources} />
+              </div>
+            </div>
+            <div style={{ flex: '0 0 343px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                窄（343px，預設 theme 寬度）
+              </div>
+              <div style={{ width: '343px', height: '420px' }} data-testid="scope-narrow">
+                <ReadOnlySourcePanel controller={scopeNarrowController} providers={providers} sources={scopeSources} />
               </div>
             </div>
           </div>

@@ -1973,9 +1973,13 @@ const readOnlyProviders = { listDir, readFile, watchFile, download };
 ```
 
 The clipboard remembers the source id an entry was copied or cut in, and paste is only offered while a
-source with that id is active. The match is by id alone: a source removed and later added back under the
-same id — such as a sandbox name reused by the next channel — counts as the same source, so clear the
-clipboard (`setClipboard(null)`) when the sources behind the ids change.
+source with that id is active. When that source leaves `sources`, the clipboard empties, so an id added back
+later does not find it waiting.
+
+Sandbox names are per-channel, so the next conversation can list a sandbox with the **same** id. The
+built-in aside lives inside `<Chatbot>`, which is remounted to change conversation, so its clipboard starts
+empty. If you keep one explorer mounted across conversations, clear the clipboard yourself when the
+conversation changes (`setClipboard(null)`), or remount the explorer.
 
 ## SourceSet File Explorer
 
