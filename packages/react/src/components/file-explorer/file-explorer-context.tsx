@@ -119,6 +119,19 @@ export interface FileExplorerContextValue {
    * silently doing nothing is the worst outcome — the user reads it as a broken card (F-034 AC7 / UC-061).
    */
   outOfRoot: string | null;
+  /**
+   * Downloads the out-of-root file named by {@link outOfRoot}, or `null` when there is nothing to offer: no
+   * notice, a folder request (`fs/file` refuses a directory), or a source without a `download` provider.
+   *
+   * The tree cannot reach that path, but the sandbox can still read it — `download` goes through the same
+   * `fs/file` read the download card uses, which is not confined to the working directory. So a card the
+   * explorer cannot open still ends with the user holding the file, instead of only being told it is out of
+   * reach. Rejects when the download fails, so the notice can say so.
+   *
+   * A new function per request, even for the same path, so the notice can tie a download's result to the
+   * request it was started from.
+   */
+  downloadOutOfRoot: (() => Promise<void>) | null;
 
   // --- refs owned by <FileExplorerRoot> ---
   rootRef: RefObject<HTMLDivElement | null>;
@@ -289,8 +302,10 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
   const nudging = wakePhase ? wakePhase === 'waking' : ownNudging;
   const wakeFailed = wakePhase === 'failed';
   // Not part of a source's remembered view: it describes one request that could not be served, not "where
-  // the user was". It is cleared on a source switch below, alongside the context menu.
-  const [outOfRoot, setOutOfRoot] = useState<string | null>(null);
+  // the user was". It is cleared on a source switch below, alongside the context menu. The request's `kind`
+  // is kept with it because only a file can be offered as a download.
+  const [outOfRootRequest, setOutOfRootRequest] = useState<{ path: string; kind: 'file' | 'folder' } | null>(null);
+  const outOfRoot = outOfRootRequest?.path ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
   const uploadDirRef = useRef<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -340,14 +355,28 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     [updateView],
   );
 
-  const dismissOutOfRoot = useCallback((): void => setOutOfRoot(null), []);
+  const dismissOutOfRoot = useCallback((): void => setOutOfRootRequest(null), []);
+
+  // Bound to the active source, which is the one the request was made against: the notice is cleared on
+  // every source switch (below), so the two cannot disagree. `download` is read through a ref so the
+  // function changes with the request only — a host that rebuilds its providers must not reset the notice.
+  const downloadRef = useRef(download);
+  downloadRef.current = download;
+  const canDownload = !!download;
+  const downloadOutOfRoot = useMemo(() => {
+    if (!outOfRootRequest || outOfRootRequest.kind !== 'file' || !activeSourceId || !canDownload) return null;
+
+    const { path } = outOfRootRequest;
+
+    return async (): Promise<void> => downloadRef.current?.(activeSourceId, path, baseName(path));
+  }, [outOfRootRequest, activeSourceId, canDownload]);
 
   // The context menu is per-interaction chrome, not part of a source's remembered view — a menu left
   // open while the source changes is stale in a way "where was I" state is not. The out-of-root notice
   // goes with it: it names a path in the source you just left (UC-061 ALT2).
   useEffect(() => {
     setMenu(null);
-    setOutOfRoot(null);
+    setOutOfRootRequest(null);
   }, [activeSourceId]);
 
   // Reveal intent (F-021 AC9 / F-034 AC4): expand the ancestors, select, then follow the request's `kind`.
@@ -364,12 +393,12 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
     if (!rf || rf.sourceId !== activeSourceId || !rootPath) return;
 
     if (!isUnderRoot(rootPath, rf.absolutePath)) {
-      setOutOfRoot(rf.absolutePath);
+      setOutOfRootRequest({ path: rf.absolutePath, kind: rf.kind });
 
       return;
     }
 
-    setOutOfRoot(null);
+    setOutOfRootRequest(null);
 
     const isDir = rf.kind === 'folder';
     const entry: FsEntry = {
@@ -864,6 +893,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       targetDir,
       pasteLabel,
       outOfRoot,
+      downloadOutOfRoot,
       rootRef,
       uploadInputRef,
       uploadDirInputRef,
@@ -923,6 +953,7 @@ export function FileExplorerProvider(props: FileExplorerProviderProps): ReactNod
       targetDir,
       pasteLabel,
       outOfRoot,
+      downloadOutOfRoot,
       dismissOutOfRoot,
       closeMenu,
       openContext,

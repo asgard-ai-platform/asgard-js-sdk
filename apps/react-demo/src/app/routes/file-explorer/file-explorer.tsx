@@ -276,6 +276,8 @@ const FOLDER_TARGET = '/home/user/project/out/archive';
 const FILE_TARGET = '/home/user/project/out/manifest.json';
 /** Outside the tree root — the shape of the 2026-09-09 incident, where the card pointed next to the attachment. */
 const OUT_OF_ROOT_TARGET = '/work/生活市集';
+/** A FILE outside the tree root — the 2026-10-29 Agent Hub incident; the notice offers to download it instead. */
+const OUT_OF_ROOT_FILE_TARGET = '/work/output/報價單_IELTS成績驗證Agent_20261029.docx';
 
 /**
  * Locale picker for the standalone panels. They sit outside any Chatbot, so nothing supplies a locale and
@@ -305,7 +307,7 @@ function LocaleSwitch({ value, onChange }: { value: Locale; onChange: (locale: L
   );
 }
 
-/** The three simulated cards, rendered under each panel of the F-034 pair. */
+/** The simulated cards, rendered under each panel of the F-034 pair. */
 function FolderCardButtons({
   controller,
   idPrefix,
@@ -340,6 +342,14 @@ function FolderCardButtons({
         style={style}
       >
         樹根外 → /work/生活市集
+      </button>
+      <button
+        type="button"
+        data-testid={`${idPrefix}-out-of-root-file`}
+        onClick={() => controller.requestFile(FIXED_SOURCE.id, OUT_OF_ROOT_FILE_TARGET)}
+        style={style}
+      >
+        樹根外檔案 → /work/output/報價單….docx
       </button>
     </div>
   );
@@ -528,12 +538,15 @@ export function FileExplorer(): ReactNode {
 
         <h3 style={{ marginTop: '1.5rem' }}>資料夾卡與樹根外提示（F-034）——寬窄並排</h3>
         <p style={{ fontSize: '0.85rem', color: '#666' }}>
-          三顆按鈕模擬 agent 推來的三種卡片。<strong>開啟資料夾</strong>走 <code>controller.requestFolder</code>：沿路
+          四顆按鈕模擬 agent 推來的卡片。<strong>開啟資料夾</strong>走 <code>controller.requestFolder</code>：沿路
           祖先（<code>out</code>）<strong>與該目錄自己</strong>（<code>archive</code>）都展開、選取它、停在樹上——
           全程不呼叫 <code>fs/file</code>、不掛 <code>fs/watch</code>（DevTools Network 可核對）。
           <strong>開啟檔案</strong>維持舊行為、進檔案檢視器；先開檔再按資料夾卡，檢視器會關掉，否則展開的樹被蓋住、
           看起來像沒反應。<strong>樹根外</strong>那顆指向 <code>/work/生活市集</code>（樹根是{' '}
           <code>/home/user/project</code>）：不展開、不選取、不發任何 fs 請求，改在面板頂端說明並附上那條路徑。
+          <strong>樹根外檔案</strong>是 2026-10-29 Agent Hub 的形狀（Word 檔落在 Channel
+          Home）：提示多一個「改為下載這個檔案」， 走面板自己的 <code>download</code>——樹打不開，但 sandbox
+          讀得到。資料夾沒有這個連結，<code>fs/file</code> 不收目錄。
         </p>
         <LocaleSwitch value={batchLocale} onChange={setBatchLocale} />
         <AsgardTemplateContextProvider locale={batchLocale}>
