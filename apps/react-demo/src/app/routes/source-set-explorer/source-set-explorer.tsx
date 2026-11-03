@@ -84,6 +84,9 @@ export function SourceSetExplorerRoute(): ReactNode {
   // menu item are both on screen without setting anything up first.
   const [pulled, setPulled] = useState<Record<string, string>>({ notes: 'nightly-docs' });
   const [searchPathsOn, setSearchPathsOn] = useState(true);
+  // asgard-sdk-pm#98 — what Odin's Drive / Skillset Files tab puts at the toolbar's right end.
+  const [toolbarRightOn, setToolbarRightOn] = useState(true);
+  const [advancedEditorOpens, setAdvancedEditorOpens] = useState(0);
   // Shared by both mounts on purpose: the two trees then paint the same list, which is what makes the
   // narrow / wide comparison say anything. The selection driving the panel stays per mount.
   const [searchPaths, setSearchPaths] = useState<string[]>([asSearchPath('skills/pdf')]);
@@ -207,6 +210,15 @@ export function SourceSetExplorerRoute(): ReactNode {
           </label>
 
           <label className={styles.control}>
+            <input
+              type="checkbox"
+              checked={toolbarRightOn}
+              onChange={event => setToolbarRightOn(event.target.checked)}
+            />
+            toolbarRight
+          </label>
+
+          <label className={styles.control}>
             <input type="checkbox" checked={slowWrites} onChange={event => setSlowWrites(event.target.checked)} />
             slow writes (700ms)
           </label>
@@ -285,6 +297,16 @@ export function SourceSetExplorerRoute(): ReactNode {
           </p>
         )}
 
+        {toolbarRightOn && (
+          <p className={styles.hint}>
+            <code>toolbarRight</code> is on: Odin’s buttons sit at the toolbar’s right end, after a divider — on the
+            narrow mount they wrap to their own line. Switch <code>readOnly</code> on and a <code>Read-only</code> note
+            with an <code>Edit</code> button joins them. Open a file (double-click) and the whole toolbar goes, these
+            buttons with it; the back arrow brings it back with the selection as it was.
+            {advancedEditorOpens > 0 && ` Advanced editor requested ${advancedEditorOpens}×.`}
+          </p>
+        )}
+
         {ready ? (
           <div className={styles.mounts}>
             {MOUNTS.map(mount => (
@@ -302,6 +324,27 @@ export function SourceSetExplorerRoute(): ReactNode {
                 searchPaths={searchPathsOn ? searchPaths : undefined}
                 onAddSearchPath={addSearchPath}
                 onRemoveSearchPath={removeSearchPath}
+                toolbarRight={
+                  toolbarRightOn ? (
+                    <>
+                      {readOnly && (
+                        <>
+                          <span className={styles.readOnlyNote}>Read-only</span>
+                          <button type="button" className={styles.panelAdd} onClick={() => setReadOnly(false)}>
+                            Edit
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.panelAdd}
+                        onClick={() => setAdvancedEditorOpens(n => n + 1)}
+                      >
+                        Open in Advance Editor
+                      </button>
+                    </>
+                  ) : undefined
+                }
               />
             ))}
           </div>
@@ -327,6 +370,7 @@ interface ExplorerMountProps {
   searchPaths?: string[];
   onAddSearchPath: (path: string) => void;
   onRemoveSearchPath: (path: string) => void;
+  toolbarRight?: ReactNode;
 }
 
 /**
@@ -350,6 +394,7 @@ function ExplorerMount(props: ExplorerMountProps): ReactNode {
     searchPaths,
     onAddSearchPath,
     onRemoveSearchPath,
+    toolbarRight,
   } = props;
 
   const [selected, setSelected] = useState<FsEntry | null>(null);
@@ -379,6 +424,7 @@ function ExplorerMount(props: ExplorerMountProps): ReactNode {
           highlightPaths={searchPaths}
           autoExpandPaths={autoExpandSeed}
           onSelectEntry={setSelected}
+          toolbarRight={toolbarRight}
         />
       </div>
 
