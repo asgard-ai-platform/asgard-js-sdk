@@ -2025,8 +2025,8 @@ The component does not add a prefix, and neither should you.
 
 **There is no watch.** A volume is served by several replicas and exposes no change stream, so the
 component never subscribes to one. Freshness comes from the refresh button in the toolbar, which reloads
-the visible tree and any file open in the viewer. If a consumer needs changes pushed, that is a backend
-capability the volume API does not have today.
+the visible tree, and from the viewer's own reload button for an open file. If a consumer needs changes
+pushed, that is a backend capability the volume API does not have today.
 
 ### Props
 
@@ -2046,6 +2046,11 @@ capability the volume API does not have today.
 | `extraEntryActions` | `(entry: FsEntry \| null) => ContextMenuItem[]` | —                  | Host rows appended to the right-click menu, above `Refresh`. Called with the selected entry, or `null` when nothing is selected. Still called while `readOnly` — a host action usually changes the host's own configuration rather than the volume — so return only what belongs on a read-only tree.                                                      |
 | `entryBadge`        | `(entry: FsEntry) => ReactNode`                 | —                  | Host decoration for the right of a row's name; return `null` to leave the row untouched. Purely visual — it adds no click target, so a click still reaches the row — and unlike `extraEntryActions` it keeps rendering while `readOnly`.                                                                                                                   |
 | `hideEntry`         | `(entry: FsEntry) => boolean`                   | —                  | Return `true` to keep an entry — and everything under it — off the tree, at every level. Only the drawing changes: a hidden entry still counts when a paste deduplicates a name, and a directory whose entries are all hidden reads as empty. To hide `.git` and its kind while `.` files stay, pass `entry => entry.isDir && entry.name.startsWith('.')`. |
+| `toolbarRight`      | `ReactNode`                                     | —                  | Host content at the toolbar's right end, after a divider — a secondary action such as "Open in Advance Editor". Still rendered while `readOnly`. On a narrow panel it wraps to its own line and stays right-aligned.                                                                                                                                       |
+
+**The toolbar hides while a file is open**, `toolbarRight` with it: the viewer's header carries back,
+reload and download, so the row would only repeat them. Going back to the tree brings it back with the
+selection as it was.
 
 Paths are **volume-relative and the root is the empty string** — `notes/todo.md`, never `/notes/todo.md`.
 A leading slash, a trailing slash, a doubled slash or a `.` / `..` segment is rejected by the volume.

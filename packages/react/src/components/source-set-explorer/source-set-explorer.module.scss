@@ -33,6 +33,18 @@
   border-bottom: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.06));
 }
 
+// asgard-sdk-pm#98 — host content at the toolbar's right end. `margin-left: auto` keeps it right-aligned
+// on a wide panel and, once the row wraps on a narrow one, on its own line; the divider marks where the
+// built-in actions end and the host's begin (prototype `.ssfe-toolbar-right`).
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--asg-color-border, rgba(0, 0, 0, 0.1));
+}
+
 .toolBtn {
   display: grid;
   place-items: center;

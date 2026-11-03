@@ -175,6 +175,16 @@ export interface SourceSetFileExplorerProps {
    * name is hidden like any other.
    */
   hideEntry?: (entry: FsEntry) => boolean;
+  /**
+   * Host content for the right end of the toolbar — a secondary action such as "Open in Advance
+   * Editor", or a read-only notice beside an Edit button (asgard-sdk-pm#98).
+   *
+   * Like {@link SourceSetFileExplorerProps.extraEntryActions} it keeps rendering while `readOnly`: a
+   * host action usually opens something of the host's own rather than changing this volume. It hides
+   * with the rest of the toolbar while a file is open, because the file view's own header already has
+   * back, reload and download.
+   */
+  toolbarRight?: ReactNode;
   onError?: (error: unknown) => void;
 }
 
@@ -244,6 +254,7 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
     onSelectEntry,
     entryBadge,
     hideEntry,
+    toolbarRight,
     onError,
   } = props;
 
@@ -752,25 +763,29 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
       tabIndex={-1}
       onKeyDown={onExplorerKeyDown}
     >
-      <div className={styles.toolbar} role="toolbar" aria-label={t(locale, 'sourceSetExplorer.toolbar')}>
-        {actions.map(action => (
-          <button
-            key={action.key}
-            type="button"
-            ref={action.key === 'upload' ? uploadButton : undefined}
-            className={`${styles.toolBtn} ${action.danger ? styles.toolBtnDanger : ''}`}
-            // R5: an action that needs a selection goes inert, it does not disappear — a toolbar whose
-            // buttons come and go makes the user hunt for the one they just used.
-            disabled={action.disabled}
-            aria-label={labelOf(action)}
-            title={labelOf(action)}
-            onClick={action.run}
-          >
-            {action.icon}
-          </button>
-        ))}
-        {explorer.busy && <Spinner size={13} />}
-      </div>
+      {/* Not while a file is open: the file view's header carries back, reload and download (asgard-sdk-pm#98). */}
+      {!openFile && (
+        <div className={styles.toolbar} role="toolbar" aria-label={t(locale, 'sourceSetExplorer.toolbar')}>
+          {actions.map(action => (
+            <button
+              key={action.key}
+              type="button"
+              ref={action.key === 'upload' ? uploadButton : undefined}
+              className={`${styles.toolBtn} ${action.danger ? styles.toolBtnDanger : ''}`}
+              // R5: an action that needs a selection goes inert, it does not disappear — a toolbar whose
+              // buttons come and go makes the user hunt for the one they just used.
+              disabled={action.disabled}
+              aria-label={labelOf(action)}
+              title={labelOf(action)}
+              onClick={action.run}
+            >
+              {action.icon}
+            </button>
+          ))}
+          {explorer.busy && <Spinner size={13} />}
+          {toolbarRight ? <div className={styles.toolbarRight}>{toolbarRight}</div> : null}
+        </div>
+      )}
 
       {explorer.error && (
         <div className={styles.errorBar} role="alert">
@@ -795,8 +810,8 @@ export function SourceSetFileExplorer(props: SourceSetFileExplorerProps): ReactN
         )}
         {openFile ? (
           <SourceSetFileView
-            // Keyed on the refresh token so the toolbar's refresh re-reads the open file too (R8).
-            key={`${openFile.path}:${explorer.refreshToken}`}
+            // The toolbar is hidden while a file is open, so re-reading it is the view's own reload button.
+            key={openFile.path}
             file={openFile}
             readFile={explorer.readFile}
             onSaveFile={explorer.saveFile}

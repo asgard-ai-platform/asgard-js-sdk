@@ -247,10 +247,13 @@ describe('BUG-008 R1 — the upload action asks "files or folder?"', () => {
     const probe = installVolume({ entries: ['a.txt'] });
     render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
 
-    fireEvent.doubleClick(await screen.findByText('a.txt'));
+    const row = await screen.findByText('a.txt');
+    // Taken before opening: `rootOf` finds the panel through its toolbar, which a file view hides.
+    const root = rootOf();
+    fireEvent.doubleClick(row);
     await screen.findByTitle(t('en-US', 'sourceSetExplorer.backToTree'));
 
-    fireEvent.drop(rootOf(), { dataTransfer: fileDrag([entryFor('b.txt')]) });
+    fireEvent.drop(root, { dataTransfer: fileDrag([entryFor('b.txt')]) });
 
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(probe.writes).toEqual([]);
