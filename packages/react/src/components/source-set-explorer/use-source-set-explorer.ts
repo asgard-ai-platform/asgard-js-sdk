@@ -69,8 +69,6 @@ export interface SourceSetExplorerController {
   clipboard: ClipboardState | null;
   /** Last failed operation, for the shell's error bar. `null` when the last one succeeded. */
   error: string | null;
-  /** Bumped by refresh; the file view is keyed on it so a refresh re-reads the open file too. */
-  refreshToken: number;
   busy: boolean;
   dismissError: () => void;
   select: (entry: FsEntry | null) => void;
@@ -227,7 +225,6 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
   const [openFile, setOpenFile] = useState<FsEntry | null>(null);
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState(0);
   const [busy, setBusy] = useState(false);
 
   // A listing that arrives after a newer one for the same path was requested must not overwrite it —
@@ -479,7 +476,6 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
   // refresh, permanently poisoning the button for that mount.
   const refresh = useCallback((): void => {
     setError(null);
-    setRefreshToken(n => n + 1);
     [...expanded]
       .filter(dir => isKnownDir(listings, rootPath, dir) && !isHiddenPath(listings, rootPath, dir, hideEntry))
       .forEach(dir => void listDir(dir));
@@ -706,7 +702,6 @@ export function useSourceSetExplorer(options: SourceSetExplorerOptions): SourceS
     openFile,
     clipboard,
     error,
-    refreshToken,
     busy,
     dismissError,
     select,

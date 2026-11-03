@@ -1474,3 +1474,67 @@ describe('asgard-heimdall-pm#375 — a markdown preview shows frontmatter as fie
     expect(container.querySelector('.cm-content')?.textContent).toContain('name: open-pr');
   });
 });
+
+/**
+ * asgard-sdk-pm#98 — Odin puts "Open in Advance Editor" at the right end of the toolbar, and the toolbar
+ * stands down while a file has the body: the file view's own header already carries back, reload and
+ * download, so the row would only repeat them above it.
+ */
+describe('asgard-sdk-pm#98 — toolbarRight and the toolbar while a file is open', () => {
+  const HOST_BUTTON = 'Open in Advance Editor';
+  const slot = <button type="button">{HOST_BUTTON}</button>;
+
+  it('renders the host content inside the toolbar, after every built-in button', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" toolbarRight={slot} />);
+    await screen.findByText('a.txt');
+
+    const buttons = Array.from(screen.getByRole('toolbar').querySelectorAll('button'));
+    expect(buttons.map(b => b.textContent || b.getAttribute('aria-label'))).toEqual([
+      ...ACTION_ORDER.map(key => t('en-US', key)),
+      HOST_BUTTON,
+    ]);
+  });
+
+  it('adds nothing to the toolbar when the host passes no toolbarRight', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" />);
+    await screen.findByText('a.txt');
+
+    const toolbar = screen.getByRole('toolbar');
+    expect(Array.from(toolbar.children).every(child => child.tagName === 'BUTTON')).toBe(true);
+    expect(toolbar.children).toHaveLength(ACTION_ORDER.length);
+  });
+
+  it('keeps the host content while readOnly', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" readOnly toolbarRight={slot} />);
+    await screen.findByText('a.txt');
+
+    expect(within(screen.getByRole('toolbar')).getByText(HOST_BUTTON)).toBeTruthy();
+  });
+
+  it('hides the whole toolbar while a file is open and brings it back with the selection', async () => {
+    installVolume(SIMPLE);
+    render(<SourceSetFileExplorer sourceSetEndpoint={ENDPOINT} apiKey="k" toolbarRight={slot} />);
+    const row = await screen.findByText('a.txt');
+    fireEvent.click(row);
+    fireEvent.doubleClick(row);
+    await waitFor(() => expect(screen.queryByRole('tree')).toBeNull());
+
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    expect(screen.queryByText(HOST_BUTTON)).toBeNull();
+    // The file view's own header is what stands in for it.
+    expect(screen.getByTitle(t('en-US', 'sourceSetExplorer.backToTree'))).toBeTruthy();
+    expect(screen.getByLabelText(t('en-US', 'sourceSetExplorer.reloadFile'))).toBeTruthy();
+    expect(screen.getByLabelText(t('en-US', 'sourceSetExplorer.download'))).toBeTruthy();
+
+    fireEvent.click(screen.getByTitle(t('en-US', 'sourceSetExplorer.backToTree')));
+
+    await waitFor(() => expect(screen.queryByRole('tree')).not.toBeNull());
+    expect(within(screen.getByRole('toolbar')).getByText(HOST_BUTTON)).toBeTruthy();
+    const selected = screen.getAllByRole('treeitem').find(r => r.getAttribute('aria-selected') === 'true');
+    expect(selected?.textContent).toBe('a.txt');
+    expect(requireToolButton('sourceSetExplorer.rename').disabled).toBe(false);
+  });
+});
