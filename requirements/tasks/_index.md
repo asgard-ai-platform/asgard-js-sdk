@@ -87,6 +87,8 @@
 
 ## ▶ Next Task
 
+**`BUILD-098` / `REVIEW-098`（[`asgard-js-sdk#496`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/496)：預設附件清單補常見錄音格式）皆 `done`，2026-11-03 授權完成 cycle**，分支 `feat/496-audio-document-types`，本地驗收通過、PR [#497](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/497)。後端對部分 MIME 回 `BINARY` 的影響待開票人上 DEV 後以 Studio 驗。
+
 **`BUILD-097` / `REVIEW-097`（[`asgard-sdk-pm#98`](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/98)：`SourceSetFileExplorer` 的 `toolbarRight` 與開檔時隱藏工具列）皆 `done`，2026-11-03 授權完成 cycle**，分支 `feat/98-source-set-toolbar-right`，本地驗收通過、PR [#495](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/495) 已轉 ready。下游 Odin 把按鈕搬進 `toolbarRight` 待 SDK 發版後處理。
 
 **`BUILD-096` / `REVIEW-096`（[`asgard-js-sdk#482`](https://github.com/asgard-ai-platform/asgard-js-sdk/issues/482) 第 1 項：剪貼簿在來源從清單消失時清空）皆 `done`，2026-11-03 授權完成 cycle**，分支 `fix/482-file-explorer-clipboard-followups`，本地驗收通過、PR [#494](https://github.com/asgard-ai-platform/asgard-js-sdk/pull/494) 已轉 ready。
