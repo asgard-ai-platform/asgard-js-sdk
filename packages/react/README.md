@@ -343,6 +343,7 @@ config: {
 - **onSandboxOpenFile?**: `(sandboxName: string, absolutePath: string) => void` - Host handler for the `sandbox://<name>/open-file` card — the File Explorer **preview** destination. Fires in addition to the built-in explorer, not instead of it.
 - **onSandboxOpenFolder?**: `(sandboxName: string, absolutePath: string) => void` - Host handler for the `sandbox://<name>/open-folder` card — the File Explorer **tree** destination: expand that directory and stop there. Deliberately separate from `onSandboxOpenFile` rather than a flag on it, because the two destinations cannot be swapped: the backend refuses both `fs/file` and `fs/watch` for a directory, so routing a folder into the viewer cannot succeed.
 - **saveDownloadedFile?**: `(blob: Blob, fileName: string) => void` - Replace only the "save" step of a `sandbox://<name>/download-file` card — by default the blob goes through `<a download>`, named after the path's basename. Use it where `<a download>` does nothing (some WebViews). Waking the sandbox, waiting for it and reading the file stay with the SDK, because the wake must remain the channel's one shared wake.
+- **disabledActionTooltip?**: `string` - Tooltip on the action cards that cannot work in preview mode (`botProviderEndpoint: 'skip'`). Defaults to the localized "This item can't be opened", which deliberately gives no reason; pass your own sentence to say why (e.g. that this is a shared, read-only conversation). Used as-is for every `locale` — translate it yourself. See [Sandbox handoff cards](#sandbox-handoff-cards).
 - **className?**: `string` - Custom CSS class name applied to the chatbot container element.
 - **style?**: `CSSProperties` - Custom inline styles applied to the chatbot container element.
 - **theme**: `Partial<AsgardThemeContextValue>` - Custom theme configuration
@@ -1920,6 +1921,13 @@ Two consequences worth stating outright, because both look like a broken card ra
   without wiring the matching callback leaves the click with nowhere to go, and it fails silently: no throw,
   no console warning, no visual change. If you place the explorer yourself, wire **both** callbacks — adding
   only `onSandboxOpenFile` leaves folder cards inert.
+
+**In preview mode** (`botProviderEndpoint: 'skip'`) there is no channel, so none of these cards — nor an old
+`channel-home://` download card — can do anything. They still render, because they are part of the conversation,
+but disabled: secondary colors, a lock in place of the download glyph, no hover, `cursor: not-allowed`, and a click,
+Enter or Space does nothing. They stay focusable (`aria-disabled="true"`, not native `disabled`), and on hover or
+focus a tooltip says the item cannot be opened — pass `disabledActionTooltip` to say why in your own words. A
+button-template / carousel button pointing at one of these URIs is disabled the same way; plain links keep working.
 
 **The download card** (`download-file`) needs the sandbox to be running. If it is not, a click wakes it through
 the channel's one shared wake — the same one the File Explorer's wake button uses — waits, then downloads, all on

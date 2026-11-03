@@ -41,6 +41,7 @@ import { RunIndicator } from './routes/run-indicator';
 import { SandboxHud } from './routes/sandbox-hud';
 import { SandboxCards } from './routes/sandbox-cards';
 import { SandboxDownloadRoute } from './routes/sandbox-download';
+import { PreviewModeCards } from './routes/preview-mode-cards';
 import { FileExplorer } from './routes/file-explorer';
 import { SandboxBrowserRoute } from './routes/sandbox-browser';
 import { NekoLabRoute } from './routes/neko-lab';
@@ -124,6 +125,7 @@ export function App(): React.ReactElement {
         <Route path="/sandbox-hud" element={<SandboxHud />} />
         <Route path="/sandbox-cards" element={<SandboxCards />} />
         <Route path="/sandbox-download" element={<SandboxDownloadRoute />} />
+        <Route path="/preview-mode-cards" element={<PreviewModeCards />} />
         <Route path="/file-explorer" element={<FileExplorer />} />
         <Route path="/sandbox-browser" element={<SandboxBrowserRoute />} />
         <Route path="/neko-lab" element={<NekoLabRoute />} />
