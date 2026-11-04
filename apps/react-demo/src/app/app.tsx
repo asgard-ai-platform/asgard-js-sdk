@@ -12,6 +12,7 @@ import { Markdown } from './routes/markdown';
 import { MarkdownTable } from './routes/markdown-table';
 import { MarkdownTheme } from './routes/markdown-theme';
 import { MarkdownStream } from './routes/markdown-stream';
+import { MarkdownFileLinks } from './routes/markdown-file-links';
 import { KeepConnection } from './routes/keep-connection';
 import { Private } from './routes/private';
 import { CustomRenderer } from './routes/custom-renderer';
@@ -96,6 +97,7 @@ export function App(): React.ReactElement {
         <Route path="/markdown-table" element={<MarkdownTable />} />
         <Route path="/markdown-theme" element={<MarkdownTheme />} />
         <Route path="/markdown-stream" element={<MarkdownStream />} />
+        <Route path="/markdown-file-links" element={<MarkdownFileLinks />} />
         <Route path="/keep-connection" element={<KeepConnection />} />
         <Route path="/private" element={<Private />} />
         <Route path="/custom-renderer" element={<CustomRenderer />} />

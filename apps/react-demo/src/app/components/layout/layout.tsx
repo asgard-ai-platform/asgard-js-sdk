@@ -19,6 +19,7 @@ const navItems = [
   { to: '/fullscreen', label: 'Fullscreen' },
   { to: '/markdown', label: 'Markdown' },
   { to: '/markdown-table', label: 'Markdown Table' },
+  { to: '/markdown-file-links', label: 'Markdown file:// Links' },
   { to: '/markdown-theme', label: 'Markdown Theme' },
   { to: '/markdown-stream', label: 'Markdown Stream' },
   { to: '/keep-connection', label: 'Keep Connection' },

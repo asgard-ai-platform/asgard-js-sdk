@@ -1,6 +1,11 @@
 'use client';
 
-import { memo, type ReactNode, type JSX } from 'react';
+import { memo, useEffect, useState, type ReactNode, type JSX } from 'react';
+import { useAsgardTemplateContext } from '../../../context/asgard-template-context';
+import { t } from '../../../i18n';
+import { CircleCheckIcon, CopyIcon } from '../../file-explorer/icons';
+import { toFileLinkPath } from './file-link';
+import { FILE_LINK_TAG } from './rehype-file-links';
 import styles from './streamdown.module.scss';
 
 type WithNode<T> = T & {
@@ -92,6 +97,58 @@ const A = memo<AProps>(({ children, href, node: _node, ...props }) => (
   </a>
 ));
 A.displayName = 'MarkdownA';
+
+// BUG-025 — a `file:` link, which `rehypeFileLinks` turns into `FILE_LINK_TAG` so harden leaves it alone.
+// Browsers will not open `file://` from an http(s) page, so instead of a dead link the user gets the
+// path and a button that copies it.
+const COPIED_FEEDBACK_MS = 1500;
+
+interface FileLinkProps {
+  children?: ReactNode;
+  node?: unknown;
+  'data-href'?: string;
+}
+
+const FileLink = memo<FileLinkProps>(({ children, 'data-href': href = '' }) => {
+  const { locale = 'en-US' } = useAsgardTemplateContext();
+  const [copied, setCopied] = useState(false);
+  const path = toFileLinkPath(href);
+
+  useEffect(() => {
+    if (!copied) return;
+
+    const timer = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+
+    return (): void => clearTimeout(timer);
+  }, [copied]);
+
+  const copy = (): void => {
+    if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') return;
+
+    navigator.clipboard.writeText(path).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
+  };
+
+  const label = t(locale, copied ? 'fileLink.copied' : 'fileLink.copy');
+  // An autolink (`<file:///tmp/a.txt>`) has the URL as its text; showing it next to the path says it twice.
+  const showText = !(typeof children === 'string' && (children === href || toFileLinkPath(children) === path));
+
+  return (
+    <span data-streamdown="file-link">
+      {/* A real space, not a margin: with only a margin, the file name and the start of the path form one
+          unbreakable word, and the browser wraps that whole run onto the next line too early. */}
+      {showText && <span className={styles.fileLinkText}>{children}</span>}
+      {showText && ' '}
+      <code className={`${styles.code} ${styles.fileLinkPath}`}>{path}</code>
+      <button type="button" className={styles.fileLinkCopy} onClick={copy} aria-label={label} title={label}>
+        {copied ? <CircleCheckIcon size={14} /> : <CopyIcon size={14} />}
+      </button>
+    </span>
+  );
+});
+FileLink.displayName = 'MarkdownFileLink';
 
 // Blockquote
 const Blockquote = memo<ElementProps<'blockquote'>>(({ children, node: _node, ...props }) => (
@@ -199,6 +256,7 @@ export const streamdownComponents = {
   ol: Ol,
   li: Li,
   a: A,
+  [FILE_LINK_TAG]: FileLink,
   blockquote: Blockquote,
   hr: Hr,
   strong: Strong,
