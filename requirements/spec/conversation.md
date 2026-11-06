@@ -26,10 +26,10 @@
 
 ## 已知限制
 
-| 編號     | 限制                                                  | 原因                                                                                                                   | 待誰處理                        |
-| -------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| CONVO-27 | 重播出的 tool-call 時間是「現在」，不是原始時間       | 跨 rejoin 以 `time` 排序不準；畫面依串流順序與 `${processId}-${callSeq}` 排列，目前看不出差異                          | 需要依時間排序時再處理          |
-| CONVO-28 | 跨 turn 恢復的 subagent 結束後不會回到終態            | 後端在跨 turn 恢復全程不發 lifecycle event，包括結束時的 `subagent.complete`，卡片在那個 turn 之後一直顯示 running     | 後端（asgard-core）             |
-| CONVO-29 | 冷啟動重播出的 subagent 卡片缺資料                    | 重播不含 subagent lifecycle event，只由子 tool-call 重建的卡片沒有 `subagentType`／`description`，而且一直顯示 running | 後端決定 history 帶什麼         |
-| CONVO-31 | 自組訊息列不帶 `asgard-text-template--user` class     | 那是 `TextTemplate` 自己掛的 global class，`BotMessageText` 也一樣；消費端要對它下樣式得自己掛                         | —                               |
-| CONVO-35 | tool-call 群組與檔案總管的 spinner 沒有在瀏覽器實測過 | 兩者的 loading 在 demo 裡是瞬時的；依據是樣式原文核對、型別檢查與測試                                                  | 需要能停在 pending 的 demo 路由 |
+| 編號     | 限制                                                          | 原因                                                                                                                                               | 待誰處理 |
+| -------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| CONVO-27 | 重播出的 tool-call 時間是「現在」，不是原始時間               | 跨 rejoin 以 `time` 排序不準；畫面依串流順序與 `${processId}-${callSeq}` 排列，目前看不出差異；需要依時間排序時再處理                              | 不處理   |
+| CONVO-28 | 跨 turn 恢復的 subagent 結束後不會回到終態                    | 後端在跨 turn 恢復全程不發 lifecycle event，包括結束時的 `subagent.complete`，卡片在那個 turn 之後一直顯示 running                                 | 後端     |
+| CONVO-29 | 冷啟動重播出的 subagent 卡片缺資料                            | 重播不含 subagent lifecycle event，只由子 tool-call 重建的卡片沒有 `subagentType`／`description`，而且一直顯示 running；history 要帶什麼由後端決定 | 後端     |
+| CONVO-31 | 自組訊息列不帶 `asgard-text-template--user` class             | 那是 `TextTemplate` 自己掛的 global class，`BotMessageText` 也一樣；消費端要對它下樣式得自己掛                                                     | 不處理   |
+| CONVO-35 | 未驗證：tool-call 群組與檔案總管的 spinner 沒有在瀏覽器實測過 | 兩者的 loading 在 demo 裡是瞬時的；依據是樣式原文核對、型別檢查與測試；補驗需要一個能停在 pending 的 demo 路由                                     | 需另立票 |

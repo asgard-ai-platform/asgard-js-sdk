@@ -28,10 +28,10 @@
 
 | 編號     | 限制                                                     | 原因                                                                                                                                                                      | 待誰處理 |
 | -------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| FILES-25 | 開檔後 400ms 內按下載，拿到的是磁碟上的舊內容            | 存檔有 400ms debounce；這就是「與檔案樹相同的下載」的意思（FILES-5）                                                                                                      | —        |
-| FILES-26 | 省略 `FileExplorerRoot` 自組時沒有拖放區                 | 拖放區隨 root 部件；沒有 root 的組法本來也缺右鍵選單的定位容器、對話框與上傳進度面板                                                                                      | —        |
-| FILES-27 | 剪貼簿剛設好的那一次 commit，`sourceId` 還是 `undefined` | 在 paint 之前就補上、`canPaste` 為 false；但 host 對 `clipboard` 的 effect 可能先看到一次未補的值                                                                         | —        |
-| FILES-28 | frontmatter 的邊角情況                                   | BOM 開頭、結尾 `---` 後有空白或用 `...` 收尾時不當成 frontmatter；數字樣式的 key 排在最前面；標題含行內 markdown 時不會和 `title` 對上；YAML 折疊在中文兩行之間多一個空白 | —        |
+| FILES-25 | 開檔後 400ms 內按下載，拿到的是磁碟上的舊內容            | 存檔有 400ms debounce；這就是「與檔案樹相同的下載」的意思（FILES-5）                                                                                                      | 不處理   |
+| FILES-26 | 省略 `FileExplorerRoot` 自組時沒有拖放區                 | 拖放區隨 root 部件；沒有 root 的組法本來也缺右鍵選單的定位容器、對話框與上傳進度面板                                                                                      | 不處理   |
+| FILES-27 | 剪貼簿剛設好的那一次 commit，`sourceId` 還是 `undefined` | 在 paint 之前就補上、`canPaste` 為 false；但 host 對 `clipboard` 的 effect 可能先看到一次未補的值                                                                         | 不處理   |
+| FILES-28 | frontmatter 的邊角情況                                   | BOM 開頭、結尾 `---` 後有空白或用 `...` 收尾時不當成 frontmatter；數字樣式的 key 排在最前面；標題含行內 markdown 時不會和 `title` 對上；YAML 折疊在中文兩行之間多一個空白 | 不處理   |
 | FILES-29 | `SourceSetFileExplorer` 沒有剪貼簿的修正                 | 它有自己的剪貼簿，FILES-10、FILES-11 不涵蓋它；frontmatter 欄位表已經補上                                                                                                 | 需另立票 |
 | FILES-30 | `file-view.tsx` 的 `scheduleSave` 相依警告               | 既有警告；修它會改變存檔行為                                                                                                                                              | 需另立票 |
 | FILES-31 | demo `/file-explorer` 的 composer 附件上傳會 404         | 該路由的 mock 只實作 sandbox fs，沒有 blob 上傳的 stub                                                                                                                    | 需另立票 |
