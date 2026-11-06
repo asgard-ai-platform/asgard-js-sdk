@@ -73,6 +73,10 @@ npm run build:core && npm run build:react
 npm run test:packages
 ```
 
+`npm run typecheck` emits `.js` files into `packages/core/out-tsc/`, and `.prettierignore` does not exclude
+that directory (prettier 2 does not read `.gitignore`). Running `format:check` after a typecheck in the same
+working tree therefore fails on those build outputs, not on your code — delete `packages/core/out-tsc/` first.
+
 ## Tech Stack
 
 - **Language**: TypeScript 5 (strict mode; no `any`, explicit return types, explicit type exports at module boundaries)

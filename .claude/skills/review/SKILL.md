@@ -67,7 +67,7 @@ This project's review procedure has exactly two sections: §1 and §3.
 
 #### 3d. Run §1 — Static Code Review (always)
 
-Follow `REVIEW_RULE.md §1` procedure in full.
+Follow `.claude/skills/feature-workflow/REVIEW_RULE.md` §1 in full. Its §1.1 table is the SDK checklist; the §1.1 table in `requirements/tasks/_review_template.md` is a Next.js leftover — use REVIEW_RULE's.
 
 **Scope for grep checks (§1.1 / §1.2):** restrict to the directories / files listed in `Coverage.Files`. If no explicit directory is listed, fall back to `src/`.
 
@@ -75,7 +75,7 @@ Follow `REVIEW_RULE.md §1` procedure in full.
 
 ```bash
 npx tsc --noEmit
-npm run lint:check
+npm run lint:packages
 ```
 
 Write results under `## §1 Static Code Review` in `REVIEW-NNN.md`:
@@ -83,13 +83,13 @@ Write results under `## §1 Static Code Review` in `REVIEW-NNN.md`:
 - For each §1.1 checklist item: mark ✅ / ❌
 - For ❌: include file path, line number, and rule reference
 - Paste all §1.2 grep outputs verbatim (empty = ✅, any match = ❌)
-- Paste `tsc` / `lint:check` outcomes
+- Paste `tsc` / `lint:packages` outcomes
 
 If any ❌ is found → mark as BLOCKER in `## Findings` and do not mark REVIEW-NNN done until resolved.
 
 #### 3e. Run §3 — Functional Validation (if Coverage.Use Cases ≠ `—`)
 
-Follow `REVIEW_RULE.md §3` procedure in full.
+Follow `.claude/skills/feature-workflow/REVIEW_RULE.md` §3 in full.
 
 **Preferred harness:** if an e2e spec exists for the changed routes, run:
 
@@ -131,8 +131,8 @@ Mark `REVIEW-NNN` as `done` in the Task Queue.
 ## Common mistakes / gotchas
 
 - **Only §1 and §3**: this project's review has exactly two sections. Do not add visual or design-comparison steps.
-- **Scope §1 greps to Coverage.Files**: do not scan unrelated source files. `tsc` and `lint:check` still run project-wide.
+- **Scope §1 greps to Coverage.Files**: do not scan unrelated source files. `tsc` and `lint:packages` still run project-wide.
 - **Unfinished BUILD**: if `[filled during build]` is present anywhere in Coverage, the BUILD is not done — report BLOCKER and stop.
 - **Pairing**: REVIEW-003 pairs with BUILD-003. Confirm the BUILD task ID from `## Meta - BUILD Task` in the REVIEW file.
-- **lint:check not lint**: use `npm run lint:check` (read-only) for review; `npm run lint` has auto-fix side effects.
+- **Lint**: this repo has no `lint:check`; `npm run lint:packages` lints core and react without fixing.
 - **Dev port**: the local dev server port is per-repo personal config; see `CLAUDE.local.md` (e.g., `npm run dev -- -p <port>`).
