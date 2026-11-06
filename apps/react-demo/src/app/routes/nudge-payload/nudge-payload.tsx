@@ -11,9 +11,9 @@ import styles from './nudge-payload.module.scss';
 // directory, silently, since those blueprint expressions all have falsy fallbacks.
 //
 // This route points at the real dev bot provider so the NUDGE actually goes on the wire: open DevTools →
-// Network → `message/sse` and read the request body. That body is the thing under test, not the response
-// — the backend still rejects a NUDGE on a channel that has been chatted with (BUG-005 / asgard-sdk-pm#40,
-// asgard-core side), so an error frame coming back is expected here and is not this fix's business.
+// Network → `message/sse` and read the request body. That body is the thing under test, not the response.
+// The backend used to reject a NUDGE on a channel that had been chatted with; that was BUG-005
+// (asgard-sdk-pm#40, asgard-core side) and it is fixed, so the NUDGE now succeeds here too.
 const SESSION_PAYLOAD = {
   agent_hub: {
     agent_names: ['researcher', 'writer'],
@@ -69,8 +69,8 @@ export function NudgePayload(): ReactNode {
   }, []);
 
   const nudge = useCallback((payload?: Record<string, unknown>): void => {
-    // The backend rejects this turn until BUG-005 lands, and the SDK surfaces that as a rejected promise —
-    // swallow it so the demo does not raise an unhandled rejection while the request body is inspected.
+    // A failed nudge surfaces as a rejected promise. The backend accepts it since BUG-005 was fixed, but
+    // swallow any rejection anyway so the demo never raises an unhandled rejection while the body is inspected.
     void chatbotRef.current?.serviceContext?.nudge?.(payload)?.catch(() => undefined);
   }, []);
 

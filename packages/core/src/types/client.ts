@@ -183,8 +183,9 @@ export interface FetchSseOptions {
   /**
    * How long (ms) SSE frames are gathered before being handed to the reducer and to `onSseMessage`.
    * Defaults to 50. This is the total latency the SDK adds, regardless of how many frames arrive in
-   * the window — adjacent deltas of one message are coalesced rather than paced one by one. `0`
-   * removes the wait entirely (frames are forwarded on the next tick).
+   * the window. Frames are never coalesced: each one still reaches `onSseMessage` individually,
+   * unmodified and in arrival order. `0` removes the wait entirely (frames are forwarded on the next
+   * tick).
    */
   delayTime?: number;
   onSseStart?: () => void;
