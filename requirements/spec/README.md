@@ -52,6 +52,8 @@ PM 規格的連結指向 `references/` 底下的 submodule，要先 `git submodu
 - 它對應的 PM issue 在 GitHub Projects 看板上是 **Done**（`In review`、`Pending fix` 都不算），**而且**
 - BUILD 與 REVIEW 本身的 Status 都是 `done`。
 
+當時沒有寫 REVIEW 的舊票，以 BUILD 的 Status 為準；它原本該由 REVIEW 檢出的問題，在盤點時一併找出來。
+
 沒有 PM 票的，跟著它的來源票一起收；沒有來源票的，要合併並發版（打 tag）後才收。舊格式的 `TASK-*.md`、FOLLOWUP、測試報告等開發過程文件，用同樣的條件判斷；它依附的上游票還沒結案，就不收。
 
 符合條件只代表可以開始收斂，不代表可以刪。能不能刪，看下一節。
