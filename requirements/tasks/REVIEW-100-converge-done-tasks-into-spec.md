@@ -23,14 +23,14 @@
 
 ## §3 Functional Validation
 
-| R#  | Check                                                                                                                | Result |
-| --- | -------------------------------------------------------------------------------------------------------------------- | ------ |
-| R1  | `_index.md` lists eight chapters; each has the five sections and stable row IDs                                      | Pass   |
-| R2  | 66 archive rows; `git cat-file -e` 66/66; every SHA is an ancestor of `origin/main`                                  | Pass   |
-| R3  | Step 2.1 command on the branch returns `BUILD-100` → next is `BUILD-101`                                             | Pass   |
-| R4  | `review` skill §3a sends a converged number to `converged-tasks.md` and stops                                        | Pass   |
-| R5  | Dead relative links: 8 on the branch, the same 8 on `main`; deleted file names occur only in the archive             | Pass   |
-| R6  | Every backticked path and identifier in the chapters resolves in the tree (chapter codes and backend names excepted) | Pass   |
+| R#  | Check                                                                                                                                                 | Result |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| R1  | `_index.md` lists eight chapters; each has exactly the four sections with stable row IDs; no behavior table, 待驗收 row or code-location list remains | Pass   |
+| R2  | 66 archive rows; `git cat-file -e` 66/66; every SHA is an ancestor of `origin/main`                                                                   | Pass   |
+| R3  | Step 2.1 command on the branch returns `BUILD-100` → next is `BUILD-101`                                                                              | Pass   |
+| R4  | `review` skill §3a sends a converged number to `converged-tasks.md` and stops                                                                         | Pass   |
+| R5  | Dead relative links: 8 on the branch, the same 8 on `main`; deleted file names occur only in the archive                                              | Pass   |
+| R6  | Every backticked path and identifier in the chapters resolves in the tree (chapter codes and backend names excepted)                                  | Pass   |
 
 ## Findings
 
@@ -44,6 +44,10 @@ None.
 
 ### Minor (nice to have)
 
-1. **36 of the 124 chapter rows are「待驗收」.** 54 of the 64 remaining BUILDs wait on PM acceptance (sdk-pm board, mostly In review). Those rows are one-line summaries; their detail still lives in the BUILDs until they converge.
+1. **Unaccepted behavior is not in the chapters.** 54 of the 64 remaining BUILDs wait on PM acceptance (sdk-pm board, mostly In review). Their behavior is read from the BUILD files, which stay in `requirements/tasks/` until they converge.
 2. **`spec-workflow` still describes the single-file task format.** Same as the other front-end repos; left for a separate decision.
 3. **Pre-existing dead links** (unchanged by this task): `packages/{core,react}/README.md` → `../../CONTRIBUTING.md`, `../../LICENSE`; `REVIEW-012`～`REVIEW-015` → `none`.
+
+## Re-validation
+
+- 2026-11-06: Re-validated after the four-section format revision (BUILD-100 D3, D8, T6): R1 re-checked against the new format; R2 67/67 including FOLLOWUP-f002; R3 still BUILD-101; R5 8 dead links, same as `main`, and 50/50 PM submodule links resolve at the pinned commit; `typecheck`, `test:packages` (458 + 805) and `format:check` pass.
