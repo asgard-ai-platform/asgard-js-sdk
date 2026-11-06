@@ -8,7 +8,7 @@ This repository uses Spec-Driven Development (SDD) for medium-to-large frontend 
 - `requirements/`: implementation source of truth. Agents must implement from requirements, not directly from references.
 - `requirements/requests/`: high-level requirements, governance documents, cross-task background, and links to related task specs.
 - `requirements/tasks/`: executable task specs. Each task must be specific enough for an agent to implement and verify.
-- `requirements/spec/`: current-state spec — what the SDK does today, one chapter per feature area. Accepted tasks are folded in here and their task files deleted.
+- `requirements/spec/`: current-state spec — per feature area, what the code doesn't explain: design decisions, gaps with the PM spec, known limits. Accepted tasks are folded in here and their task files deleted.
 
 If `references/` conflicts with `requirements/`, trust `requirements/`. Record the conflict as an open question or decision before implementation.
 
@@ -58,7 +58,7 @@ The single-file `TASK-xxx-short-name.md` format (`_template.md`) is older; do no
 
 ## Current-State Spec
 
-`requirements/spec/` describes what the SDK does today. Once every PM issue a task cites is accepted (board **Done**), its BUILD/REVIEW pair is folded into the matching chapter and deleted; the number stays in `requirements/spec/converged-tasks.md` with a link to the last version, and is never reused. Rules and steps: `requirements/spec/README.md`.
+`requirements/spec/` records what the code doesn't explain: design decisions, gaps with the PM spec, known limits. Product rules come from the PM spec and actual behavior from the code. Once every PM issue a task cites is accepted (board **Done**) and the BUILD/REVIEW pair is `done`, the pair is folded into the matching chapter and deleted; the number stays in `requirements/spec/converged-tasks.md` with a link to the last version, and is never reused. Rules and steps: `requirements/spec/README.md`.
 
 ## Acceptance Criteria
 

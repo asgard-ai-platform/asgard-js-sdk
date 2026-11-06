@@ -8,7 +8,7 @@ This is the entrypoint for requirement navigation.
 - `references/` is background only.
 - High-level requirements live in `requirements/requests/REQ-*.md`.
 - Executable work lives in `requirements/tasks/` as BUILD/REVIEW pairs (`BUILD-NNN-*.md` + `REVIEW-NNN-*.md`, from `_build_template.md` / `_review_template.md`). `_template.md` (single-file `TASK-*.md`) is the older format.
-- What the SDK does today lives in `requirements/spec/` (current-state spec). Accepted tasks are folded in there and deleted.
+- Design decisions, gaps with the PM spec and known limits live in `requirements/spec/` (current-state spec). Accepted tasks are folded in there and deleted.
 - Acceptance criteria use `R#` identifiers and must map to implementation tasks and verification cases.
 - Status values are `draft`, `ready`, `in-progress`, and `done`.
 

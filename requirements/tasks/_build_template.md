@@ -20,7 +20,7 @@
 
 ## Brief
 
-<2–5 sentences describing what to build, referencing the source spec. Focus on the developer-visible outcome and the changed packages / modules / components.>
+<2–5 sentences describing what to build, referencing the source spec. Focus on the developer-visible outcome and the changed packages / modules / components. Read the matching chapter in `requirements/spec/` first; cite `← spec/<ID>` only for a recorded design decision — existing behavior is cited from the PM spec or the code.>
 
 **Already exists:** `<list files / modules / components this task reuses or extends; fill None if starting from scratch>`
 

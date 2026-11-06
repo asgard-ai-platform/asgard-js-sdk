@@ -5,7 +5,7 @@
 Read order:
 
 1. `requirements/_index.md`
-2. `requirements/spec/_index.md` for what the SDK does today; `requirements/requests/_index.md` or `requirements/tasks/_index.md` for work
+2. `requirements/spec/_index.md` for design decisions and known limits; `requirements/requests/_index.md` or `requirements/tasks/_index.md` for work
 3. Target spec chapter, `REQ-*.md`, or `BUILD-*.md` / `REVIEW-*.md`
 4. `references/` only when more background is needed
 

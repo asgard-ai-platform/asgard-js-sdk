@@ -1,92 +1,38 @@
 # 檔案總管
 
-代號 `FILES`。
-
 ## 範圍
 
-- `@asgard-js/react` 的對話側 `FileExplorer`（F-021）：`<Chatbot fileExplorer="builtin">` 的內建側欄，以及自組用的 `FileExplorer.*` 部件、`FileExplorerProvider`、controller、`createSandboxFsProviders`、`FileView`。
-- 與它共用 UI 習慣、但獨立實作的 `SourceSetFileExplorer`（F-025，SourceSet volume）列在本章最後，整段待驗收。
-- PM：F-021、F-025、F-031（待驗收）；sdk-pm#49、#68、#69、heimdall-pm#375（Done）。其餘來源是本 repo 的 issue #427、#446、#476、#482。
-- sandbox 呼叫帶 channel scope、喚醒 sandbox 在 [sandbox.md](sandbox.md)；文案語言在 [i18n.md](i18n.md)。
-
-## 現行行為
-
-### 工具列與檢視器
-
-| 編號    | 項目             | 現行行為                                                                                                                                                                                                                                                                                     |
-| ------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FILES-1 | 工具列的十個動作 | 依序分三組：新增檔案、新增資料夾、上傳、下載 ｜ 複製、剪下、貼上、重新命名、刪除 ｜ 重新整理。與右鍵選單提供同一組動作，兩個入口呼叫同一個 context action，結果相同。                                                                                                                        |
-| FILES-2 | 新增檔案         | 目標是選取中的資料夾，沒有選資料夾時是樹根（與新增資料夾、貼上同一條規則）。沒有 `providers.saveFile` 時停用。                                                                                                                                                                               |
-| FILES-3 | 重新命名         | 選取了一個項目（檔案或資料夾）且有 `providers.move` 時啟用；沒有選取或沒有 `move` 時停用（與下載、刪除相同的形狀）。                                                                                                                                                                         |
-| FILES-4 | 工具列換行       | 工具列比內容窄時換行，每個動作都點得到，不會畫到面板外面；375px 以上維持一列。                                                                                                                                                                                                               |
-| FILES-5 | 檢視器的下載     | 開著檔案時，檢視器標頭右側在預覽／原始碼切換之後有下載鈕，執行與檔案樹相同的下載（`providers.download(activeSourceId, file.path, file.name)`），存檔名是原始檔名。開的是圖片（沒有切換鈕）時也有。沒有 `providers.download` 時停用。直接使用 `FileView` 而沒傳 `onDownload` 時不顯示這顆鈕。 |
-| FILES-6 | 名稱與確認對話框 | 新增檔案、新增資料夾、重新命名用 SDK 內的對話框輸入名稱；刪除用同一個對話框確認。不使用 `window.prompt`／`window.confirm`，分頁不會被凍住，樣式來自主題層。名稱空白、或關閉對話框時不做任何檔案操作。                                                                                        |
-
-### 唯讀來源與剪貼簿
-
-| 編號     | 項目                     | 現行行為                                                                                                                                                                                                                                                        |
-| -------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FILES-7  | 唯讀以省略 provider 表達 | 目前來源沒有 `copy` 時，工具列與檔案、資料夾右鍵選單的「複製」停用；沒有 `move` 時「剪下」停用。                                                                                                                                                                |
-| FILES-8  | 貼上                     | 剪貼簿的項目來自目前來源，**而且**該操作需要的 provider 存在（複製要 `copy`、剪下要 `move`）時才啟用「貼上」，工具列與資料夾、空白處右鍵選單都一樣。host 直接呼叫 `actPaste` 在這種情況下也不會呼叫任何 provider。                                              |
-| FILES-9  | 剪貼簿記得來源           | 切到別的來源再切回來，剪貼簿還在、可以貼上。別的來源開著時，樹不會把同路徑的項目畫成「已剪下」，貼上的標籤也不會寫出別的來源的項目名稱。同一個來源拿掉 `move` 之後，剪下的項目不再畫成淡化（因為已經貼不了）。                                                  |
-| FILES-10 | `setClipboard`           | 參照穩定，不隨切換來源改變，放進 host 的 effect deps 不會讓 effect 重跑。帶了 `sourceId` 的物件原樣存入（`===` 同一個）。沒帶 `sourceId` 時，以那一次 commit 的目前來源補上：同一個 handler 裡先 `controller.selectSource('B')` 再 `setClipboard`，項目記在 B。 |
-| FILES-11 | 來源消失就清空           | `sources` 不再包含剪貼簿的 `sourceId` 時清空剪貼簿；其他來源的開檔與 provider 不受影響、不重新掛載。之後同一個 id 再出現，剪貼簿已經是空的。所有來源都還在時，行為同 FILES-9。                                                                                  |
-| FILES-12 | 唯讀檔案的檢視           | 檢視器沒有 `onSaveFile` 時不提供預覽／原始碼切換，檔案以唯讀方式呈現；即使之前已切到原始碼模式也一樣。                                                                                                                                                          |
-
-### 開檔、拖放與 markdown 預覽
-
-| 編號     | 項目                    | 現行行為                                                                                                                                                                                                                                                                                                                                                                                |
-| -------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FILES-13 | controller 開檔         | `controller.requestFile(sourceId, absolutePath)` 會展開祖先資料夾、選取並開啟該檔，畫面穩定下來，不會無限重繪。持有 controller 的元件在 controller 狀態沒變的情況下重新渲染，拿到的 controller 物件參照不變。內建側欄收到 `sandbox://…/open-file` 卡片時走這條。                                                                                                                        |
-| FILES-14 | 拖放留在面板內          | 面板能處理的檔案拖放（有 `upload` 或 `uploadMany`、沒有開著檔案、拖的是檔案）由面板接走：drop 只上傳到 sandbox，不會冒泡到 `<Chatbot>` 變成 composer 附件；enter／over／leave 也不冒泡，chatbot 的全域拖放覆蓋層不會一起亮。面板的任何位置（來源列、目前路徑、工具列、上傳進度面板）都算。                                                                                              |
-| FILES-15 | 面板處理不了的拖放      | 沒有上傳 provider、開著檔案、或拖的不是檔案時，面板完全不碰這些事件，composer 附件的行為照舊。從面板拖到 chat column 再放下，仍會建立 composer 附件，chatbot 的拖曳計數不會失衡。                                                                                                                                                                                                       |
-| FILES-16 | markdown 的 frontmatter | `.md`／`.markdown` 預覽時，開頭是格式正確的 frontmatter（第一行 `---`、之後某一行 `---`，且開頭 `---` 的下一行不是空行）就把它從 markdown 正文移開：以 `js-yaml` 的 `FAILSAFE_SCHEMA` 解析，是 mapping 時在正文上方畫成欄位表（每個頂層 key 一列，值照檔案原字）；空的或解析不出東西時不畫表；解析失敗或不是 mapping 時以等寬字原樣顯示。編輯模式與存檔保留完整原文（含 frontmatter）。 |
-| FILES-17 | 標題不重複              | frontmatter 的 `title` 去掉空白後等於正文第一個 `# ` 標題時，欄位表不顯示 `title` 那一列。尋找標題時略過 code fence 與 HTML 註解，掃描是線性的。                                                                                                                                                                                                                                        |
-| FILES-18 | 長 key                  | 欄位表在 343px 的窄面板裡讓長 key 換行，不水平溢出，值的欄位仍可用。                                                                                                                                                                                                                                                                                                                    |
-
-### 尚待 PM 驗收的檔案總管行為
-
-| 編號     | 項目                    | 現行行為                                                                                                                                                                                                                                                                                |
-| -------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FILES-19 | 面板、樹與編輯          | 依 `launchedSandboxes$` 瀏覽 live sandbox 的檔案系統；預覽與 CodeMirror 編輯、`fs/watch` 監看、新增／刪除／複製／搬移、右鍵選單、喚醒（Nudge）。（待驗收：BUILD-023、BUILD-024、BUILD-029-file-explorer-watch-and-lifecycle）                                                           |
-| FILES-20 | 圖示防漂移              | 手抄的 lucide 圖示路徑由測試比對，避免抄錯而無聲出貨。（待驗收：BUILD-025）                                                                                                                                                                                                             |
-| FILES-21 | 批次上傳                | 一次上傳多個檔案或整個資料夾（遞迴、建立目錄結構），有速率限制、逐檔進度、可取消。（待驗收：BUILD-065）                                                                                                                                                                                 |
-| FILES-22 | 取消選取                | 點樹的空白處可以清除選取。（待驗收：BUILD-070）                                                                                                                                                                                                                                         |
-| FILES-23 | SourceSet volume 與元件 | `AsgardSourceSetClient`（core）與獨立的 `SourceSetFileExplorer`，含共用批次上傳佇列、host 擴充點、唯讀模式下保留 host 動作、路徑高亮與自動展開、隱藏項目、工具列右側插槽。（待驗收：BUILD-060、BUILD-061、BUILD-064、BUILD-069、BUILD-075、BUILD-076、BUILD-087、BUILD-092、BUILD-097） |
+- 涵蓋：`@asgard-js/react` 的對話側檔案總管（內建側欄與自組用的部件、controller、sandbox providers、檔案檢視）。獨立實作的 `SourceSetFileExplorer` 還沒有收斂。
+- PM 規格：[F-021 sandbox working directory File Explorer 側欄](../../references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-021-sandbox-working-directory-file-explorer-側欄.md)、[F-025 SourceSet File Explorer 元件](../../references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-025-sourceset-file-explorer-元件.md)、[F-031 對話 File Explorer 批次上傳(多檔 / 資料夾遞迴)](../../references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-031-對話-file-explorer-批次上傳-多檔-資料夾遞迴.md)；其餘來源是 [sdk-pm#49](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/49)、[sdk-pm#68](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/68)、[sdk-pm#69](https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/69)、[heimdall-pm#375](https://github.com/asgard-ai-platform/asgard-heimdall-pm/issues/375) 與本 repo 的 issue #427、#446、#476、#482。
+- 優先順序：產品規則以 PM 規格為準，實際行為以程式為準；本章只記兩者都讀不出來的決定、差異與限制。
 
 ## 設計決定
 
-| 決定                                                         | 理由                                                                                                                                                                                                | 出處                                  |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| 工具列的順序照 Sindri F-004 AC3 與 consumer 規格的三組       | 兩份獨立來源給出相同順序；原型沒有這兩顆鈕，符合「工具列只是沒長出來」的判斷                                                                                                                        | 原 BUILD-053                          |
-| 檢視器的下載在沒有 handler 時停用，不是隱藏                  | 原型是隱藏；sdk-pm#69 要求停用，並與工具列的下載一致                                                                                                                                                | 原 BUILD-054                          |
-| 檢視器下載的是檔案目前在磁碟上的內容，不是編輯中的緩衝       | 原型同一個 `onDownload`（`GET fs/file`）；「以檔案目前內容產生下載」指的是檔案內容                                                                                                                  | 原 BUILD-054                          |
-| 唯讀不新增 host 要設定的 API，改看 provider 是否存在         | 現場切到唯讀來源時本來就換成一份不含寫入的 providers；改完就自然生效                                                                                                                                | 原 BUILD-084                          |
-| `setClipboard` 原樣存入、缺的 `sourceId` 在 layout effect 補 | 讓 `setClipboard` 不依賴任何 state、參照穩定；同一個 handler 切來源時補的是新來源                                                                                                                   | 原 BUILD-091                          |
-| 「來源消失就清空」，暫時掉出清單也清                         | sandbox 名稱會被重複使用，同一個 id 可能已經是另一台機器；2026-11-02 決定時已接受暫時掉出（例如連續失敗被移出、之後又補回）也會清空                                                                 | 原 BUILD-096                          |
-| 不為「換對話」另外清剪貼簿                                   | `<Chatbot>` 換 `customChannelId` 不會重新初始化 channel，各消費端換對話時都會重掛檔案總管；為此加的公開 prop 沒有真實情境，已撤回。host 若讓同一個檔案總管跨對話存在，自己呼叫 `setClipboard(null)` | 原 BUILD-096                          |
-| 拖放的處理位置從 body 移到 root                              | 只放在 body 時，來源列、路徑、工具列與上傳進度面板（整批上傳期間蓋住樹的底部）仍會漏給 composer                                                                                                     | 原 BUILD-066（2026-08-20 計畫時確認） |
-| frontmatter 以欄位表顯示，不是只剝掉                         | Sindri 的目錄與對話檔案面板也用這個元件；只剝不顯示會讓 `SKILL.md` 的 `name`／`description` 消失                                                                                                    | 原 BUILD-090（2026-10-05 改）         |
-| frontmatter 用 `js-yaml` 的 `FAILSAFE_SCHEMA`，不自寫解析    | 只產生字串、陣列、一般物件，`1.0`、日期、`yes` 不會被轉型；`SKILL.md` 會用 `>-` 多行折疊                                                                                                            | 原 BUILD-090                          |
-| 名稱輸入與刪除確認用 SDK 內的對話框，刪除也一起換            | 原生對話框無法在地化、不受主題影響，而且會凍住整個分頁（Sindri 驗收時連 CDP 指令都進不去）；刪除是常用動作，留著原生的就留著同一個問題                                                              | 原 BUILD-038                          |
+| 編號     | 決定                                                                                                         | 類型                  | 為什麼                                                                                                                                                                                                  | 出處         |
+| -------- | ------------------------------------------------------------------------------------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| FILES-1  | 工具列十個動作分三組、照 Sindri F-004 AC3 與 consumer 規格的順序；與右鍵選單呼叫同一個 action                | 理由                  | 兩份獨立來源給出相同順序；原型沒有這兩顆鈕，符合「工具列只是沒長出來」的判斷                                                                                                                            | 原 BUILD-053 |
+| FILES-5  | 檢視器的下載在沒有 download handler 時停用、不是隱藏；下載的是磁碟上的內容，不是編輯中的緩衝                 | 理由                  | 原型是隱藏，但 sdk-pm#69 要求停用、並與工具列的下載一致。原型同一個下載呼叫讀的是檔案；「以檔案目前內容產生下載」指的是檔案內容                                                                         | 原 BUILD-054 |
+| FILES-6  | 新增、重新命名的名稱輸入與刪除確認用 SDK 內的對話框。不要改回 `window.prompt`／`window.confirm`              | 刻意的行為            | 原生對話框無法在地化、不受主題影響，而且會凍住整個分頁（Sindri 驗收時連 CDP 指令都進不去）                                                                                                              | 原 BUILD-038 |
+| FILES-7  | 唯讀不新增 host 要設定的 API，改看 provider 在不在：沒有 `copy` 就停用複製、沒有 `move` 就停用剪下與重新命名 | PM 未定義、前端先決定 | 現場切到唯讀來源時本來就換成一份不含寫入的 providers，改完就自然生效                                                                                                                                    | 原 BUILD-084 |
+| FILES-10 | `setClipboard` 原樣存入、參照穩定；缺的 `sourceId` 在 layout effect 以那次 commit 的目前來源補上             | 刻意的行為            | 讓 `setClipboard` 不依賴任何 state，放進 host 的 effect deps 不會重跑；同一個 handler 先切來源再設剪貼簿時，補的是新來源                                                                                | 原 BUILD-091 |
+| FILES-11 | 剪貼簿的來源從 `sources` 消失就清空，暫時掉出也清。不要為了「換對話」另外加清空用的 prop                     | 刻意的行為            | sandbox 名稱會被重複使用，同一個 id 可能已經是另一台機器（2026-11-02 決定）。各消費端換對話時都會重掛檔案總管，那個 prop 沒有真實情境、已撤回；host 讓檔案總管跨對話存在時自己呼叫 `setClipboard(null)` | 原 BUILD-096 |
+| FILES-14 | 面板能處理的拖放在 root 接走，不冒泡到 `<Chatbot>`。不要把處理位置移回 body                                  | 刻意的行為            | 只放在 body 時，來源列、路徑、工具列與上傳進度面板（整批上傳期間蓋住樹的底部）仍會漏給 composer，變成附件                                                                                               | 原 BUILD-066 |
+| FILES-16 | markdown 的 frontmatter 畫成欄位表，不是只剝掉；用 `js-yaml` 的 `FAILSAFE_SCHEMA`，不自寫解析                | 理由                  | Sindri 的目錄與對話檔案面板也用這個元件，只剝不顯示會讓 `SKILL.md` 的 `name`／`description` 消失。FAILSAFE 只產生字串、陣列、物件，`1.0`、日期、`yes` 不會被轉型；`SKILL.md` 會用 `>-` 多行折疊         | 原 BUILD-090 |
 
-## 已知限制與未交付
+## 跟 PM 不一致的地方
 
-| 項目                                                     | 說明                                                                                                                                                                                                                             | 交接     |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 預覽／原始碼切換對所有非圖片檔都顯示                     | consumer 規格寫「僅 markdown 檔顯示」                                                                                                                                                                                            | 需問 PM  |
-| 開檔後 400ms 內下載拿到的是磁碟上的內容                  | 存檔有 400ms debounce；這是「與檔案樹相同的下載」的意思                                                                                                                                                                          | —        |
-| 省略 `FileExplorerRoot` 自組時沒有拖放區                 | 拖放區隨 root 部件；但沒有 root 的組法本來就缺 context menu 的定位容器、對話框與上傳進度面板                                                                                                                                     | —        |
-| `onSaveFile` 拿掉後又回來，檢視器回到原本的編輯模式      | 兩個來源都開著檔時切換會沿用同一個元件實例，結果是還原使用者原本的模式，無害                                                                                                                                                     | —        |
-| 剪貼簿剛設好的那一次 commit，`sourceId` 還是 `undefined` | 在 paint 之前就補上，`canPaste` 為 false；但 host 對 `clipboard` 的 effect 可能先看到一次未補的值                                                                                                                                | —        |
-| frontmatter 的邊角情況                                   | BOM 開頭、結尾 `---` 後有空白或用 `...` 收尾時不當成 frontmatter；數字樣式的 key 會排在最前面；標題含行內 markdown 時不會和 `title` 對上；`---` 開頭但內容不是 key/value 的投影片會進原樣區塊；YAML 折疊在中文兩行之間多一個空白 | —        |
-| `SourceSetFileExplorer` 的 frontmatter 與剪貼簿          | 它有自己的檔案檢視與剪貼簿，FILES-11、FILES-16 的修正不涵蓋它                                                                                                                                                                    | 需另立票 |
-| `file-view.tsx` 的 `scheduleSave` 相依警告               | 既有警告；修它會改變存檔行為                                                                                                                                                                                                     | 需另立票 |
-| demo `/file-explorer` 的 composer 附件上傳會 404         | 該路由的 mock 只實作 sandbox fs，`POST /mock-asgard/blob:0` 沒有 stub                                                                                                                                                            | 需另立票 |
+| 編號     | PM 寫的                                               | 實際                 | 為什麼                 | 待誰處理 |
+| -------- | ----------------------------------------------------- | -------------------- | ---------------------- | -------- |
+| FILES-24 | consumer 規格寫預覽／原始碼切換「僅 markdown 檔顯示」 | 所有非圖片檔都有切換 | 實作時沒有依副檔名限制 | PM 確認  |
 
-## 程式位置
+## 已知限制
 
-- `packages/react/src/components/file-explorer/`（`file-explorer-parts.tsx`、`file-explorer-context.tsx`、`file-explorer-tree.tsx`、`file-view.tsx`、`file-explorer-dialog.tsx`、`create-sandbox-fs-providers.ts`、`types.ts`）
-- `packages/react/src/components/markdown-frontmatter/frontmatter.tsx`
-- `packages/react/src/components/chatbot/chatbot-file-explorer.tsx`（內建側欄）
-- `packages/react/src/components/source-set-explorer/`、`packages/core/src/lib/source-set-client.ts`（FILES-23）
+| 編號     | 限制                                                             | 原因                                                                                                                                                                      | 待誰處理 |
+| -------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| FILES-25 | 開檔後 400ms 內按下載，拿到的是磁碟上的舊內容                    | 存檔有 400ms debounce；這就是「與檔案樹相同的下載」的意思（FILES-5）                                                                                                      | —        |
+| FILES-26 | 省略 `FileExplorerRoot` 自組時沒有拖放區                         | 拖放區隨 root 部件；沒有 root 的組法本來也缺右鍵選單的定位容器、對話框與上傳進度面板                                                                                      | —        |
+| FILES-27 | 剪貼簿剛設好的那一次 commit，`sourceId` 還是 `undefined`         | 在 paint 之前就補上、`canPaste` 為 false；但 host 對 `clipboard` 的 effect 可能先看到一次未補的值                                                                         | —        |
+| FILES-28 | frontmatter 的邊角情況                                           | BOM 開頭、結尾 `---` 後有空白或用 `...` 收尾時不當成 frontmatter；數字樣式的 key 排在最前面；標題含行內 markdown 時不會和 `title` 對上；YAML 折疊在中文兩行之間多一個空白 | —        |
+| FILES-29 | `SourceSetFileExplorer` 沒有 frontmatter 與剪貼簿的修正          | 它有自己的檔案檢視與剪貼簿，FILES-11、FILES-16 不涵蓋它                                                                                                                   | 需另立票 |
+| FILES-30 | `file-view.tsx` 的 `scheduleSave` 相依警告                       | 既有警告；修它會改變存檔行為                                                                                                                                              | 需另立票 |
+| FILES-31 | demo `/file-explorer` 的 composer 附件上傳會 404，而且永遠是英文 | 該路由的 mock 只實作 sandbox fs，沒有 blob 上傳的 stub；也沒有語系設定                                                                                                    | 需另立票 |

@@ -121,7 +121,7 @@ Fill in these fields (remove template HTML comments after filling):
 - `Issue`: the GitHub issue URL (`https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/<n>`)
 - `Source spec`: the `references/asgard-sdk-pm/tracking/asgard-js-sdk/<path>` spec path
 - `Complexity`: `S` (single function / small change) | `M` (standard client method / template) | `L` (cross-package flow or streaming/protocol change)
-- `Brief`: 2–5 sentences — the developer-visible outcome and the changed packages / modules / components; note anything that already exists to be reused or extended. For what the SDK does today, read its chapter in `requirements/spec/` (`_index.md` lists them); a row marked「待驗收：BUILD-NNN」still has its detail in that BUILD under `requirements/tasks/`. When the task keeps an existing behavior, cite it as `← spec/<ID>` (e.g. `← spec/CLIENT-3`).
+- `Brief`: 2–5 sentences — the developer-visible outcome and the changed packages / modules / components; note anything that already exists to be reused or extended. Before planning, read the matching chapter in `requirements/spec/` (`_index.md` lists them): it holds what the code cannot tell you — design decisions, gaps with the PM spec, known limits. What the SDK does is in the code and the PM spec, not there. When the task keeps an existing behavior, point at the PM spec or the code; cite `← spec/<ID>` (e.g. `← spec/CLIENT-1`) only when the task relies on a recorded design decision.
 - `Relevant Rules`: the pre-filled table from the template (sourced from `FRONTEND_RULE_COMMON.md`) — do not delete rows; add extra rows if this task involves patterns not in the default table.
 - `Acceptance Criteria`: translate the spec's acceptance conditions into EARS `R#` identifiers. Every `R#` must be independently verifiable. The last `R#` is always a build + demo/test smoke check.
 - `Implementation Tasks`: ordered `T#` steps mapped to `R#`; include `npm run lint:packages`, `npm run format:check`, and `npm run build:core && npm run build:react` in the pre-done step.
@@ -261,7 +261,7 @@ REVIEW-NNN: done
 2. **Wait for explicit user authorization.**
 3. On authorization: confirm both BUILD-NNN and REVIEW-NNN are `done` in `_index.md`. Advance `## ▶ Next Task` to the next `ready` task, or set to `None — awaiting task selection` if none remain.
 
-`done` is not the end of the files' life. Once every PM issue the BUILD cites reaches **Done** on its board (PM acceptance, which happens after release), the pair is converged into `requirements/spec/` and deleted — follow `requirements/spec/README.md` → 收斂步驟. Do not converge on `done` alone: a ticket sent back as Pending fix still needs its BUILD.
+`done` is not the end of the files' life. Once every PM issue the BUILD cites reaches **Done** on its board (PM acceptance, which happens after release) and the BUILD and REVIEW are both `done`, the pair is converged into `requirements/spec/` and deleted — follow `requirements/spec/README.md` → 收斂步驟. Do not converge on `done` alone: a ticket sent back as Pending fix still needs its BUILD.
 
 ---
 
