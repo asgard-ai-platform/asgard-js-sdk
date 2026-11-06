@@ -38,6 +38,8 @@ npm-debug.log*
 testem.log
 /typings
 spec/
+# The rule above is for local scratch spec folders; the current-state spec is tracked.
+!requirements/spec/
 *.local.*
 
 # System Files

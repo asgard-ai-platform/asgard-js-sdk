@@ -38,6 +38,8 @@ Read `requirements/tasks/_index.md` Config block and extract `SPEC_DIR` (the dir
 
 #### 3a. Read Coverage
 
+A converged BUILD is no longer in the Task Queue, so `/review all` skips it. If `/review BUILD-NNN` names a number with no file in `requirements/tasks/`, look it up in `requirements/spec/converged-tasks.md`: listed there means it was accepted and converged — report that and stop; there is nothing to review.
+
 Open `{SPEC_DIR}/BUILD-NNN.md`, read `## Coverage`:
 
 - Use Cases: [list or `—`]

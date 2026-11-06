@@ -5,19 +5,13 @@
 Read order:
 
 1. `requirements/_index.md`
-2. `requirements/requests/_index.md` or `requirements/tasks/_index.md`
-3. Target `REQ-*.md` or `TASK-*.md`
+2. `requirements/spec/_index.md` for what the SDK does today; `requirements/requests/_index.md` or `requirements/tasks/_index.md` for work
+3. Target spec chapter, `REQ-*.md`, or `BUILD-*.md` / `REVIEW-*.md`
 4. `references/` only when more background is needed
 
-Task specs use Single-file SDD and live under `requirements/tasks/`.
+Work lives under `requirements/tasks/` as BUILD/REVIEW pairs, created from `_build_template.md` and `_review_template.md`; the templates define the sections. `_template.md` (single-file `TASK-*.md`) is the older format.
 
-Required task sections:
-
-- `Meta`
-- `1) Requirements`
-- `2) Design`
-- `3) Implementation Tasks`
-- `4) Execution Log / Change Log`
+Accepted work is folded into `requirements/spec/` and its task files deleted; see `requirements/spec/README.md`.
 
 Status values:
 
