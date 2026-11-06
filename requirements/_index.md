@@ -7,8 +7,8 @@ This is the entrypoint for requirement navigation.
 - `requirements/` is the implementation source of truth.
 - `references/` is background only.
 - High-level requirements live in `requirements/requests/REQ-*.md`.
-- Executable task specs live in `requirements/tasks/TASK-*.md`.
-- Task specs use Single-file SDD with `Meta`, `1) Requirements`, `2) Design`, `3) Implementation Tasks`, and `4) Execution Log / Change Log`.
+- Executable work lives in `requirements/tasks/` as BUILD/REVIEW pairs (`BUILD-NNN-*.md` + `REVIEW-NNN-*.md`, from `_build_template.md` / `_review_template.md`). `_template.md` (single-file `TASK-*.md`) is the older format.
+- Design decisions, gaps with the PM spec and known limits live in `requirements/spec/` (current-state spec). Accepted tasks are folded in there and deleted.
 - Acceptance criteria use `R#` identifiers and must map to implementation tasks and verification cases.
 - Status values are `draft`, `ready`, `in-progress`, and `done`.
 
@@ -16,6 +16,7 @@ This is the entrypoint for requirement navigation.
 
 - Requests: `requirements/requests/_index.md`
 - Tasks: `requirements/tasks/_index.md`
+- Current-state spec: `requirements/spec/_index.md`
 
 ## Gates
 
@@ -29,7 +30,7 @@ When given a GitHub issue link/number from `asgard-ai-platform/asgard-sdk-pm`:
 
 1. `gh issue view <n> -R asgard-ai-platform/asgard-sdk-pm --json title,body,labels`.
 2. The issue body cites its tracking spec (a `tracking/asgard-js-sdk/...` path, or a feature `F-NNN` / use-case `UC-NNN` number). Read it under `references/asgard-sdk-pm/tracking/asgard-js-sdk/`. If it is not there, the submodule may be behind its pin: `git submodule update --remote references/asgard-sdk-pm`, then retry (or search by number/title).
-3. `references/` is background only. Convert the PM spec into a `requirements/tasks/TASK-*.md` (or BUILD/REVIEW pair) with Single-file SDD, then follow the Gates above (spec `ready` + explicit go before coding).
+3. `references/` is background only. Distill the PM spec into a BUILD/REVIEW pair under `requirements/tasks/` (the `feature-workflow` skill), then follow the Gates above (BUILD `ready` + explicit go before coding).
 
 ## Implementation rules
 

@@ -8,6 +8,7 @@ This repository uses Spec-Driven Development (SDD) for medium-to-large frontend 
 - `requirements/`: implementation source of truth. Agents must implement from requirements, not directly from references.
 - `requirements/requests/`: high-level requirements, governance documents, cross-task background, and links to related task specs.
 - `requirements/tasks/`: executable task specs. Each task must be specific enough for an agent to implement and verify.
+- `requirements/spec/`: current-state spec — per feature area, what the code doesn't explain: design decisions, gaps with the PM spec, known limits. Accepted tasks are folded in here and their task files deleted.
 
 If `references/` conflicts with `requirements/`, trust `requirements/`. Record the conflict as an open question or decision before implementation.
 
@@ -46,15 +47,18 @@ When adding or changing a request/task status, update the matching index in the 
 
 ## Task Spec Format
 
-Use single-file task specs under `requirements/tasks/TASK-xxx-short-name.md`.
+Each unit of work is a BUILD/REVIEW pair under `requirements/tasks/`:
 
-Each task spec must include:
+- `BUILD-NNN-<slug>.md`, created from `_build_template.md`: sources, decisions, EARS acceptance criteria, implementation tasks, coverage and execution log.
+- `REVIEW-NNN-<slug>.md`, created from `_review_template.md`: the paired static review and functional validation against the BUILD's acceptance criteria.
 
-- `Meta`: task ID, status, priority, spec mode, related request/reference links.
-- `1) Requirements`: background, goal, in scope, out of scope, known context, open questions/decisions, EARS acceptance criteria.
-- `2) Design`: UI/UX decisions, component structure, data dependencies, API contracts, security/auth notes, acceptance test matrix, test plan.
-- `3) Implementation Tasks`: reviewable tasks mapped to acceptance criteria.
-- `4) Execution Log / Change Log`: spec creation, decisions, status changes, implementation notes, verification results.
+The templates define the sections; the `feature-workflow` skill (plan and build) and the `review` skill (review) define how to fill them. A BUILD's `Source spec` points at the PM ticket, or at the repo issue when there is no PM ticket.
+
+The single-file `TASK-xxx-short-name.md` format (`_template.md`) is older; do not create new ones.
+
+## Current-State Spec
+
+`requirements/spec/` records what the code doesn't explain: design decisions, gaps with the PM spec, known limits. Product rules come from the PM spec and actual behavior from the code. Once every PM issue a task cites is accepted (board **Done**) and the BUILD/REVIEW pair is `done`, the pair is folded into the matching chapter and deleted; the number stays in `requirements/spec/converged-tasks.md` with a link to the last version, and is never reused. Rules and steps: `requirements/spec/README.md`.
 
 ## Acceptance Criteria
 

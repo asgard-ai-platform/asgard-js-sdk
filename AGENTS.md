@@ -140,7 +140,8 @@ All theme properties support CSS variables. React/ReactDOM are externalized in t
 This project uses lightweight Spec-Driven Development:
 
 - **`requirements/` is the single source of truth for implementation**; `references/` is background material only, **do not implement directly from `references/`**.
-- Task specs live in `requirements/tasks/TASK-*.md` using **Single-file SDD**; per-issue cycles use the `BUILD-*` / `REVIEW-*` pair. Acceptance criteria are tagged with EARS `R#` identifiers and map to implementation tasks and verification cases.
+- Each unit of work is a **BUILD/REVIEW pair** in `requirements/tasks/` (`BUILD-NNN-<slug>.md` from `_build_template.md`, `REVIEW-NNN-<slug>.md` from `_review_template.md`), driven by the `feature-workflow` and `review` skills; acceptance criteria are tagged with EARS `R#` identifiers and map to implementation tasks and verification cases. `_template.md` (single-file `TASK-*.md`) is the older format; do not create new ones.
+- **What the code doesn't explain** lives in `requirements/spec/` (current-state spec, one chapter per feature area): design decisions, gaps with the PM spec, known limits. Product rules come from the PM spec, actual behavior from the code. Once every PM issue a BUILD cites is accepted (board **Done**) and the BUILD/REVIEW pair is `done`, the pair is folded into a chapter and deleted; see `requirements/spec/README.md`.
 - Status flow: `draft → ready → in-progress → done` (**never use the underscore form `in_progress`**).
 - When a task is `ready`, **do not start work without an explicit instruction**; if implementation must deviate from an agreed spec, stop and confirm, update the spec, then continue.
 - Before starting a new task, read `requirements/_index.md`; see `requirements/README.md` for the full rules and read order, and `docs/spec-driven-development.md` for the complete SDD guidelines.

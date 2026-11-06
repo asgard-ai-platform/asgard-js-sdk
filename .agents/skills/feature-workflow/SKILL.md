@@ -18,7 +18,7 @@ alwaysApply: false
 
 - Small fixes with clear scope that do not trace to a PM issue (edit the file directly)
 - Review-only runs (invoke `/review BUILD-NNN` directly instead)
-- Issues already planned — check `requirements/tasks/_index.md` first
+- Issues already planned — check `requirements/tasks/_index.md` first, and the PM issue column of `requirements/spec/converged-tasks.md` (an issue whose tasks were already converged is done, not unplanned)
 
 ---
 
@@ -82,13 +82,14 @@ If the spec references other upstream specs under `references/asgard-sdk-pm` (fe
 
 ### Step 2.1 — Determine task numbering
 
-Find the next BUILD number from existing files:
+Find the highest BUILD number in use. Converged tasks are deleted from `requirements/tasks/` but keep their numbers in `requirements/spec/converged-tasks.md`, so look in both places:
 
 ```bash
-ls requirements/tasks/BUILD-*.md 2>/dev/null | sort | tail -1
+{ ls requirements/tasks/BUILD-*.md 2>/dev/null; cat requirements/spec/converged-tasks.md 2>/dev/null; } \
+  | grep -oE 'BUILD-[0-9]{3}' | sort -u | tail -1
 ```
 
-If no BUILD tasks exist yet, start at `BUILD-001`. Otherwise increment the highest number found by 1.
+If nothing is found, start at `BUILD-001`. Otherwise increment the highest number by 1. **Never reuse a number**: code comments, commit messages and PRs still cite converged numbers (and `BUILD-029` was already used twice in this repo — check before you create the file).
 
 ### Step 2.2 — Decide how many BUILD tasks
 
@@ -107,7 +108,7 @@ Fill in these fields (remove template HTML comments after filling):
 - `Issue`: the GitHub issue URL (`https://github.com/asgard-ai-platform/asgard-sdk-pm/issues/<n>`)
 - `Source spec`: the `references/asgard-sdk-pm/tracking/asgard-js-sdk/<path>` spec path
 - `Complexity`: `S` (single function / small change) | `M` (standard client method / template) | `L` (cross-package flow or streaming/protocol change)
-- `Brief`: 2–5 sentences — the developer-visible outcome and the changed packages / modules / components; note anything that already exists to be reused or extended.
+- `Brief`: 2–5 sentences — the developer-visible outcome and the changed packages / modules / components; note anything that already exists to be reused or extended. Before planning, read the matching chapter in `requirements/spec/` (`_index.md` lists them): it holds what the code cannot tell you — design decisions, gaps with the PM spec, known limits. What the SDK does is in the code and the PM spec, not there. When the task keeps an existing behavior, point at the PM spec or the code; cite `← spec/<ID>` (e.g. `← spec/CLIENT-1`) only when the task relies on a recorded design decision.
 - `Relevant Rules`: the pre-filled table from the template (sourced from `FRONTEND_RULE_COMMON.md`) — do not delete rows; add extra rows if this task involves patterns not in the default table.
 - `Acceptance Criteria`: translate the spec's acceptance conditions into EARS `R#` identifiers. Every `R#` must be independently verifiable. The last `R#` is always a build + demo/test smoke check.
 - `Implementation Tasks`: ordered `T#` steps mapped to `R#`; include `npm run lint:packages`, `npm run format:check`, and `npm run build:core && npm run build:react` in the pre-done step.
@@ -246,6 +247,8 @@ REVIEW-NNN: done
 
 2. **Wait for explicit user authorization.**
 3. On authorization: confirm both BUILD-NNN and REVIEW-NNN are `done` in `_index.md`. Advance `## ▶ Next Task` to the next `ready` task, or set to `None — awaiting task selection` if none remain.
+
+`done` is not the end of the files' life. Once every PM issue the BUILD cites reaches **Done** on its board (PM acceptance, which happens after release) and the BUILD and REVIEW are both `done`, the pair is converged into `requirements/spec/` and deleted — follow `requirements/spec/README.md` → 收斂步驟. Do not converge on `done` alone: a ticket sent back as Pending fix still needs its BUILD.
 
 ---
 
