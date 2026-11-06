@@ -44,6 +44,6 @@ None.
 
 ### Minor (nice to have)
 
-1. **Most chapter rows are「待驗收」.** 54 of the 64 remaining BUILDs wait on PM acceptance (sdk-pm board, mostly In review). The chapters are complete as an index of current behavior, but most of the detail still lives in those BUILDs until they converge.
+1. **36 of the 124 chapter rows are「待驗收」.** 54 of the 64 remaining BUILDs wait on PM acceptance (sdk-pm board, mostly In review). Those rows are one-line summaries; their detail still lives in the BUILDs until they converge.
 2. **`spec-workflow` still describes the single-file task format.** Same as the other front-end repos; left for a separate decision.
 3. **Pre-existing dead links** (unchanged by this task): `packages/{core,react}/README.md` → `../../CONTRIBUTING.md`, `../../LICENSE`; `REVIEW-012`～`REVIEW-015` → `none`.
