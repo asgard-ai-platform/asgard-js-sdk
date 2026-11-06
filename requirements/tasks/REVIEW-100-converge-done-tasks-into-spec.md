@@ -51,3 +51,4 @@ None.
 ## Re-validation
 
 - 2026-11-06: Re-validated after the four-section format revision (BUILD-100 D3, D8, T6): R1 re-checked against the new format; R2 67/67 including FOLLOWUP-f002; R3 still BUILD-101; R5 8 dead links, same as `main`, and 50/50 PM submodule links resolve at the pinned commit; `typecheck`, `test:packages` (458 + 805) and `format:check` pass.
+- 2026-11-06: Re-validated after the audit fixes (BUILD-100 D8 and the audit-fix log entry): every chapter has the four sections, types and owner words are from the fixed lists, no duplicate or reused numbers; 486 relative links, 4 dead — `REVIEW-012`～`REVIEW-015` → `none`, same as `main` — and PM links resolve at `ddf9d72`; 66/66 archive SHAs exist and are ancestors of `origin/main`; deleted file names appear only in the archive; FOLLOWUP-f002 is byte-identical to `main`; `packages/` and `apps/` unchanged.
