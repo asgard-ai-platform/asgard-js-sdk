@@ -104,6 +104,17 @@ Find the highest BUILD number in use. Converged tasks are deleted from `requirem
 
 If nothing is found, start at `BUILD-001`. Otherwise increment the highest number by 1. **Never reuse a number**: code comments, commit messages and PRs still cite converged numbers (and `BUILD-029` was already used twice in this repo — check before you create the file).
 
+Those places only show numbers that are already on the base branch. A branch whose PR has not merged yet can already hold the next number, and two branches that each take "highest + 1" end up with the same number (Sindri's `BUILD-093` was taken twice this way). So also check every branch, local and remote, and take the higher of the two results:
+
+```bash
+git fetch -q origin
+git for-each-ref --format='%(refname)' refs/heads refs/remotes/origin \
+  | while read -r ref; do git ls-tree --name-only "$ref" requirements/tasks/; done \
+  | grep -oE 'BUILD-[0-9]{3}' | sort -u | tail -1
+```
+
+If two branches still end up with the same number, the branch that merges second renumbers. Keep the earlier branch as it is: its number is already in the base branch's commits and index. On your branch, `git mv` the BUILD and REVIEW files to the next free number, update the IDs inside them and your two rows in `requirements/tasks/_index.md`, and commit that alone as `docs(sdd): renumber …`. Then merge the base branch and resolve the `_index.md` conflict by keeping both pairs of rows in number order. Do not rewrite old commit messages that cite the old number.
+
 ### Step 2.2 — Decide how many BUILD tasks
 
 **Default: one BUILD + one REVIEW pair per issue.**
