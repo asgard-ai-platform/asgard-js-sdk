@@ -23,6 +23,6 @@
 
 | 編號      | 限制                                                       | 原因                                                                                                                      | 待誰處理 |
 | --------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------- |
-| LAYOUT-17 | annotations 那一段仍無條件建構 `undefined` 欄位            | 目前靠 `deepMerge` 略過 `undefined` 擋住；日後若把 `deepMerge` 換成別的合併函式，default 層對六個顏色欄位失效的問題會復發 | 需另立票 |
+| LAYOUT-17 | `asgard-theme-context.tsx` 把 annotations 的 theme 疊到預設 theme 的那次 `deepMerge`，仍無條件建構值是 `undefined` 的欄位            | 目前靠 `deepMerge` 略過 `undefined` 擋住；日後若把 `deepMerge` 換成別的合併函式，default 層對六個顏色欄位失效的問題會復發 | 需另立票 |
 | LAYOUT-18 | tool-call 展開內容的 JSON 區塊仍用 `word-break: break-all` | 那是程式碼不是散文，不套用散文的 `overflow-wrap: anywhere`                                                                | 不處理   |
 | LAYOUT-19 | 使用者泡泡與附件樣式有寫死的顏色                           | `user-image-template.module.scss` 有 `#4767eb` 與幾個 `rgba(...)`，應改讀 theme                                           | 需另立票 |
