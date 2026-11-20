@@ -139,6 +139,8 @@ Fill in these fields (remove template HTML comments after filling):
 - `Coverage` — both Use Cases and Files: leave as `[filled during build]`.
 - `Execution Log`: add `YYYY-MM-DD: BUILD task created from <issue URL> (Status: draft)`.
 
+After filling these fields, check the new text against the four wording checks in `.claude/skills/spec-workflow/SKILL.md` → Wording Checks（用語檢查）. Record each name mapping you write and each question the check turns up; Step 2.6 reports both.
+
 ### Step 2.4 — Create REVIEW-NNN.md
 
 Copy `requirements/tasks/_review_template.md` to `requirements/tasks/REVIEW-NNN-<slug>.md`.
@@ -179,6 +181,8 @@ Acceptance Criteria (BUILD-NNN):
 - RN: (Smoke check) When the developer runs `npm run build:core && npm run build:react`
       and exercises <feature> in the react-demo (http://localhost:4200) / Vitest,
       the system shall <expected observable behavior> with no build errors.
+
+用語檢查：<N> 組名稱對照（列出）、<N> 個待確認問題（列出）（或「通過，無名稱對照、無待確認」）
 
 有問題或需要調整（例如拆成多個 task、修改 R#）請告知。確認後我開始實作。
 ```
@@ -292,6 +296,7 @@ REVIEW-NNN: done
 | The tracking path is absent from the issue body and `find` returns nothing                  | 1     |
 | The spec has no identifiable acceptance criteria or behavioral requirements                 | 1     |
 | User requests task split / merge / R# change after seeing the plan                          | 2     |
+| A wording check raises a question the sources do not answer (name, actor, negation scope)   | 2     |
 | A build decision requires human judgment not covered by the spec or FRONTEND_RULE_COMMON.md | 3     |
 | A §3 failure requires a spec change rather than an implementation fix                       | 4     |
 | User has not yet explicitly authorized Done                                                 | 5     |

@@ -82,6 +82,7 @@ A task can move from `draft` to `ready` only when all checks pass:
 - API contracts (endpoints, request/response shapes, error codes) are defined when applicable.
 - Auth and permission requirements are defined when applicable.
 - Every `R#` maps to implementation tasks and an acceptance test matrix entry.
+- The new text passes the four wording checks in `.agents/skills/spec-workflow/SKILL.md` → Wording Checks（用語檢查）.
 
 ## Implementation Rules
 
