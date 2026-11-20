@@ -41,8 +41,21 @@ This skill is the **per-issue orchestrator** for the asgard-js-sdk SDD process. 
 在讀取任何 spec 之前，先把 PM spec 與 prototype/design submodule 更新到遠端最新，確保對到的是最新設計：
 
 ```bash
-git submodule update --init --recursive --remote references
+# 逐個把 submodule 更新到遠端最新（一個失敗不連坐其他）
+git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | while read -r m; do
+  git submodule update --init --remote "$m" || echo "FAILED: $m"
+  git -C "$m" submodule update --init --recursive || echo "FAILED (nested): $m"
+done
+
+# 驗收（必跑）：確認上面沒有 FAILED，且每個 submodule 都有 SHA
+git submodule status
 ```
+
+**不要圖快改用 `git submodule update --init --recursive --remote references`。** `--remote` 需要知道要追哪個分支，`.gitmodules` 沒設 `branch` 時會 fallback 到該 clone 的 `origin/HEAD`；巢狀 submodule 常常沒有 `origin/HEAD`，會噴 `fatal: Unable to find refs/remotes/origin/HEAD revision in submodule path ...`，而 git 遇到這個是**直接中止整趟迭代**——排在後面的 submodule 靜默沒被更新，你會拿舊 spec 開工。
+
+**跑完不要再補一條不帶 `--remote` 的 `git submodule update`。** 那條的語意是「把每個 submodule reset 回父 repo 記錄的 pin」，會把剛才 `--remote` 的成果整個倒退回去。巢狀 submodule 已經由上面 `git -C "$m" ...` 那行補齊了。
+
+驗收怎麼看：`git submodule status` 的 `+` 前綴代表 checkout 已超前父 repo 的 pin（`--remote` 生效）；沒有 `+` 代表 pin 本來就是最新——兩者都正常。`-` 前綴才是沒初始化。
 
 註：`--remote` 會把 submodule checkout 到遠端最新，父 repo 的 pin 會顯示為已變更。這個 pin bump commit 進 feature 分支**完全無妨、也不影響開發**——`references/` 只是背景參考（不被 app 編譯，實作以 distill 進 `requirements/` 的內容為準），且 CI 未開 `submodules: true`。因此就讓 pin 始終浮到最新、bump 自然留在分支即可，不必刻意避免 commit。
 
@@ -91,6 +104,17 @@ Find the highest BUILD number in use. Converged tasks are deleted from `requirem
 
 If nothing is found, start at `BUILD-001`. Otherwise increment the highest number by 1. **Never reuse a number**: code comments, commit messages and PRs still cite converged numbers (and `BUILD-029` was already used twice in this repo — check before you create the file).
 
+Those places only show numbers that are already on the base branch. A branch whose PR has not merged yet can already hold the next number, and two branches that each take "highest + 1" end up with the same number (Sindri's `BUILD-093` was taken twice this way). So also check every branch, local and remote, and take the higher of the two results:
+
+```bash
+git fetch -q origin
+git for-each-ref --format='%(refname)' refs/heads refs/remotes/origin \
+  | while read -r ref; do git ls-tree --name-only "$ref" requirements/tasks/; done \
+  | grep -oE 'BUILD-[0-9]{3}' | sort -u | tail -1
+```
+
+If two branches still end up with the same number, the branch that merges second renumbers. Keep the earlier branch as it is: its number is already in the base branch's commits and index. On your branch, `git mv` the BUILD and REVIEW files to the next free number, update the IDs inside them and your two rows in `requirements/tasks/_index.md`, and commit that alone as `docs(sdd): renumber …`. Then merge the base branch and resolve the `_index.md` conflict by keeping both pairs of rows in number order. Do not rewrite old commit messages that cite the old number.
+
 ### Step 2.2 — Decide how many BUILD tasks
 
 **Default: one BUILD + one REVIEW pair per issue.**
@@ -114,6 +138,8 @@ Fill in these fields (remove template HTML comments after filling):
 - `Implementation Tasks`: ordered `T#` steps mapped to `R#`; include `npm run lint:packages`, `npm run format:check`, and `npm run build:core && npm run build:react` in the pre-done step.
 - `Coverage` — both Use Cases and Files: leave as `[filled during build]`.
 - `Execution Log`: add `YYYY-MM-DD: BUILD task created from <issue URL> (Status: draft)`.
+
+After filling these fields, check the new text against the four wording checks in `.claude/skills/spec-workflow/SKILL.md` → Wording Checks（用語檢查）. Record each name mapping you write and each question the check turns up; Step 2.6 reports both.
 
 ### Step 2.4 — Create REVIEW-NNN.md
 
@@ -155,6 +181,8 @@ Acceptance Criteria (BUILD-NNN):
 - RN: (Smoke check) When the developer runs `npm run build:core && npm run build:react`
       and exercises <feature> in the react-demo (http://localhost:4200) / Vitest,
       the system shall <expected observable behavior> with no build errors.
+
+用語檢查：<N> 組名稱對照（列出）、<N> 個待確認問題（列出）（或「通過，無名稱對照、無待確認」）
 
 有問題或需要調整（例如拆成多個 task、修改 R#）請告知。確認後我開始實作。
 ```
@@ -268,6 +296,7 @@ REVIEW-NNN: done
 | The tracking path is absent from the issue body and `find` returns nothing                  | 1     |
 | The spec has no identifiable acceptance criteria or behavioral requirements                 | 1     |
 | User requests task split / merge / R# change after seeing the plan                          | 2     |
+| A wording check raises a question the sources do not answer (name, actor, negation scope)   | 2     |
 | A build decision requires human judgment not covered by the spec or FRONTEND_RULE_COMMON.md | 3     |
 | A §3 failure requires a spec change rather than an implementation fix                       | 4     |
 | User has not yet explicitly authorized Done                                                 | 5     |
