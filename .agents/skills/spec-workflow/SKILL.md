@@ -26,8 +26,21 @@ Use this skill to turn unclear work into implementable, reviewable specs before 
 在讀取 `references/` 下任何 PM spec 或 prototype 之前，先把它們更新到遠端最新，確保對到的是最新設計：
 
 ```bash
-git submodule update --init --recursive --remote references
+# 逐個把 submodule 更新到遠端最新（一個失敗不連坐其他）
+git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | while read -r m; do
+  git submodule update --init --remote "$m" || echo "FAILED: $m"
+  git -C "$m" submodule update --init --recursive || echo "FAILED (nested): $m"
+done
+
+# 驗收（必跑）：確認上面沒有 FAILED，且每個 submodule 都有 SHA
+git submodule status
 ```
+
+**不要圖快改用 `git submodule update --init --recursive --remote references`。** `--remote` 需要知道要追哪個分支，`.gitmodules` 沒設 `branch` 時會 fallback 到該 clone 的 `origin/HEAD`；巢狀 submodule 常常沒有 `origin/HEAD`，會噴 `fatal: Unable to find refs/remotes/origin/HEAD revision in submodule path ...`，而 git 遇到這個是**直接中止整趟迭代**——排在後面的 submodule 靜默沒被更新，你會拿舊 spec 開工。
+
+**跑完不要再補一條不帶 `--remote` 的 `git submodule update`。** 那條的語意是「把每個 submodule reset 回父 repo 記錄的 pin」，會把剛才 `--remote` 的成果整個倒退回去。巢狀 submodule 已經由上面 `git -C "$m" ...` 那行補齊了。
+
+驗收怎麼看：`git submodule status` 的 `+` 前綴代表 checkout 已超前父 repo 的 pin（`--remote` 生效）；沒有 `+` 代表 pin 本來就是最新——兩者都正常。`-` 前綴才是沒初始化。
 
 註：`--remote` 會把 submodule checkout 到遠端最新，父 repo 的 pin 會顯示為已變更。這個 pin bump commit 進 feature 分支**完全無妨、也不影響開發**——`references/` 只是背景參考（不被 app 編譯，實作以 distill 進 `requirements/` 的內容為準），且 CI 未開 `submodules: true`。因此就讓 pin 始終浮到最新、bump 自然留在分支即可，不必刻意避免 commit。
 
