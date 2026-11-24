@@ -111,6 +111,13 @@ props 一律定義 interface / type，無 `any`；event handler、children、ren
 
 新模板沿用 `components/templates/` 既有結構與命名，從 `templates/index.ts` 導出，並補上對應 theme 設定。
 
+### §4.3+ UI 驗收：兩種尺寸都要看
+
+預設 theme 把 shell 畫成 **375×640** 的行動版 widget，但消費端（Mimir / Sindri / Odin）一律 full-bleed
+掛載（`theme={{ chatbot: { width: '100%', height: '100%' } }}`）。只驗其中一種等於沒驗到另一種會壞的版面
+——尤其是 composer 這類「寬度一窄就被裁掉」的地方。demo 路由請**同時並排**渲染兩個 shell（範例見
+`/prompt-suggestion`），細節與兩個已知陷阱見 `AGENTS.md` → Demo application。
+
 ### §4.4 React 走 peerDependencies
 
 `react` / `react-dom` 不打包進 bundle（externalize）；不得引入會把 React 打進來的相依。避免消費端出現兩份 React（invalid hook call）。
