@@ -247,6 +247,12 @@ export async function handleMockSse(req: IncomingMessage, res: ServerResponse): 
     return;
   }
 
+  if (customChannelId.startsWith('needs-input-demo')) {
+    await handleNeedsInputMock(res, payload, customChannelId);
+
+    return;
+  }
+
   // F-033 — the feedback demo channels. A plain send gets a short reply; a `[Response Feedback: …]`
   // message gets the interlude the platform's system prompt would produce.
   if (customChannelId.startsWith('message-feedback-demo')) {
@@ -1081,6 +1087,78 @@ async function handlePromptSuggestionMock(
   }
 
   await sleep(60);
+  writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
+  res.end();
+}
+
+// ---------------------------------------------------------------------------------------------------
+// F-041 — the `[NEEDS_INPUT]:` callout. Every reply ends on a marker line and streams two characters at a
+// time, slowly enough to watch the half-typed marker being held back instead of flashing. What you type
+// picks the variant; the opening run (mount) stays silent so the scripted transcript is what you see first.
+// ---------------------------------------------------------------------------------------------------
+
+const NEEDS_INPUT_REPLIES: { match: (text: string) => boolean; reply: string }[] = [
+  {
+    match: text => text.includes('連續') || text.toLowerCase().includes('several'),
+    reply: '要繼續之前有兩件事需要你決定：\n[NEEDS_INPUT]: 要比較哪兩個月？\n[NEEDS_INPUT]: 金額要含稅嗎？',
+  },
+  {
+    match: text => text.includes('空') || text.toLowerCase().includes('empty'),
+    reply: '我先停在這裡，等你回覆。\n[NEEDS_INPUT]:',
+  },
+  {
+    match: text => text.includes('舊') || text.toLowerCase().includes('legacy'),
+    reply: '查詢需要權限。\nneeds input: 請先[連結 Google Drive](https://example.com/connect) 再回覆我',
+  },
+  {
+    match: text => text.includes('程式') || text.toLowerCase().includes('code'),
+    reply:
+      '標記放在 code block 裡不算，下面這段會照原樣顯示：\n```text\n[NEEDS_INPUT]: 這是範例，不是 callout\n```\n[NEEDS_INPUT]: 只有這一行是 callout',
+  },
+];
+
+const NEEDS_INPUT_DEFAULT_REPLY =
+  '我查了上個月的營收，總額是 **NT$ 1,284 萬**。\n\n要拆到各通路之前，需要你先確認一件事。\n[NEEDS_INPUT]: 要用「下單日」還是「出貨日」計算？';
+
+async function handleNeedsInputMock(
+  res: ServerResponse,
+  payload: ParsedPayload,
+  customChannelId: string,
+): Promise<void> {
+  const header: CommonHeader = {
+    requestId: randomUUID(),
+    namespace: NAMESPACE,
+    botProviderName: BOT_PROVIDER_NAME,
+    customChannelId,
+  };
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+
+  writeEvent(res, { ...header, eventType: 'asgard.run.init', fact: { ...emptyFact(), runInit: {} } });
+
+  if (!isOpeningTurn(payload)) {
+    const text = payload.text ?? '';
+    const reply = NEEDS_INPUT_REPLIES.find(r => r.match(text))?.reply ?? NEEDS_INPUT_DEFAULT_REPLY;
+    const replyTo = payload.customMessageId ?? '';
+    const messageId = randomUUID();
+
+    await sleep(40);
+    writeEvent(res, messageFrame(header, 'asgard.message.start', messageId, replyTo, '', TEXT_TEMPLATE('')));
+
+    for (const chunk of chunkText(reply, 2)) {
+      await sleep(80);
+      writeEvent(res, messageFrame(header, 'asgard.message.delta', messageId, replyTo, chunk, null));
+    }
+
+    await sleep(60);
+    writeEvent(res, messageFrame(header, 'asgard.message.complete', messageId, replyTo, reply, TEXT_TEMPLATE(reply)));
+  }
+
+  await sleep(40);
   writeEvent(res, { ...header, eventType: 'asgard.run.done', fact: { ...emptyFact(), runDone: {} } });
   res.end();
 }

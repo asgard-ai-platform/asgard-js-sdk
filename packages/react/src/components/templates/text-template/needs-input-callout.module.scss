@@ -1,0 +1,36 @@
+// F-041 — "needs your reply" callout (spec §3.5). Semantic tokens only, so the brand color carries over.
+
+.callout {
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--asg-color-primary, #4f46e5);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--asg-color-primary, #4f46e5) 10%, transparent);
+}
+
+.callout--answered {
+  border-left-color: var(--asg-color-border, #434343);
+  background: color-mix(in srgb, var(--asg-color-text-primary, #fff) 3%, transparent);
+
+  .callout__title {
+    color: var(--asg-color-text-secondary, #8c8c8c);
+  }
+}
+
+.callout__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--asg-color-primary, #4f46e5);
+
+  // Only spaced from the content when there is content (an empty callout shows the title alone).
+  &:not(:last-child) {
+    margin-bottom: 4px;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}

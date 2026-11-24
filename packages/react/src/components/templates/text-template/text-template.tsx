@@ -6,6 +6,8 @@ import classes from './text-template.module.scss';
 import { Time } from '../time';
 import { useAsgardThemeContext } from '../../../context/asgard-theme-context';
 import { BotMessageText } from './bot-message-text';
+import { useAsgardContext } from '../../../context';
+import { isQuestionResolved } from '../question-template/is-question-resolved';
 import { UserMessageText } from './user-message-text';
 
 interface TextTemplateProps {
@@ -17,6 +19,7 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
 
   const theme = useAsgardThemeContext();
   const { botMessage } = theme;
+  const { messages } = useAsgardContext();
 
   const messageText = (message as ConversationBotMessage)?.message?.text || '';
   const isBot = message.type === 'bot';
@@ -94,7 +97,13 @@ export function TextTemplate(props: TextTemplateProps): ReactNode {
     >
       <TemplateBoxContent quickReplies={quickReplies} references={references} message={botConversationMessage}>
         {isBot ? (
-          <BotMessageText className={classes['text--bot-default']}>{messageText}</BotMessageText>
+          <BotMessageText
+            className={classes['text--bot-default']}
+            // F-041: same rule as the question card — once a user message follows, the moment has passed.
+            answered={isQuestionResolved(Array.from(messages?.values() ?? []), message.messageId)}
+          >
+            {messageText}
+          </BotMessageText>
         ) : (
           <div className={clsx(classes.text, classes['text--bot'], classes['text--bot-default'])} style={styles}>
             {messageText}

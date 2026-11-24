@@ -219,3 +219,5 @@ None — awaiting task selection.
 | `REVIEW-099` | Review: file:// links shown as a copyable path              | —        | done   | [REVIEW-099-file-link-path-copy.md](./REVIEW-099-file-link-path-copy.md)                                 |
 | `BUILD-100`  | Converge Accepted Tasks Into a Current-State Spec           | M        | done   | [BUILD-100-converge-done-tasks-into-spec.md](./BUILD-100-converge-done-tasks-into-spec.md)               |
 | `REVIEW-100` | Review: Converge Accepted Tasks Into a Current-State Spec   | —        | ready  | [REVIEW-100-converge-done-tasks-into-spec.md](./REVIEW-100-converge-done-tasks-into-spec.md)             |
+| `BUILD-101`  | Render the [NEEDS_INPUT]: Line as a Callout                 | Normal   | done   | [BUILD-101-needs-input-callout.md](./BUILD-101-needs-input-callout.md)                                   |
+| `REVIEW-101` | Review: Render the [NEEDS_INPUT]: Line as a Callout         | —        | done   | [REVIEW-101-needs-input-callout.md](./REVIEW-101-needs-input-callout.md)                                 |
