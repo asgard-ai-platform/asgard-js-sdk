@@ -1,0 +1,128 @@
+// DemoWrapper's content area is a ROW flex, so the route needs one column child — otherwise the legend
+// and the chatbot sit side by side and the chatbot gets squeezed to zero width.
+.stack {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend {
+  flex-shrink: 0;
+}
+
+.legend__title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.scripts {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+
+  strong {
+    margin-right: 8px;
+  }
+
+  span {
+    opacity: 0.75;
+  }
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.75;
+
+  kbd {
+    padding: 1px 5px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+}
+
+.locales {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+
+  button {
+    padding: 4px 10px;
+    border: 1px solid #888;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  button.active {
+    border-color: #1677ff;
+    color: #1677ff;
+  }
+}
+
+.localeHint {
+  opacity: 0.7;
+}
+
+// Both shells keep their honest height (the narrow one is a hard 375×640), so on a short window the row
+// is taller than the space left over — the demo shell's own `main` scrolls, which is enough. Don't add a
+// scroller here: nesting one inside `main` just traps the wheel.
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  // Breathing room under the shells: scrolled to the bottom, the composer would otherwise sit flush
+  // against the window edge — and the composer is the thing you are here to look at.
+  padding-bottom: 24px;
+}
+
+// Full-bleed, the way every consumer mounts it (theme override supplies width/height: 100%).
+.sizeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.chatbotWide {
+  flex: 1;
+  min-width: 0;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+// `min-height: 0` matters: without it the shell refuses to shrink below its content and pushes the
+// composer — the thing this route exists to look at — below the fold.
+.wideBox {
+  flex: 1;
+  min-height: 0;
+}
+
+.chatbotNarrow {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// The SDK's own default: a fixed 375×640 shell. The wrapper must be at least that tall — a shorter box
+// does not clip it, the shell simply paints outside and covers whatever follows.
+.narrowBox {
+  width: 375px;
+  height: 640px;
+  flex-shrink: 0;
+}

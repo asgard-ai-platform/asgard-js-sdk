@@ -68,6 +68,7 @@ const navItems = [
   { to: '/chat-header', label: 'Chat Header (F-022)' },
   { to: '/composer', label: 'Composer (BUILD-028)' },
   { to: '/prompt-suggestion', label: 'Prompt Suggestion (F-028)' },
+  { to: '/needs-input', label: 'Needs-Input Callout (F-041)' },
   { to: '/question-template', label: 'Question Card (F-029)' },
   { to: '/attachment-rejoin', label: 'Replayed attachments (#448)' },
   { to: '/canvas-card', label: 'Canvas Card (F-030)' },
