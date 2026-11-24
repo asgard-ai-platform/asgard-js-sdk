@@ -40,6 +40,14 @@
   background: transparent;
 }
 
+// F-041 — bot text split around a `[NEEDS_INPUT]:` callout: markdown and callout pieces stack with a gap.
+// Only applied when a callout is present, so a message without one keeps its exact previous layout.
+.text--segmented {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 // Width of the built-in bot message row. Kept off `.text--bot` so that a consumer composing its own
 // row (via `renderMessageContent` + `BotMessageText`) fills the reading width instead of inheriting
 // the chat-bubble constraint.

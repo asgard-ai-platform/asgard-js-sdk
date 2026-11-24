@@ -18,7 +18,7 @@ export function BotTypingBox(props: BotTypingBoxProps): ReactNode {
   return (
     <TemplateBox className="asgard-text-template asgard-text-template--bot" type="bot" direction="horizontal">
       <TemplateBoxContent>
-        <BotMessageText>{typingText}</BotMessageText>
+        <BotMessageText streaming>{typingText}</BotMessageText>
       </TemplateBoxContent>
     </TemplateBox>
   );
