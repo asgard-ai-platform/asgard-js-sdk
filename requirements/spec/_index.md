@@ -13,4 +13,4 @@
 | [檔案總管](file-explorer.md)          | `FILES`   | 對話側檔案總管的工具列、唯讀、剪貼簿、拖放、markdown 預覽            | F-021、F-025、F-031（其餘為 sdk-pm#49、#68、#69、heimdall-pm#375）                                                                                                                                                                                                                                                                                      |
 | [Sandbox](sandbox.md)                 | `SANDBOX` | sandbox relay 呼叫的 channel scope                                   | [Sandbox 瀏覽器面板](../../references/asgard-sdk-pm/docs/spec/asgard-js-sdk/sandbox-browser.md)、[Sandbox 下載卡與共用喚醒](../../references/asgard-sdk-pm/docs/spec/asgard-js-sdk/sandbox-download.md)、[預覽模式下的動作卡](../../references/asgard-sdk-pm/docs/spec/asgard-js-sdk/preview-mode-cards.md)；F-018 ～ F-021、F-034、F-035、F-038、F-040 |
 
-開發工具（型別檢查涵蓋範圍）不是 SDK 對整合方的行為，記在根目錄 `AGENTS.md` 的〈Type checking〉，不另立章。
+開發工具（型別檢查涵蓋範圍）不是 SDK 對消費端的行為，記在根目錄 `AGENTS.md` 的〈Type checking〉，不另立章。
