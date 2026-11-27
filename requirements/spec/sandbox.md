@@ -29,7 +29,7 @@
 
 | 編號 | 限制 | 原因 | 待誰處理 |
 |---|---|---|---|
-| SANDBOX-17 | 參數層的 4xx 在畫面上沒有自己的呈現。 | 失敗計數只認 `412` 與 `5xx`。缺 channel scope 之類的 400，不會讓 sandbox 被踢出下拉選單。現場的表現是「一直重試、一直失敗、看不到原因」。 | 需另立票（asgard-ai-platform/asgard-js-sdk#470） |
+| SANDBOX-17 | 參數層的 4xx 在畫面上沒有自己的呈現。 | 失敗計數只認 `412` 與 `5xx`。缺 channel scope 之類的 400，不會讓 sandbox 被踢出下拉選單。所以這種 400 發生時，使用者看到的是「一直重試、一直失敗、看不到原因」。 | 需另立票（asgard-ai-platform/asgard-js-sdk#470） |
 | SANDBOX-18 | 自組面板的消費端漏傳 channel scope 時，沒有型別錯誤。 | SDK 內沒有 hook 或 provider 幫忙補值。已知的例子是 Sindri 自己持有 controller、不帶 channel scope 的檔案總管。它目前不在做 ownership 檢查的 relay 後面，所以沒壞。要不要提供「從 context 取值」是設計題。 | SDK（asgard-ai-platform/asgard-js-sdk#472） |
 | SANDBOX-19 | 對照表守門有盲區。 | 守門的做法是掃 prototype 上名稱含 `sandbox`（不分大小寫）的方法。有兩種掃不到：名稱裡沒有 sandbox 字樣的 relay；宣告成實例 arrow-function field 的方法。 | 不處理 |
 | SANDBOX-20 | 相對路徑的 `botProviderEndpoint` 會讓 open-url 丟例外。 | open-url 改用 `new URL()`，與 client 的其他方法一致。相對路徑的 base 本來就不支援。 | 不處理 |

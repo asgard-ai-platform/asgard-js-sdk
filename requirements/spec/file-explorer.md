@@ -18,9 +18,9 @@
 
 | 編號 | 決定 | 類型 | 為什麼 | 出處 |
 |---|---|---|---|---|
-| FILES-5 | 沒有 download handler 時，檢視器的下載鈕停用，不隱藏。下載的是磁碟上的內容，不是編輯中的緩衝。 | PM 未定義、前端先決定 | 原型是隱藏下載鈕。Sindri 規格只寫標題列有下載鈕，沒寫沒有 handler 時怎麼辦。前端在 sdk-pm#69 提出改成停用，與工具列的下載一致。原型的同一個下載呼叫讀的是檔案；「以檔案目前內容產生下載」指的是檔案內容。 | 原 BUILD-054 |
+| FILES-5 | 沒有 download handler 時，檢視器的下載鈕停用，不隱藏。下載的是磁碟上的內容，不是編輯中的緩衝。 | PM 未定義、前端先決定 | 原型是隱藏下載鈕。Sindri 規格只寫標題列有下載鈕，沒寫沒有 handler 時怎麼辦。前端在 sdk-pm#69 提出改成停用，與工具列的下載一致。下載的內容依原型決定：原型檢視器的下載鈕和檔案樹用同一個下載呼叫（`GET fs/file`），讀的是磁碟上的檔案。所以 Sindri 規格 panels〈檔案檢視器〉寫的「以檔案目前內容產生下載」，指的是檔案目前在磁碟上的內容，不是編輯中還沒存檔的緩衝。 | 原 BUILD-054 |
 | FILES-6 | 新增、重新命名時的名稱輸入，以及刪除確認，都用 SDK 內的對話框。不要改回 `window.prompt` 或 `window.confirm`。 | 刻意的行為 | 原生對話框無法在地化，不受主題影響，而且會凍住整個分頁。Sindri 驗收時，連 CDP 指令都進不去。核准：PM 端 [F-031](../../references/asgard-sdk-pm/tracking/asgard-js-sdk/features/F-031-對話-file-explorer-批次上傳-多檔-資料夾遞迴.md) AC9（:116-118，對話框「絕不是 `window.confirm`」），以及 [`prototype-gaps.md`](../../references/asgard-sdk-pm/docs/prototype-gaps.md):24 PG-003（沿用 SDK 對話框風格，而非 `window.confirm`）。 | 原 BUILD-038 |
-| FILES-7 | SDK 不新增讓消費端設定唯讀的 API，改依 provider 是否存在決定：沒有 `copy` 時，停用複製；沒有 `move` 時，停用剪下和重新命名。 | PM 未定義、前端先決定 | 現場切到唯讀來源時，本來就會換成一份不含寫入操作的 providers。改成依 provider 判斷後，唯讀就自然生效。 | 原 BUILD-084 |
+| FILES-7 | SDK 不新增讓消費端設定唯讀的 API，改依 provider 是否存在決定：沒有 `copy` 時，停用複製；沒有 `move` 時，停用剪下和重新命名。 | PM 未定義、前端先決定 | 已知的消費端（Heimdall `asgard-ai-auto-post-web` 的 ed-chat 素材庫）切到唯讀來源時，本來就會換成一份不含寫入操作的 providers。改成依 provider 判斷後，唯讀就自然生效。 | 原 BUILD-084 |
 | FILES-10 | `setClipboard` 原樣存入，參照穩定。缺少的 `sourceId`，在 layout effect 裡以那次 commit 的目前來源補上。 | 刻意的行為 | 這樣 `setClipboard` 不依賴任何 state，放進消費端的 effect deps 也不會重跑。同一個 handler 先切來源、再設剪貼簿時，補上的是新來源。 | 原 BUILD-091 |
 | FILES-11 | 剪貼簿的來源從 `sources` 消失時，剪貼簿就清空。來源只是暫時掉出清單，也一樣清空。不要為了「換 channel」另外加清空用的 prop。 | 刻意的行為 | sandbox 名稱會被重複使用，同一個 id 可能已經是另一台機器（2026-11-02 決定）。各消費端換 channel 時，都會重掛檔案總管，所以那個 prop 沒有真實情境，已撤回。如果消費端讓檔案總管跨 channel 存在，由消費端自己呼叫 `setClipboard(null)`。 | 原 BUILD-096 |
 | FILES-14 | 拖放符合下列所有條件時，面板在 root 接走拖放，不冒泡到 `<Chatbot>`：沒有開啟中的檔案；有 `upload` 或 `uploadMany` provider；拖曳的內容包含檔案。只要有一項不符合，拖放就照常冒泡。不要把處理位置移回 body。 | 刻意的行為 | 如果只在 body 處理，拖放到來源列、路徑、工具列與上傳進度面板時，仍會漏給 composer，變成附件。上傳進度面板在整批上傳期間會蓋住樹的底部。 | 原 BUILD-066 |
